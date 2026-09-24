@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#1b1917" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <meta name="color-scheme" content="light dark">
-<title>室内设计助手 0.1.4 · 对话式设计顾问</title>
+<title>室内设计助手 0.1.5 · 对话式设计顾问</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -110,6 +110,7 @@
   /* 触屏上 hover 会「粘」在最后点过的元素上，这里把悬停效果复位 */
   @media (hover: none) {
     .card:hover { border-color:var(--border); transform:none; box-shadow:none; }
+    .card:hover .card-go { background:var(--accent); }
     .chip:hover { border-color:var(--border-soft); color:var(--text-2); background:var(--surface-2); }
     .chip.big:hover { transform:none; }
     .tbtn:hover { border-color:var(--border); color:var(--text-2); }
@@ -230,7 +231,26 @@
     position:relative; font-family:inherit; color:inherit; width:100%;
   }
   .card:hover { border-color:var(--gold); transform:translateY(-3px); box-shadow:0 10px 26px var(--shadow); }
-  .card:active { transform:translateY(-1px); }
+  /* 按下就给反馈：轻微缩小 + 边框变色 + 背景变浅，手指「按到了」是有感觉的 */
+  .card:active {
+    transform:scale(.985);
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  /* 卡片里的「大家常问」区：虚线分隔，和「进入」按钮拉开距离，避免抢点击 */
+  .card-qa { margin-top:12px; padding-top:10px; border-top:1px dashed var(--border-soft); }
+  .card-qa-title { font-size:0.75rem; color:var(--text-4); margin-bottom:6px; }
+  .card-qa .chips { flex-direction:column; align-items:flex-start; gap:6px; margin-top:0; }
+  /* 卡片底部那个「进入 XX ›」：一眼就知道这才是正门。
+     它只是个提示元素，点击由整张卡片接手，所以不会跟快捷问题抢事件 */
+  .card-go {
+    display:flex; align-items:center; justify-content:center;
+    margin-top:14px; padding:11px 16px; border-radius:11px;
+    background:var(--accent); color:#fff;
+    font-size:0.875rem; font-weight:600; letter-spacing:.3px;
+    transition:background .18s;
+  }
+  .card:hover .card-go { background:var(--accent-dark); }
   .card .icon { font-size:1.625rem; margin-bottom:8px; display:block; line-height:1; }
   .card .name { font-size:1.0625rem; font-weight:600; }
   .card .desc { font-size:0.84375rem; color:var(--text-3); margin-top:6px; line-height:1.55; }
@@ -820,7 +840,7 @@
   .rank-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
   .rank-head b { font-size:0.9375rem; }
   .rank-head .grow { flex:1; }
-  .rank-score { font-size:0.8125rem; font-weight:700; color:var(--accent); }
+  .rank-flag { font-size:0.75rem; color:var(--accent); margin-top:5px; }
   .rank-basis {
     font-size:0.6875rem; padding:2px 7px; border-radius:5px;
     background:var(--surface-2); border:1px solid var(--border-soft); color:var(--text-3);
@@ -844,7 +864,7 @@
     <div class="ab-main" id="abMain">室内设计助手</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.1.4</span>
+  <span class="ver-tag" id="verTag">v0.1.5</span>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
   <button type="button" class="ab-btn hidden" id="abMoreBtn" data-act="toggle-more" aria-label="更多操作" title="更多操作">⋯</button>
@@ -1585,9 +1605,9 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.1.4";
-const BUILD_TAG    = "b5";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
-const BASE_TITLE   = "室内设计助手 0.1.4 · 对话式设计顾问";
+const APP_VERSION  = "0.1.5";
+const BUILD_TAG    = "v15";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
+const BASE_TITLE   = "室内设计助手 0.1.5 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
 const WEB_SEARCH_URL = "https://api.deepseek.com/anthropic/v1/messages";
@@ -1862,11 +1882,33 @@ const RANK_TIER_META = {
 };
 const BUDGET_OPTIONS = ["不限", "经济型（1 万以内）", "中档（1-3 万）", "品质型（3-8 万）", "高端（8 万以上）"];
 
+/* 补充条件：都不填也能问，填了答案更准。
+   顺序按「先说房子，再说人，最后说钱和偏好」排，手机上一屏能扫完。 */
 const COND_FIELDS = [
-  { id:"area",   label:"面积 / 尺寸", type:"text",   placeholder:"如：卫生间 2×2.5m，层高 2.6m，朝北没窗" },
-  { id:"budget", label:"预算档位",   type:"select", options: BUDGET_OPTIONS },
-  { id:"note",   label:"一句话补充", type:"text",   placeholder:"如：家里有老人、只想简单改造、要做无障碍" }
+  { id:"area",     label:"面积 / 尺寸", type:"text",   placeholder:"如：2×2.5m" },
+  { id:"height",   label:"层高",       type:"text",   placeholder:"如：2.6m" },
+  { id:"houseType",label:"房屋类型",   type:"select", options:["未指定","毛坯","旧房改造","精装房"] },
+  { id:"floor",    label:"所在楼层",   type:"text",   placeholder:"如：6 楼 / 一楼带院子" },
+  { id:"orient",   label:"朝向",       type:"select", options:["未指定","南","东南","西南","东","西","北","东北","西北"] },
+  { id:"people",   label:"常住人口",   type:"text",   placeholder:"如：3 人" },
+  { id:"elders",   label:"有没有老人", type:"select", options:["未指定","有","没有"] },
+  { id:"kids",     label:"有没有小孩", type:"select", options:["未指定","有","没有"] },
+  { id:"pets",     label:"有没有宠物", type:"select", options:["未指定","有","没有"] },
+  { id:"budget",   label:"预算档位",   type:"select", options: BUDGET_OPTIONS },
+  { id:"style",    label:"风格偏好",   type:"select", options:["未指定","现代简约","原木风","奶油风","日式","北欧","轻奢","工业风","新中式","中古复古"] },
+  { id:"special",  label:"特殊需求",   type:"text",   placeholder:"如：无障碍 / 隔音 / 智能家居 / 收纳" },
+  { id:"note",     label:"一句话补充", type:"text",   placeholder:"还有什么要说的" }
 ];
+
+/* 只留下真正填了值的条件，顺手限长（进历史 / 进 prompt 都用它） */
+function pickConditions(c) {
+  const o = {};
+  COND_FIELDS.forEach(function (f) {
+    const v = String((c && c[f.id]) || "").trim();
+    if (v) o[f.id] = v.slice(0, 80);
+  });
+  return o;
+}
 
 /* ============================================================
    二、状态
@@ -2035,22 +2077,36 @@ function safeMd(text, streaming) {
   catch (_) { return `<p>${esc(text)}</p>`; }
 }
 
-function defaultConditions() { return { area:"", budget:"不限", note:"" }; }
+/* 按字段表动态生成默认值：以后加字段不用再改这里，也漏不掉 */
+function defaultConditions() {
+  const o = {};
+  COND_FIELDS.forEach(function (f) {
+    o[f.id] = (f.type === "select") ? (f.id === "budget" ? "不限" : "未指定") : "";
+  });
+  return o;
+}
 function conditionsFor(spaceKey) {
   if (!condBySpace[spaceKey]) condBySpace[spaceKey] = defaultConditions();
   return condBySpace[spaceKey];
 }
+/* 已填条件的摘要：前面几项带标签（面积 2×2.5m），补充说明只给原文 */
 function condSummary(c) {
   if (!c) return "";
   const parts = [];
-  if (c.area) parts.push(c.area);
-  if (c.budget && c.budget !== "不限") parts.push(c.budget);
-  if (c.note) parts.push(c.note);
-  return truncateWidth(parts.join(" · "), 46);
+  COND_FIELDS.forEach(function (f) {
+    const v = String(c[f.id] || "").trim();
+    if (!v || v === "未指定" || v === "不限") return;
+    parts.push(f.id === "note" ? v : (f.label.replace(/\s*\/\s*/g, "/") + " " + v));
+  });
+  return truncateWidth(parts.join(" · "), 60);
 }
-/* 有没有填过任何条件 —— 注意预算档位也算，别漏 */
+/* 有没有填过任何条件 —— 逐字段看，别漏任何一项 */
 function hasConds(c) {
-  return !!(c && (c.area || c.note || (c.budget && c.budget !== "不限")));
+  if (!c) return false;
+  return COND_FIELDS.some(function (f) {
+    const v = String(c[f.id] || "").trim();
+    return !!v && v !== "未指定" && v !== "不限";
+  });
 }
 function modelTier() {
   for (let i = 0; i < MODEL_TIERS.length; i++) if (MODEL_TIERS[i].key === settings.modelKey) return MODEL_TIERS[i];
@@ -2343,7 +2399,7 @@ function appbarTitle() {
   const sp = DATA[state.space];
   if (!sp) return "室内设计助手";
   if (state.view === "space") return sp.name;
-  if (state.view === "rank") return sp.name + " · 优先级榜";
+  if (state.view === "rank") return sp.name + " · 最需要先解决";
   const ob = state.objectId ? sp.objects.find(o => o.id === state.objectId) : null;
   let t = sp.name + (ob ? " · " + ob.name : "");
   if (state.topic) t += "（" + state.topic + "）";
@@ -2576,7 +2632,7 @@ function renderCrumb() {
     html += `<span class="sep">›</span><span>${esc(sp.name)}</span>`;
   } else if (state.view === "rank") {
     html += `<span class="sep">›</span><button type="button" class="link" data-act="open-space" data-key="${escAttr(state.space)}">${esc(sp.name)}</button>`;
-    html += `<span class="sep">›</span><span>优先级榜</span>`;
+    html += `<span class="sep">›</span><span>最需要先解决</span>`;
   } else {
     html += `<span class="sep">›</span><button type="button" class="link" data-act="open-space" data-key="${escAttr(state.space)}">${esc(sp.name)}</button>`;
     html += `<span class="sep">›</span><span>${esc(chatTitleText())}</span>`;
@@ -2606,8 +2662,11 @@ function viewHome() {
         <span class="icon">${s.icon}</span>
         <div class="name">${esc(s.name)}</div>
         <div class="desc">${esc(s.desc)}</div>
-        <div class="chips">${chips}</div>
-        <div class="more">查看全部 ${s.faqs.length} 个常见问题 ›</div>
+        <div class="card-qa">
+          <div class="card-qa-title">大家常问：</div>
+          <div class="chips">${chips}</div>
+        </div>
+        <span class="card-go">进入${esc(s.name)} ›</span>
       </div>`;
   }
 
@@ -2762,18 +2821,18 @@ function viewSpace() {
   const rankEntry = `
     <div class="card rank-entry" role="button" tabindex="0" data-act="open-rank" data-key="${escAttr(state.space)}">
       <span class="icon">🏆</span>
-      <div class="name">${esc(sp.name)}的钱该花在哪</div>
+      <div class="name">${esc(sp.name)} · 最需要先解决的</div>
       <div class="desc">按返工代价、安全影响等五个维度排出 S / A / B / C 梯队，分隐藏工程、表面工程、软装三张榜</div>
-      <div class="more">打开排行榜 ›</div>
+      <span class="card-go">打开排行榜 ›</span>
     </div>`;
 
   return `
+    <div class="sec-title">最需要先解决的</div>
+    <div class="grid">${rankEntry}</div>
+    <div class="sec-title">聊一个具体的东西</div>
+    <div class="grid">${objs}</div>
     <div class="sec-title">${esc(sp.name)} —— 大家最常问的</div>
     <div class="chips.row">${faqChips}</div>
-    <div class="sec-title">优先级排行榜</div>
-    <div class="grid">${rankEntry}</div>
-    <div class="sec-title">或者，聊一个具体的东西</div>
-    <div class="grid">${objs}</div>
   `;
 }
 
@@ -4674,9 +4733,13 @@ function buildContext(meta) {
   if (topic) ctx += `\n他最先问的是：「${topic}」。`;
 
   const c = [];
-  if ((conds.area || "").trim()) c.push(`面积 / 尺寸：${conds.area.trim()}`);
-  if (conds.budget && conds.budget !== "不限") c.push(`预算档位：${conds.budget}（方案默认按这一档给，不要每次都问预算）`);
-  if ((conds.note || "").trim()) c.push(`一句话补充：${conds.note.trim()}`);
+  COND_FIELDS.forEach(function (f) {
+    const v = String((conds && conds[f.id]) || "").trim();
+    if (!v || v === "未指定" || v === "不限") return;
+    if (f.id === "budget") { c.push("预算档位：" + v + "（方案默认按这一档给，不要每次都问预算）"); return; }
+    if (f.id === "note")   { c.push("补充说明：" + v); return; }
+    c.push(f.label + "：" + v);
+  });
   if (c.length) ctx += `\n业主自己填的条件：\n- ${c.join("\n- ")}\n（这些条件要贯穿全程使用，不要重复问。）`;
   else ctx += `\n业主没有填条件，缺关键信息时先给通用答案，再用一句话问一个最关键的问题。`;
   return ctx;
@@ -4714,6 +4777,7 @@ function sanitizeRank(raw, spaceKey, minTotal) {
       items.push({
         name: String(it.name).slice(0, 40),
         why: String(it.why || "").slice(0, 140),
+        how: String(it.how || "").slice(0, 200),
         key: String(it.key || "").slice(0, 140),
         basis: basis,
         standard: standard,
@@ -4753,6 +4817,20 @@ function rankScore(item, preset) {
   return (s.rework || 0) * w.rework + (s.safety || 0) * w.safety + (s.replace || 0) * w.replace
        + (s.frequency || 0) * w.frequency + (s.feel || 0) * w.feel;
 }
+/* 把 5 个维度分数翻译成人话 —— 「返工 9 · 安全 10」这种谜语没人看得懂 */
+function rankDimText(s) {
+  s = s || {};
+  const hi = [];
+  if (s.rework >= 8) hi.push("返工代价极高");
+  else if (s.rework >= 6) hi.push("返工代价高");
+  if (s.safety >= 8) hi.push("涉及安全");
+  else if (s.safety >= 6) hi.push("有一定安全影响");
+  if (s.replace >= 8) hi.push("装完就动不了");
+  if (s.frequency >= 7) hi.push("天天要用");
+  if (s.feel >= 7) hi.push("一眼看得出差别");
+  return hi.length ? hi.slice(0, 3).join("、") : "常规项目";
+}
+
 function rankTier(score) {
   if (score >= 8.5) return "S";
   if (score >= 6.5) return "A";
@@ -4783,10 +4861,12 @@ function openRank(spaceKey) {
 }
 
 /* ---- 生成：按 tab 拆三次请求，先出第一张 ---- */
-const RANK_PROMPT_HEAD = `你是资深室内设计施工顾问。请为下面这个空间的一个工程类别生成「优先级排行榜」数据。
+const RANK_PROMPT_HEAD = `你是资深室内设计施工顾问。请为下面这个空间的一个工程类别生成「最需要先解决的排行榜」数据。
 
 第一步：先用联网检索核对 —— 涉及国标 / 行业规范的地方，查证标准号与关键数值；
 常见尺寸、验收做法、造价区间，也顺手核一下当前行情。这一步必须做。
+凡是有《装修避坑手册（2025）》这类行业手册说法的，优先按手册口径写；手册没覆盖的，
+再按经验补，并把 basis 标成 "经验"。
 
 第二步：检索完成后，最终回复只输出一个 JSON 对象 ——
 不要解释、不要复述搜索结果、不要 Markdown 代码块、不要在 JSON 前后加任何文字。
@@ -4799,16 +4879,23 @@ const RANK_PROMPT_HEAD = `你是资深室内设计施工顾问。请为下面这
    - replace   替换难度：0=拧螺丝就换，10=封起来完全动不了
    - frequency 使用频率：0=一年碰一次，10=每天几十次
    - feel      感知强度：0=好坏察觉不到，10=一眼看出差别
-3. 禁止出现「适当」「合理」「注意」这类没有信息量的词。
+3. 说人话，不许写谜语：不许出现「适当」「合理」「注意」这类没信息量的词，
+   也不许只给数字（比如「返工代价 8」）。每条都要让一个完全不懂装修的人看懂六件事：
+     · 这件事是什么        → name
+     · 为什么必须先解决    → why（一句话说清代价）
+     · 正确做法 / 标准      → how（怎么做、做到什么程度）
+     · 做错了会怎样        → fail（写具体后果，不要抽象）
+     · 怎么验收            → check（可操作的验证方法，如「闭水 48 小时」）
+     · 大概花多少钱        → cost 区间 + costUnit
 4. basis 只能填 "规范" / "经验" / "建议"；填 "规范" 时必须给检索确认过的标准号，不确定就填 "经验"。
 5. 禁止编造标准号 —— 检索里查不到的就填 "经验"。
 6. 涉及承重墙、燃气、电气改造的，safety 必须 ≥ 8。
 7. cost 写 [下限, 上限] 两个整数（元），估不出就填 null。
 8. 每个子类至少 1 条，条目总数 6~9 条（宁少勿多，写短写准；输出被截断就全废了）。
-9. 文字要短：why ≤ 25 字，key ≤ 18 字，fail ≤ 25 字，check ≤ 25 字，ask ≤ 18 字。
+9. 文字要短：why ≤ 30 字，how ≤ 45 字，key ≤ 18 字，fail ≤ 30 字，check ≤ 30 字，ask ≤ 18 字。
 
 JSON 格式：{"space":"...","tabs":{"<tab>":{"items":[...]}}}
-每条字段：name / why / key / basis / standard / fail / cost / costUnit / check / ask / scores
+每条字段：name / why / how / key / basis / standard / fail / cost / costUnit / check / ask / scores
 `;
 
 async function generateRankTab(spaceKey, tab) {
@@ -4994,10 +5081,13 @@ function copyRankItem(idx) {
   if (!it) return;
   const s = [
     it.name,
-    it.why ? "为什么：" + it.why : "",
+    it.why ? "为什么先做：" + it.why : "",
+    it.how ? "正确做法：" + it.how : "",
+    it.fail ? "做错了会怎样：" + it.fail : "",
+    it.check ? "怎么验收：" + it.check : "",
     it.key ? "关键数字：" + it.key : "",
-    it.fail ? "做错的代价：" + it.fail : "",
-    it.check ? "怎么验：" + it.check : ""
+    it.cost ? "参考花费：¥" + it.cost[0] + "~" + it.cost[1] + " " + it.costUnit : "",
+    "依据：" + it.basis + (it.standard ? "（" + it.standard + "）" : "")
   ].filter(Boolean).join("\n");
   copyText(s, "已复制这一条");
 }
@@ -5056,10 +5146,12 @@ function viewRank() {
   }
 
   const hasData = !!state.rankData;
-  return '<div class="sec-title">' + esc(sp.name) + ' · 优先级排行榜</div>'
+  return '<div class="sec-title">' + esc(sp.name) + ' · 最需要先解决的排行榜</div>'
        + '<div class="rank-tabs">' + tabBar + '</div>'
        + (hasData ? '<div class="rank-presets">' + presetBar + '</div>' : "")
-       + body;
+       + body
+       + (hasData ? '<p class="tip">想更细问某一条，点条目里的「问设计师」—— 会带着这一条进对话；'
+                  + '在对话里打开输入框上方的 🌐 联网，还能继续查最新的做法与行情。</p>' : "");
 }
 
 function rankListHtml() {
@@ -5086,30 +5178,30 @@ function rankListHtml() {
   return html;
 }
 
+/* 一条排行榜条目：摘要给「是什么 + 为什么排前面」，展开给六件事（说人话） */
 function rankItemHtml(it, i) {
-  const cost = it.cost ? ("¥" + it.cost[0] + "~" + it.cost[1] + " " + esc(it.costUnit)) : "";
+  const costText = it.cost ? (it.cost[0] + "~" + it.cost[1] + " " + esc(it.costUnit)) : "";
   const basisTag = it.basis === "规范" && it.standard
-    ? '<span class="rank-basis">' + esc(it.standard) + '</span>'
+    ? '<span class="rank-basis">规范 · ' + esc(it.standard) + '</span>'
     : '<span class="rank-basis">' + esc(it.basis) + '</span>';
-  const s = it.scores || {};
 
   return '<details class="rank-item">'
     + '<summary>'
     +   '<div class="rank-head">'
     +     '<b>' + esc(it.name) + '</b>' + basisTag
     +     '<span class="grow"></span>'
-    +     '<span class="rank-score">' + it.score.toFixed(1) + '</span>'
     +   '</div>'
     +   (it.why ? '<div class="rank-why">' + esc(it.why) + '</div>' : "")
-    +   (it.key ? '<div class="rank-key">🔑 ' + esc(it.key) + '</div>' : "")
-    +   (cost ? '<div class="rank-cost">' + cost + '</div>' : "")
+    +   '<div class="rank-flag">' + esc(rankDimText(it.scores)) + '</div>'
     + '</summary>'
     + '<div class="rank-detail">'
-    +   '<div class="rank-dims">返工 ' + (s.rework||0) + ' · 安全 ' + (s.safety||0)
-    +     ' · 替换 ' + (s.replace||0) + ' · 频率 ' + (s.frequency||0)
-    +     ' · 感知 ' + (s.feel||0) + '</div>'
-    +   (it.fail ? '<div class="rank-fail"><b>做错的代价：</b>' + esc(it.fail) + '</div>' : "")
-    +   (it.check ? '<div class="rank-check"><b>怎么验：</b>' + esc(it.check) + '</div>' : "")
+    +   (it.key ? '<div class="rank-key">🔑 关键数字：' + esc(it.key) + '</div>' : "")
+    +   (it.how ? '<div class="rank-check"><b>正确做法：</b>' + esc(it.how) + '</div>' : "")
+    +   (it.fail ? '<div class="rank-fail"><b>做错了会怎样：</b>' + esc(it.fail) + '</div>' : "")
+    +   (it.check ? '<div class="rank-check"><b>怎么验收：</b>' + esc(it.check) + '</div>' : "")
+    +   '<div class="rank-cost">参考花费：' + (costText ? "¥" + costText : "暂估不出") + '</div>'
+    +   '<div class="rank-dims">依据：' + esc(it.basis) + (it.standard ? '（' + esc(it.standard) + '）' : '')
+    +     '　·　排在前面是因为：' + esc(rankDimText(it.scores)) + '</div>'
     +   '<div class="sb-acts">'
     +     (it.ask ? '<button type="button" class="tbtn" data-act="rank-ask" data-idx="' + i + '">问设计师</button>' : "")
     +     '<button type="button" class="tbtn" data-act="rank-copy" data-idx="' + i + '">复制这一条</button>'
@@ -6004,11 +6096,7 @@ function sanitizeHistory(raw) {
       topic: String(h.topic || ""),
       title: String(h.title || msgs[0].text).slice(0, 60),
       messages: msgs,
-      conditions: {
-        area: String((h.conditions || {}).area || ""),
-        budget: String((h.conditions || {}).budget || "不限"),
-        note: String((h.conditions || {}).note || "")
-      },
+      conditions: pickConditions(h.conditions),
       usage: sanitizeUsage(h.usage),
       updatedAt: Number(h.updatedAt) || Date.now()
     });
@@ -6078,11 +6166,7 @@ function saveHistorySnapshot(meta, allowPending) {
     topic: meta.topic || "",
     title: truncateWidth(meta.topic || firstUser.text || "图片提问", 56),
     messages: msgs,
-    conditions: {
-      area: (meta.conditions || {}).area || "",
-      budget: (meta.conditions || {}).budget || "不限",
-      note: (meta.conditions || {}).note || ""
-    },
+    conditions: pickConditions(meta.conditions),
     usage: sanitizeUsage(meta.usage || state.usage),
     updatedAt: Date.now()
   };
@@ -6119,12 +6203,7 @@ function openHistory(id) {
     return o;
   });
 
-  const c = defaultConditions();
-  if (item.conditions) {
-    c.area = item.conditions.area || "";
-    c.budget = item.conditions.budget || "不限";
-    c.note = item.conditions.note || "";
-  }
+  const c = Object.assign(defaultConditions(), pickConditions(item.conditions || {}));
 
   /* 体验 8：不要冲掉当前空间正在填的条件 */
   const cur = condBySpace[item.spaceKey];
