@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#1b1917" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <meta name="color-scheme" content="light dark">
-<title>室内设计助手 0.1.9 · 对话式设计顾问</title>
+<title>室内设计助手 0.2.0 · 对话式设计顾问</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -919,6 +919,115 @@
   .card.mini .name { font-size:0.9375rem; }
   .card.mini .desc { font-size:0.8125rem; margin-top:2px; }
   @media (max-width: 640px) { .tool-grid { grid-template-columns:1fr 1fr; } }
+  /* ---------- 工具箱 AI 工作台 ---------- */
+  .tool-badges { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px; }
+  .tbadge {
+    font-size:0.6875rem; padding:2px 8px; border-radius:20px;
+    background:var(--accent-soft); color:var(--accent-dark); border:1px solid var(--accent-light);
+  }
+  .tbadge.muted { background:transparent; color:var(--text-4); border-color:var(--border); }
+  .tool-box {
+    background:var(--surface); border:1px solid var(--border-soft); border-radius:12px;
+    padding:12px 13px; margin-bottom:12px;
+  }
+  .tool-label { display:block; font-size:0.8125rem; color:var(--text-2); margin-bottom:6px; }
+  .tool-textarea {
+    width:100%; box-sizing:border-box; font:inherit; font-size:0.875rem; line-height:1.7;
+    color:var(--text); background:var(--surface-2); border:1px solid var(--border);
+    border-radius:10px; padding:10px 12px; resize:vertical; min-height:96px;
+  }
+  .tool-textarea:focus { outline:2px solid var(--accent); outline-offset:-1px; }
+  .tool-row-inline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .tool-examples { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .tool-examples .lbl { font-size:0.75rem; color:var(--text-4); }
+  .tool-imgs { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .tool-img { position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1px solid var(--border); }
+  .tool-img img { width:100%; height:100%; object-fit:cover; display:block; }
+  .tool-img-x {
+    position:absolute; top:0; right:0; width:20px; height:20px; border:0; cursor:pointer;
+    background:rgba(0,0,0,.55); color:#fff; font-size:0.8125rem; line-height:20px; padding:0;
+  }
+  .tool-fields { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:8px; margin-top:10px; }
+  .tool-field { display:flex; flex-direction:column; gap:4px; }
+  .tool-field .k { font-size:0.75rem; color:var(--text-4); }
+  .tool-field input {
+    font:inherit; font-size:0.8125rem; color:var(--text); background:var(--surface-2);
+    border:1px solid var(--border); border-radius:8px; padding:7px 9px; min-width:0;
+  }
+  .tool-ctrl { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .tool-inline { display:flex; align-items:center; gap:6px; font-size:0.78125rem; color:var(--text-3); }
+  .tool-inline select, .tool-ctrl select {
+    font:inherit; font-size:0.78125rem; color:var(--text); background:var(--surface-2);
+    border:1px solid var(--border); border-radius:8px; padding:5px 7px;
+  }
+  .tool-tempnote { font-size:0.75rem; color:var(--text-4); }
+  .tool-hint { font-size:0.75rem; color:var(--text-4); line-height:1.7; margin:0 0 14px; }
+  .tool-cachenote { font-size:0.75rem; color:var(--text-4); margin:-6px 0 8px; min-height:1em; }
+  .tool-out { margin:10px 0; }
+  .tool-empty { text-align:center; padding:26px 12px; color:var(--text-4); }
+  .tool-empty .et { font-size:0.9375rem; color:var(--text-3); margin-bottom:6px; }
+  .tool-empty .es { font-size:0.8125rem; line-height:1.7; }
+  .tool-warn {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-size:0.8125rem; line-height:1.75; color:var(--warn-text);
+    background:var(--warn-bg); border:1px solid var(--warn-border);
+    border-radius:10px; padding:10px 12px; margin-bottom:10px;
+  }
+  .tool-fallback { opacity:.96; }
+  .tool-fallback-t { font-size:0.75rem; color:var(--text-4); margin-bottom:8px; letter-spacing:.04em; }
+  .tool-result { display:flex; flex-direction:column; gap:10px; }
+  .tool-summary {
+    font-size:0.875rem; line-height:1.85; color:var(--text);
+    background:var(--surface-2); border:1px solid var(--border-soft);
+    border-radius:10px; padding:11px 13px;
+  }
+  .tool-block {
+    background:var(--surface); border:1px solid var(--border-soft);
+    border-radius:10px; padding:11px 13px;
+  }
+  .tool-block-t { font-size:0.75rem; color:var(--text-4); margin-bottom:6px; letter-spacing:.04em; }
+  .tool-card {
+    background:var(--surface); border:1px solid var(--border-soft);
+    border-radius:10px; padding:11px 13px;
+  }
+  .tool-card-head { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  .tool-card-head b { font-size:0.875rem; color:var(--text); }
+  .tool-contract {
+    font-size:0.8125rem; line-height:1.75; color:var(--accent-dark);
+    background:var(--accent-soft); border:1px solid var(--accent-light);
+    border-radius:9px; padding:8px 11px; margin-top:6px;
+  }
+  .tool-reply { padding:7px 0; border-bottom:1px solid var(--border-soft); }
+  .tool-reply:last-child { border-bottom:0; }
+  .tool-reply .tag {
+    display:inline-block; font-size:0.6875rem; padding:1px 7px; border-radius:20px;
+    background:var(--muted-bg); color:var(--text-3); margin-bottom:4px;
+  }
+  .tool-ul { margin:0; padding-left:1.1em; }
+  .tool-ul li { font-size:0.8125rem; line-height:1.8; color:var(--text-2); }
+  .tool-decision { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+  .tool-decision .rank-level { margin-left:0; font-size:0.8125rem; padding:3px 11px; }
+  .tool-sources {
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    margin:12px 0 4px; padding:10px 12px;
+    background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
+  }
+  .tool-sources .lbl { font-size:0.75rem; color:var(--text-4); }
+  .tool-sources .src {
+    font-size:0.75rem; color:var(--accent-dark); text-decoration:none;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .tool-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 6px; }
+  @media (max-width: 640px) {
+    .tool-ctrl { gap:6px; }
+    .tool-ctrl .tbtn { flex:0 1 auto; }
+    .tool-actions .tbtn { flex:1 1 46%; }
+    .tool-textarea { font-size:16px; }        /* 手机聚焦时不放大 */
+    .tool-field input { font-size:16px; }
+    .tool-fields { grid-template-columns:1fr; }
+    .tool-sources { flex-direction:column; align-items:flex-start; }
+    .tool-sources .src { white-space:normal; word-break:break-all; }
+  }
   /* 通用对照列表（报价陷阱 / 话术 / 该问什么 / 设计决策） */
   .tool-lead { font-size:0.875rem; color:var(--text-2); line-height:1.8; margin:0 0 12px; }
   .tool-row { padding:10px 0; border-bottom:1px solid var(--border-soft); }
@@ -965,7 +1074,7 @@
     <div class="ab-main" id="abMain">室内设计助手</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.1.9</span>
+  <span class="ver-tag" id="verTag">v0.2.0</span>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
   <button type="button" class="ab-btn hidden" id="abMoreBtn" data-act="toggle-more" aria-label="更多操作" title="更多操作">⋯</button>
@@ -1081,11 +1190,12 @@
         </div>
         <div class="set-row">
           <label for="tempSelect">灵活度（temperature）</label>
-          <select id="tempSelect">
-            <option value="0.3">稳定 0.3</option>
-            <option value="0.7">平衡 0.7</option>
-            <option value="1.2">发散 1.2</option>
-          </select>
+          <select id="tempSelect"></select>
+          <input type="number" id="tempCustomInput" class="hidden" min="0" max="2" step="0.1"
+                 placeholder="0 ~ 2 之间，例如 0.8" autocomplete="off">
+          <div class="set-hint" id="tempHint">
+            0.0 最严格、2.0 最发散；思考模式下 temperature 不生效（会自动省掉）。
+          </div>
         </div>
       </div>
     </details>
@@ -1279,7 +1389,7 @@
 </div>
 
 <script>/* ============================================================
-   室内设计助手 v0.1.9
+   室内设计助手 v0.2.0
    ------------------------------------------------------------
    本版新增「优先级排行榜」：把「钱该花在哪」从一句话变成一张表。
 
@@ -1760,9 +1870,9 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.1.9";
+const APP_VERSION  = "0.2.0";
 const BUILD_TAG    = "v15";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
-const BASE_TITLE   = "室内设计助手 0.1.9 · 对话式设计顾问";
+const BASE_TITLE   = "室内设计助手 0.2.0 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
 const WEB_SEARCH_URL = "https://api.deepseek.com/anthropic/v1/messages";
@@ -2242,10 +2352,31 @@ const state = {
   rankPreset: "balanced",  /* balanced | family | budget | quality */
   rankWeb: { open:false, space:"", name:"", keywords:"", busy:false },   /* 联网搜别人案例的窗口状态 */
 
+  /* 工具箱 AI 工作台（与聊天完全分开，互不干扰） */
+  tool: {
+    activeId: "",              /* traps | talk | ask | design */
+    input: "",
+    images: [],                /* 独立图片区，不混进聊天的 state.images */
+    web: true,                 /* 工具箱默认联网，可关 */
+    extra: {},                 /* 工具专用补充输入（总价 / 阶段 / 面积…） */
+    temperatureMode: "follow", /* follow 跟随设置 / custom 本工具临时 */
+    temperature: null,
+    busy: false,
+    result: null,
+    rawText: "",
+    sources: [],
+    error: "",
+    errorKind: "",             /* "" 正常 / "nokey" 没 Key / "net" 网络 / "api" 接口 / "parse" 解析 */
+    generatedAt: 0,
+    fromCache: false,
+    fallback: false            /* 是否正在显示静态兜底内容 */
+  },
+
 
 
 
   controller: null,
+  toolController: null,   /* 工具箱独立 AbortController，不跟聊天混用 */
   histExpanded: false,
   histQuery: "",
   histSpace: "",
@@ -2501,10 +2632,7 @@ function doRender() {
   if (state.view === "home")        view.innerHTML = viewHome();
   else if (state.view === "space")  view.innerHTML = viewSpace();
   else if (state.view === "rank")   view.innerHTML = viewRank();
-  else if (state.view === "traps")  view.innerHTML = viewTraps();
-  else if (state.view === "talk")   view.innerHTML = viewTalk();
-  else if (state.view === "ask")    view.innerHTML = viewAsk();
-  else if (state.view === "design") view.innerHTML = viewDesign();
+  else if (isToolView(state.view)) view.innerHTML = viewToolWorkbench(state.view);
   else                              view.innerHTML = viewChat();
 
   afterRender();
@@ -3120,9 +3248,9 @@ function refreshHistList() {
    ============================================================ */
 
 const TOOLS = [
-  { id:"traps",  icon:"📋", name:"报价单陷阱", desc:"哪些写法后面会加钱" },
-  { id:"talk",   icon:"🗣", name:"工头话术",   desc:"他说这话是什么意思" },
-  { id:"ask",    icon:"❓", name:"该问什么",   desc:"按阶段列好的问题" },
+  { id:"traps",  icon:"📋", name:"报价单陷阱", desc:"输入你的报价单，找出会加钱的地方" },
+  { id:"talk",   icon:"🗣", name:"工头话术",   desc:"把原话丢进来，翻译成人话" },
+  { id:"ask",    icon:"❓", name:"该问什么",   desc:"按你的阶段生成提问清单" },
   { id:"design", icon:"⚖️", name:"设计决策",   desc:"该不该做，为什么" }
 ];
 
@@ -3136,12 +3264,291 @@ function toolsHtml() {
   }).join("");
   return '<div class="sec-title">工具箱 · 装修防坑</div>'
        + '<div class="tool-grid">' + cards + '</div>'
-       + '<p class="tool-lead">这四件是照着说、照着问、照着核对用的，'
-       + '不是让你多读一遍知识。</p>';
+       + '<p class="tool-lead">这四个都能<b>填自己的情况、传截图、联网核对</b>，'
+       + '生成针对你家的分析 —— 不是让你再看一遍通用清单。</p>';
+}
+
+/* ---------- 统一 AI 工作台 ---------- */
+
+function toolImgStripHtml() {
+  const imgs = state.tool.images || [];
+  if (!imgs.length) return "";
+  return '<div class="tool-imgs">' + imgs.map(function (x) {
+    return '<div class="tool-img"><img src="' + escAttr(x.dataUrl) + '" alt="上传的图片">'
+      + '<button type="button" class="tool-img-x" data-act="tool-remove-image" data-id="' + escAttr(x.id) + '" aria-label="移除">×</button>'
+      + '</div>';
+  }).join("") + '</div>';
+}
+
+function toolFieldsHtml(id) {
+  const meta = TOOL_META[id];
+  if (!meta.fields || !meta.fields.length) return "";
+  return '<div class="tool-fields">' + meta.fields.map(function (f) {
+    const v = (state.tool.extra || {})[f.k] || "";
+    return '<label class="tool-field">'
+      + '<span class="k">' + esc(f.label) + '</span>'
+      + '<input type="text" id="toolField_' + escAttr(f.k) + '" data-field="' + escAttr(f.k) + '"'
+      + ' value="' + escAttr(v) + '" placeholder="' + escAttr(f.ph) + '" autocomplete="off">'
+      + '</label>';
+  }).join("") + '</div>';
+}
+
+function toolHeadHtml(id) {
+  const meta = TOOL_META[id];
+  return '<div class="sec-title">' + meta.icon + ' ' + esc(meta.title) + '</div>'
+    + '<p class="tool-lead">' + esc(meta.desc) + '</p>'
+    + '<div class="tool-badges">'
+    +   '<span class="tbadge">AI 生成</span>'
+    +   '<span class="tbadge">可联网核对</span>'
+    +   '<span class="tbadge muted">内置清单仅作兜底</span>'
+    + '</div>';
+}
+
+function toolInputHtml(id) {
+  const meta = TOOL_META[id];
+  const t = state.tool;
+  const ex = (meta.examples || []).map(function (s, i) {
+    return '<button type="button" class="chip" data-act="tool-example" data-idx="' + i + '">' + esc(truncateWidth(s, 22)) + '</button>';
+  }).join("");
+  return '<div class="tool-box">'
+    + '<label class="tool-label" for="toolInput">' + esc(meta.inputLabel) + '</label>'
+    + '<textarea id="toolInput" class="tool-textarea" rows="6" placeholder="' + escAttr(meta.placeholder) + '">' + esc(t.input || "") + '</textarea>'
+    + '<div class="tool-row-inline">'
+    +   (ex ? '<div class="tool-examples"><span class="lbl">示例：</span>' + ex + '</div>' : "")
+    +   '<span class="grow"></span>'
+    +   '<button type="button" class="tbtn" data-act="tool-pick-image">📷 传图</button>'
+    + '</div>'
+    + toolImgStripHtml()
+    + toolFieldsHtml(id)
+    + '</div>';
+}
+
+function toolControlsHtml(id) {
+  const t = state.tool;
+  const tempLabel = function () {
+    if (t.temperatureMode === "follow") return "跟随设置（" + String(settings.temperature) + "）";
+    return "本工具临时（" + String(toolTemperature()) + "）";
+  };
+  const opts = TEMP_PRESETS.map(function (p) {
+    const sel = (t.temperature !== null && Math.abs(Number(t.temperature) - p.v) < 1e-9) ? " selected" : "";
+    return '<option value="' + p.v + '"' + sel + '>' + esc(p.label) + '</option>';
+  }).join("");
+  const tier = modelTier();
+  const thinking = isThinking();
+  return '<div class="tool-ctrl">'
+    + '<button type="button" class="tbtn ' + (t.web ? "active" : "") + '" data-act="tool-toggle-web"'
+    +   ' title="开启后会先检索真实资料，结果里附来源链接">' + (t.web ? "🌐 联网 开" : "🌐 联网 关") + '</button>'
+    + '<label class="tool-inline">灵活度'
+    +   '<select id="toolTempMode" data-act="tool-temp-mode">'
+    +     '<option value="follow"' + (t.temperatureMode === "follow" ? " selected" : "") + '>跟随设置</option>'
+    +     '<option value="custom"' + (t.temperatureMode === "custom" ? " selected" : "") + '>本次临时</option>'
+    +   '</select>'
+    + '</label>'
+    + (t.temperatureMode === "custom"
+        ? '<select id="toolTempValue" data-act="tool-temp">' + opts + '</select>'
+        : '<span class="tool-tempnote">' + esc(tempLabel()) + '</span>')
+    + '<span class="tool-tempnote">' + esc((tier ? tier.label : "默认") + (thinking ? " · 思考（temperature 不生效）" : "")) + '</span>'
+    + '<span class="grow"></span>'
+    + (t.busy
+        ? '<button type="button" class="tbtn primary" data-act="tool-stop">■ 停止</button>'
+        : '<button type="button" class="tbtn primary" data-act="tool-run">✨ AI 生成</button>')
+    + (t.result || t.rawText ? '<button type="button" class="tbtn" data-act="tool-retry">重新生成</button>' : "")
+    + '<button type="button" class="tbtn" data-act="tool-clear">清空</button>'
+    + '</div>'
+    + '<p class="tool-hint">生成的结论只基于你填的内容和检索结果，不构成法律意见；'
+    + '价格请以实际询价为准。</p>';
+}
+
+/* 统一工作台 */
+/* ---------- 结果区 ---------- */
+
+function toolSourcesHtml(list) {
+  if (!list || !list.length) return "";
+  return '<div class="tool-sources"><div class="lbl">来源</div>' + list.map(function (u, k) {
+    const s = String(u);
+    const ok = /^https?:\/\//i.test(s);
+    return ok
+      ? '<a class="src" href="' + escAttr(s) + '" target="_blank" rel="noopener noreferrer">[' + (k + 1) + '] ' + esc(shortHost(s)) + '</a>'
+      : '<span class="src">[' + (k + 1) + '] ' + esc(truncateWidth(s, 40)) + '</span>';
+  }).join("") + '</div>';
+}
+
+function toolActionsHtml(id) {
+  return '<div class="tool-actions">'
+    + '<button type="button" class="tbtn" data-act="tool-copy">复制全部</button>'
+    + '<button type="button" class="tbtn" data-act="tool-export">导出 Markdown</button>'
+    + '<button type="button" class="tbtn" data-act="tool-ask">问设计师</button>'
+    + '<button type="button" class="tbtn" data-act="tool-retry">重新生成</button>'
+    + '<button type="button" class="tbtn" data-act="tool-save-to-chat">保存到当前对话</button>'
+    + '</div>';
+}
+
+function toolResultTraps(r) {
+  const risks = (r.risks || []).map(function (x, i) {
+    const lvl = String(x.level || "");
+    const cls = lvl.indexOf("高") >= 0 ? "lv-must" : (lvl.indexOf("中") >= 0 ? "lv-rec" : "lv-opt");
+    return '<div class="tool-card">'
+      + '<div class="tool-card-head"><span class="rank-level ' + cls + '">' + esc(lvl || "待判") + '</span>'
+      + '<b>' + esc(truncateWidth(String(x.original || ("第 " + (i + 1) + " 条")), 40)) + '</b></div>'
+      + (x.problem ? '<div class="tool-mean"><b>问题：</b>' + esc(x.problem) + '</div>' : "")
+      + (x.consequence ? '<div class="tool-mean"><b>后面会怎样：</b>' + esc(x.consequence) + '</div>' : "")
+      + (x.response ? '<div class="tool-mean"><b>你可以这么回：</b>' + esc(x.response) + '</div>' : "")
+      + (x.contract ? '<div class="tool-contract"><b>写进合同：</b>' + esc(x.contract) + '</div>' : "")
+      + '</div>';
+  }).join("");
+  const missing = (r.missing || []).length
+    ? '<div class="tool-block"><div class="tool-block-t">可能漏项</div><ul class="tool-ul">'
+      + (r.missing || []).map(function (m) { return '<li>' + esc(m) + '</li>'; }).join("") + '</ul></div>' : "";
+  return (r.summary ? '<div class="tool-summary">' + esc(r.summary) + '</div>' : "")
+       + risks
+       + missing
+       + (r.paymentAdvice ? '<div class="tool-block"><div class="tool-block-t">付款节点建议</div><div class="tool-mean">' + esc(r.paymentAdvice) + '</div></div>' : "");
+}
+
+function toolResultTalk(r) {
+  const replies = (r.replies || []).map(function (x) {
+    return '<div class="tool-reply"><span class="tag">' + esc(x.tone || "回复") + '</span>'
+      + '<div class="tool-mean">' + esc(x.text || "") + '</div></div>';
+  }).join("");
+  const rows = [
+    ["字面意思", r.literal],
+    ["大概率意思", r.likely],
+    ["风险", r.risk]
+  ].filter(function (x) { return x[1]; }).map(function (x) {
+    return '<div class="tool-mean"><b>' + esc(x[0]) + '：</b>' + esc(x[1]) + '</div>';
+  }).join("");
+  return (r.say ? '<div class="tool-summary">他说：「' + esc(r.say) + '」</div>' : "")
+       + (rows ? '<div class="tool-block">' + rows + '</div>' : "")
+       + (replies ? '<div class="tool-block"><div class="tool-block-t">可以这么回</div>' + replies + '</div>' : "")
+       + (r.contract ? '<div class="tool-contract"><b>写进合同 / 确认单：</b>' + esc(r.contract) + '</div>' : "")
+       + (r.next ? '<div class="tool-block"><div class="tool-block-t">下一步</div><div class="tool-mean">' + esc(r.next) + '</div></div>' : "");
+}
+
+function toolResultAsk(r) {
+  const groups = (r.stageGroups || []).map(function (g) {
+    const items = (g.items || []).map(function (x) {
+      return '<div class="tool-row">'
+        + '<div class="tool-say">' + esc(x.q || "") + '</div>'
+        + (x.why ? '<div class="tool-mean"><b>为什么问：</b>' + esc(x.why) + '</div>' : "")
+        + (x.answer ? '<div class="tool-mean"><b>对方可能说：</b>' + esc(x.answer) + '</div>' : "")
+        + (x.judge ? '<div class="tool-mean"><b>怎么判断：</b>' + esc(x.judge) + '</div>' : "")
+        + (x.followup ? '<div class="tool-mean"><b>继续追问：</b>' + esc(x.followup) + '</div>' : "")
+        + (x.contract ? '<div class="tool-contract"><b>写进合同：</b>' + esc(x.contract) + '</div>' : "")
+        + '</div>';
+    }).join("");
+    return '<details class="rank-item" open><summary>'
+      + '<div class="rank-head"><b>' + esc(g.stage || "问题") + '</b><span class="grow"></span></div>'
+      + '<div class="rank-why">' + (g.items || []).length + ' 个问题</div>'
+      + '</summary><div class="rank-detail">' + items + '</div></details>';
+  }).join("");
+  return groups || '<div class="tool-summary">没有生成出问题清单，可以补充一下你的阶段和户型再试。</div>';
+}
+
+function toolResultDesign(r) {
+  const d = String(r.decision || "");
+  const cls = d.indexOf("不建议") >= 0 ? "lv-must" : (d.indexOf("有条件") >= 0 ? "lv-rec" : "lv-opt");
+  const alts = (r.alternatives || []).length
+    ? '<div class="tool-block"><div class="tool-block-t">替代方案</div><ul class="tool-ul">'
+      + (r.alternatives || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ul></div>' : "";
+  const rows = [
+    ["为什么做", r.why],
+    ["代价", r.cost],
+    ["什么情况别做", r.avoid],
+    ["怎么验收 / 维护", r.verify]
+  ].filter(function (x) { return x[1]; }).map(function (x) {
+    return '<div class="rank-verify-row"><span class="k">' + esc(x[0]) + '</span><span class="v">' + esc(x[1]) + '</span></div>';
+  }).join("");
+  return '<div class="tool-decision"><span class="rank-level ' + cls + '">' + esc(d || "结论") + '</span></div>'
+       + (rows ? '<div class="rank-verify">' + rows + '</div>' : "")
+       + alts;
+}
+
+function toolResultHtml(id, r) {
+  let body = "";
+  if (id === "traps") body = toolResultTraps(r);
+  else if (id === "talk") body = toolResultTalk(r);
+  else if (id === "ask") body = toolResultAsk(r);
+  else body = toolResultDesign(r);
+  return '<div class="tool-result">' + body + '</div>'
+       + toolSourcesHtml(state.tool.sources)
+       + toolActionsHtml(id);
+}
+
+function toolFallbackBodyHtml(id) {
+  if (id === "traps") return viewFallbackTraps();
+  if (id === "talk") return viewFallbackTalk();
+  if (id === "ask") return viewFallbackAsk();
+  return viewFallbackDesign();
+}
+
+function toolOutputHtml(id) {
+  const t = state.tool;
+
+  if (t.busy) {
+    return '<div class="tool-out"><div class="dots"><span></span><span></span><span></span></div>'
+      + '<div class="thinking">' + (t.web ? "正在联网检索并整理…" : "正在整理…") + '</div></div>';
+  }
+
+  if (t.errorKind === "nokey") {
+    return '<div class="tool-out"><div class="tool-warn">'
+      + '还没有填 <b>DeepSeek API Key</b>，现在显示的是<b>内置通用参考</b>，不是根据你的情况生成的。'
+      + '<button type="button" class="tbtn" data-act="tool-open-settings">去设置</button>'
+      + '</div></div>'
+      + '<div class="tool-out tool-fallback"><div class="tool-fallback-t">内置通用参考</div>'
+      + toolFallbackBodyHtml(id) + '</div>';
+  }
+
+  if (t.fallback) {
+    return '<div class="tool-out"><div class="tool-warn">'
+      + esc(t.error || "这次没生成成功。") + ' 下面是<b>内置通用参考</b>。'
+      + '<button type="button" class="tbtn" data-act="tool-retry">重试</button>'
+      + '</div></div>'
+      + '<div class="tool-out tool-fallback"><div class="tool-fallback-t">内置通用参考</div>'
+      + toolFallbackBodyHtml(id) + '</div>';
+  }
+
+  if (t.errorKind === "cancel" && !t.result && !t.rawText) {
+    return '<div class="tool-out"><div class="tool-warn">' + esc(t.error || "已停止生成。")
+      + '<button type="button" class="tbtn" data-act="tool-retry">重试</button></div></div>';
+  }
+
+  if (t.result) {
+    const note = t.fromCache ? '<div class="tool-cachenote">来自缓存 · '
+      + (t.generatedAt ? new Date(t.generatedAt).toLocaleString() : "") + '</div>' : "";
+    return note + toolResultHtml(id, t.result);
+  }
+
+  if (t.rawText) {
+    return '<div class="tool-out"><div class="tool-warn">这次没有返回结构化结果，下面是原始内容。</div></div>'
+      + '<div class="tool-result">' + safeMd(t.rawText, false) + '</div>'
+      + toolSourcesHtml(t.sources) + toolActionsHtml(id);
+  }
+
+  const need = t.web ? "填好内容后点「AI 生成」，会先联网检索，再按你的情况分析。" : "填好内容后点「AI 生成」。";
+  return '<div class="tool-out tool-empty"><div class="et">还没有生成</div><div class="es">' + esc(need) + '</div></div>';
+}
+
+function viewToolWorkbench(id) {
+  /* 直接刷新或从别处回到工具视图时，保证 activeId 跟上 */
+  if (state.tool.activeId !== id) {
+    state.tool.activeId = id;
+    if (!state.tool.input && !(state.tool.images || []).length) state.tool.extra = {};
+  }
+  return toolHeadHtml(id)
+       + toolInputHtml(id)
+       + toolControlsHtml(id)
+       + '<div id="toolCacheNote" class="tool-cachenote">' + (state.tool.fromCache ? "已读取上次生成的结果（点「重新生成」可忽略缓存）" : "") + '</div>'
+       + toolOutputHtml(id);
 }
 
 /* ---------- ② 报价单陷阱 ---------- */
-function viewTraps() {
+function viewTraps()  { return viewFallbackTraps(); }
+function viewTalk()   { return viewFallbackTalk(); }
+function viewAsk()    { return viewFallbackAsk(); }
+
+/* ---------- 四个工具的静态兜底内容（无 Key / 断网 / 失败时显示） ---------- */
+
+function viewFallbackTraps() {
   const body = TRAPS.map(function (g) {
     const rows = g.items.map(function (it) {
       return '<div class="tool-row">'
@@ -3155,15 +3562,11 @@ function viewTraps() {
       + '<div class="rank-why">' + g.items.length + ' 种常见写法</div>'
       + '</summary><div class="rank-detail">' + rows + '</div></details>';
   }).join("");
-  return '<div class="sec-title">报价单陷阱对照</div>'
-       + '<p class="tool-lead">报价单上看着正常的写法，后面往往对应一笔增项。'
-       + '对着自己的报价单一条一条核。</p>'
-       + body
+  return body
        + '<p class="tool-foot">以上为行业常见表述，不针对任何公司。具体以合同文本为准。</p>';
 }
 
-/* ---------- ③ 工头话术翻译 ---------- */
-function viewTalk() {
+function viewFallbackTalk() {
   const rows = TALK.map(function (t) {
     return '<div class="tool-row">'
       + '<div class="tool-say">他说：「' + esc(t.say) + '」</div>'
@@ -3171,18 +3574,14 @@ function viewTalk() {
       + '<div class="tool-mean"><b>你可以这么接：</b>' + esc(t.better) + '</div>'
       + '</div>';
   }).join("");
-  return '<div class="sec-title">工头话术翻译</div>'
-       + '<p class="tool-lead">不是把人往坏处想 —— 是把「听着合理」的话翻译成「具体要做什么」，'
-       + '这样你才知道该问什么、该写进合同什么。</p>'
-       + '<details class="rank-item" open><summary>'
+  return '<details class="rank-item" open><summary>'
        + '<div class="rank-head"><b>对照表</b><span class="grow"></span></div>'
        + '<div class="rank-why">' + TALK.length + ' 句常听到的话</div>'
        + '</summary><div class="rank-detail">' + rows + '</div></details>'
        + '<p class="tool-foot">判断标准始终是同一条：让说法落到「合同文字 + 可验收的动作」上。</p>';
 }
 
-/* ---------- ④ 该问什么清单 ---------- */
-function viewAsk() {
+function viewFallbackAsk() {
   const body = ASK_STAGES.map(function (st) {
     const rows = st.items.map(function (it) {
       return '<div class="tool-row">'
@@ -3195,10 +3594,7 @@ function viewAsk() {
       + '<div class="rank-why">' + st.items.length + ' 个问题</div>'
       + '</summary><div class="rank-detail">' + rows + '</div></details>';
   }).join("");
-  return '<div class="sec-title">该问什么清单</div>'
-       + '<p class="tool-lead">按阶段列，不按空间列 —— 按空间会和排行榜打架。'
-       + '每个问题都写了「为什么问」，知道为什么才敢开口问。</p>'
-       + body
+  return body
        + '<p class="tool-foot">问之前不用背，把这一屏打开照着念就行。'
        + '对方答不上来的问题，本身就是信息。</p>';
 }
@@ -3226,19 +3622,19 @@ function designBlockHtml(spaceKey) {
   }).join("");
 }
 
-function viewDesign() {
+function viewFallbackDesign() {
+  /* 空间页的「设计决策」section 也用它，所以这里不带标题 */
   const body = Object.keys(DATA).map(function (key) {
     const sp = DATA[key];
     return '<div class="sec-title">' + sp.icon + ' ' + esc(sp.name) + '</div>'
          + designBlockHtml(key);
   }).join("");
-  return '<div class="sec-title">设计决策对照</div>'
-       + '<p class="tool-lead">这里回答「这个空间该不该做某种设计」，'
-       + '和排行榜的「该买什么、该装什么」是两条腿：一个管设计，一个管施工。</p>'
-       + body
+  return body
        + '<p class="tool-foot">同一个设计在不同户型、不同生活习惯下结论完全不同，'
        + '所以每一项都写了「什么情况别做」—— 对照自己家的情况看。</p>';
 }
+
+function viewDesign() { return viewFallbackDesign(); }
 
 function viewSpace() {
   const sp = DATA[state.space];
@@ -3343,6 +3739,7 @@ function viewChat() {
       </div>
     </div>
     <input type="file" id="imgInput" class="hidden" accept="image/*" multiple>
+    <input type="file" id="toolImgInput" class="hidden" accept="image/*" multiple>
   `;
 }
 
@@ -5166,17 +5563,802 @@ function rankItems(spaceKey, tab, preset) {
 
 /* ---- 导航 ---- */
 /* 工具箱：四个独立视图，标题和面包屑跟着一起变 */
+/* ============================================================
+   工具箱 AI 工作台：常量与提示词
+   - 原来的静态数据（TRAPS / TALK / ASK_STAGES / DESIGN_DECISIONS）保留，
+     只作为「兜底」，不再是主展示内容
+   - 每个工具：可输入、可传图、可联网、可生成结构化结果、可复制导出追问
+   ============================================================ */
+
+const TOOL_CACHE_PREFIX = "design_tool_ai_v1_";
+const TOOL_CACHE_LIMIT  = 20;    /* 每个工具最多 20 条 */
+const TOOL_CACHE_TOTAL  = 80;    /* 全部工具合计上限 */
+const TOOL_CACHE_MAXLEN = 20000; /* 单条结果超过 20k 字只留摘要 */
+
+/* 灵活度档位（设置与工具箱共用） */
+const TEMP_PRESETS = [
+  { v: 0.0, label: "0.0 严格" },
+  { v: 0.1, label: "0.1 极稳" },
+  { v: 0.2, label: "0.2 很稳" },
+  { v: 0.3, label: "0.3 稳定" },
+  { v: 0.4, label: "0.4 偏稳" },
+  { v: 0.5, label: "0.5 中稳" },
+  { v: 0.7, label: "0.7 平衡" },
+  { v: 0.9, label: "0.9 稍发散" },
+  { v: 1.0, label: "1.0 标准发散" },
+  { v: 1.2, label: "1.2 发散" },
+  { v: 1.4, label: "1.4 创意" },
+  { v: 1.6, label: "1.6 很创意" },
+  { v: 1.8, label: "1.8 狂野" },
+  { v: 2.0, label: "2.0 最大" }
+];
+const TEMP_MIN = 0, TEMP_MAX = 2, TEMP_DEFAULT = 0.7;
+
+/* 四个工具的详细元信息：文案、示例、专用补充输入、提示词 */
 const TOOL_META = {
+  traps: {
+    icon: "📋", title: "报价单陷阱",
+    desc: "把报价单粘进来（或传截图），找出后面会加钱的地方",
+    cardDesc: "AI 分析，可联网核对",
+    inputLabel: "报价单文字 / 截图",
+    placeholder: "把报价单里让你不放心的几行粘进来，例如：\n\n水电改造：按实际发生量结算，45 元/米\n防水：85 元/㎡（含材料）\n增项：按现场实际情况结算\n付款：签约付 50%，开工付 30%，完工付 20%",
+    examples: [
+      "水电改造：按实际发生量结算，45 元/米；增项按现场实际结算",
+      "材料由施工方统一采购，均为优质品牌，价格已含在总价内",
+      "签约付 50%，开工付 30%，完工付 20%，尾款完工当日结清",
+      "报价单只写了大项总价，明细（人工/辅料/主材）分开另算"
+    ],
+    fields: [
+      { k:"total",   label:"报价总价", ph:"例如 12.8 万" },
+      { k:"pay",     label:"付款节点", ph:"例如 5:3:2 / 按进度" },
+      { k:"extra",   label:"增项说法", ph:"例如 按实际结算" }
+    ],
+    promptKey: "traps",
+    fallbackKey: "TRAPS"
+  },
+  talk: {
+    icon: "🗣", title: "工头话术",
+    desc: "他是怎么说的？看看大概率是什么意思、可以怎么接",
+    cardDesc: "把原话丢进来，翻译成人话",
+    inputLabel: "工头原话 / 聊天记录",
+    placeholder: "把他说的话原样贴进来，例如：\n\n「这个不用做，纯浪费钱，我们都是这么干的」\n「先交定金锁定优惠，晚了名额就没了」",
+    examples: [
+      "这个不用做，纯浪费钱，我们都是这么干的",
+      "你先交个定金把优惠锁定，晚了名额就没了",
+      "材料你不用管，我们统一采购，比你自己买便宜",
+      "这个尺寸差不多就行，不用那么精确",
+      "验收就不用写字据了，都是熟人"
+    ],
+    fields: [
+      { k:"stage",   label:"当前阶段", ph:"例如 水电阶段" },
+      { k:"worry",   label:"你担心什么", ph:"例如 怕他偷工减料" }
+    ],
+    promptKey: "talk",
+    fallbackKey: "TALK"
+  },
+  ask: {
+    icon: "❓", title: "该问什么",
+    desc: "按你的户型和阶段，生成一份可以直接照着问的清单",
+    cardDesc: "按阶段生成问题清单",
+    inputLabel: "你的情况（户型 / 面积 / 阶段 / 最担心的事）",
+    placeholder: "简单说说你家的情况，例如：\n\n89 平两室一厅，毛坯，准备签合同了。\n最担心增项和工期拖延。家里有老人，卫生间想做得安全些。",
+    examples: [
+      "89 平两室一厅毛坯，准备签合同，最担心增项",
+      "老房改造，水电要全改，怕被糊弄，不知道盯什么",
+      "已经开工了，瓷砖快贴完，接下来该盯哪些节点",
+      "家里有老人小孩，想做适老化，不知道要提前问什么"
+    ],
+    fields: [
+      { k:"stage",  label:"当前阶段", ph:"例如 签合同前" },
+      { k:"area",   label:"面积 / 户型", ph:"例如 89 平两室" },
+      { k:"budget", label:"预算档位", ph:"例如 15~20 万" }
+    ],
+    promptKey: "ask",
+    fallbackKey: "ASK_STAGES"
+  },
+  design: {
+    icon: "⚖️", title: "设计决策",
+    desc: "某个设计该不该做？按你家的条件给结论和替代方案",
+    cardDesc: "该不该做，为什么",
+    inputLabel: "想做什么设计 + 你家的情况",
+    placeholder: "例如：\n\n想在厨房做中岛，厨房大概 2.3 米宽、3.6 米长，层高 2.7 米。\n家里两口人，做饭频率中等，预算一般。",
+    examples: [
+      "厨房宽 2.3 米，想做中岛，值不值",
+      "客厅层高 2.6 米，想做无主灯可以吗",
+      "卫生间只有 3.5㎡，想做干湿分离还是浴帘",
+      "卧室 11㎡，想做踏入式衣帽间合适吗",
+      "只有一个阳台还要晾衣服，能不能并进客厅"
+    ],
+    fields: [
+      { k:"space",  label:"空间", ph:"例如 厨房" },
+      { k:"size",   label:"尺寸 / 层高", ph:"例如 2.3×3.6 米，层高 2.7" },
+      { k:"people", label:"人口 / 习惯", ph:"例如 两口人，做饭少" },
+      { k:"budget", label:"预算 / 风格", ph:"例如 预算一般，喜欢简洁" }
+    ],
+    promptKey: "design",
+    fallbackKey: "DESIGN_DECISIONS"
+  }
+};
+
+/* 所有工具都必须遵守的底线要求 */
+const TOOL_SYSTEM_BASE = [
+  "你是室内装修顾问，输出的是经验判断，不是法律意见。",
+  "只基于用户提供的信息和你检索到的资料作答；不确定就明确说「不确定」。",
+  "禁止编造 URL、价格、规范编号、品牌型号。",
+  "用到联网检索结果时，必须在对应句子末尾标注 [1] [2]，序号与来源列表一致。",
+  "如果本次没有检索到可验证来源，就明确写「本次没有检索到可验证来源」，不要用记忆里的链接凑数。",
+  "信息不足时：先给通用判断，再只问一个最关键的问题，不要一次抛一堆问题。",
+  "涉及承重结构、燃气、电气、防水的改动，必须提醒找有资质的专业单位。",
+  "价格一律写区间，并注明「以实际询价为准」。",
+  "如果输出表格，最多 4 列，保证手机竖屏不用横滑。",
+  "结尾给出 3 个可以继续追问的问题。"
+].join("\n");
+
+/* 只输出 JSON 的硬性要求（结构化生成时用） */
+const TOOL_JSON_RULE = "\n\n【输出格式】只输出一个合法的 JSON 对象，不要输出 Markdown 代码块、不要任何解释文字。字段名和结构必须严格按要求。";
+
+/* 各工具的结构化输出要求 */
+const TOOL_PROMPTS = {
+  traps: {
+    schema: '{"summary":"总风险判断","risks":[{"level":"高/中/低","original":"报价单原文或位置","problem":"问题是什么","consequence":"后面会怎样加钱","response":"你可以怎么回","contract":"建议写进合同的条款","source":["[1]"]}],"missing":["可能漏项"],"paymentAdvice":"付款节点建议"}',
+    role: "你是一位帮业主审装修报价单的顾问。逐条找出：重复计价、漏项、描述模糊、单价异常、材料型号不明、按实结算、增项口子、付款节点风险。",
+    user: function (input, extra, webNote) {
+      return "【业主的报价单 / 描述】\n" + (input || "（未提供文字，请看图片）") +
+        "\n\n【补充信息】总价：" + (extra.total || "未提供") +
+        "；付款节点：" + (extra.pay || "未提供") +
+        "；增项说法：" + (extra.extra || "未提供") +
+        webNote +
+        "\n\n请输出 JSON：" + this.schema;
+    }
+  },
+  talk: {
+    schema: '{"say":"原话","literal":"字面意思","likely":"大概率意思","risk":"风险","replies":[{"tone":"缓和","text":"..."},{"tone":"直接","text":"..."},{"tone":"合同式","text":"..."}],"contract":"要写进合同或确认单的内容","next":"下一步动作"}',
+    role: "你把工头/施工方说的话翻译成业主能听懂的意思，并给出稳妥的应对说法。语气要中立：既不要一味把人往坏处想，也不要替对方开脱 —— 落到「具体要做什么、要写进什么文件」上。",
+    user: function (input, extra, webNote) {
+      return "【他说的话】\n" + (input || "（未提供文字，请看图片）") +
+        "\n\n【补充信息】当前阶段：" + (extra.stage || "未提供") +
+        "；业主担心：" + (extra.worry || "未提供") +
+        webNote +
+        "\n\n请输出 JSON：" + this.schema;
+    }
+  },
+  ask: {
+    schema: '{"stageGroups":[{"stage":"签合同前","items":[{"q":"问题","why":"为什么问","answer":"对方可能怎么答","judge":"怎么判断","followup":"继续追问什么","contract":"写进合同哪一句"}]}]}',
+    role: "你帮业主准备一份「照着问就行」的提问清单。按阶段组织：签合同前 / 定方案时 / 开工前 / 每个施工节点 / 出问题时。每个问题都要能直接念出来，并写清为什么问、对方可能怎么答、怎么判断、怎么追问、要写进合同哪一句。",
+    user: function (input, extra, webNote) {
+      return "【业主的情况】\n" + (input || "（未提供文字，请看图片）") +
+        "\n\n【补充信息】阶段：" + (extra.stage || "未提供") +
+        "；面积户型：" + (extra.area || "未提供") +
+        "；预算：" + (extra.budget || "未提供") +
+        webNote +
+        "\n\n请输出 JSON：" + this.schema;
+    }
+  },
+  design: {
+    schema: '{"decision":"建议做 / 不建议做 / 有条件做","why":"原因","cost":"代价","avoid":"什么情况别做","alternatives":["替代方案"],"verify":"怎么验收或维护","sources":["url"]}',
+    role: "你判断某个装修设计「该不该做」。结论必须对应业主给出的实际条件（尺寸、层高、采光、人口、习惯、预算），不要给放之四海皆准的套话。",
+    user: function (input, extra, webNote) {
+      return "【业主想做/在纠结的设计】\n" + (input || "（未提供文字，请看图片）") +
+        "\n\n【补充信息】空间：" + (extra.space || "未提供") +
+        "；尺寸层高：" + (extra.size || "未提供") +
+        "；人口习惯：" + (extra.people || "未提供") +
+        "；预算风格：" + (extra.budget || "未提供") +
+        webNote +
+        "\n\n请输出 JSON：" + this.schema;
+    }
+  }
+};
+
+/* 工具 ID → 静态兜底数据（无 Key / 断网 / 失败时用） */
+function toolFallbackData(id) {
+  if (id === "traps")  return TRAPS;
+  if (id === "talk")   return TALK;
+  if (id === "ask")    return ASK_STAGES;
+  if (id === "design") return DESIGN_DECISIONS;
+  return null;
+}
+
+/* 兼容旧引用 */
+const TOOL_TITLES = {
   traps:  { title:"报价单陷阱", views:true },
   talk:   { title:"工头话术",   views:true },
   ask:    { title:"该问什么",   views:true },
   design: { title:"设计决策",   views:true }
 };
+/* ============================================================
+   工具箱调用层：缓存、联网检索、结构化生成、取消
+   重要：全部走 state.toolController，绝不碰聊天的 state.controller
+   ============================================================ */
+
+function toolHash(s) {
+  const str = String(s || "");
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+/* 当前这条请求实际用的灵活度 */
+function toolTemperature() {
+  const t = state.tool;
+  if (t.temperatureMode === "custom" && t.temperature !== null && t.temperature !== undefined) {
+    const v = Number(t.temperature);
+    if (isFinite(v) && v >= TEMP_MIN && v <= TEMP_MAX) return v;
+    return TEMP_DEFAULT;
+  }
+  return settings.temperature;
+}
+
+/* ---------- 缓存（localStorage，刷新后仍在） ---------- */
+
+function toolCacheKey(id) {
+  const t = state.tool;
+  const raw = [
+    id,
+    String(t.input || "").slice(0, 2000),
+    (t.images || []).length,
+    JSON.stringify(t.extra || {}),
+    state.space || "",
+    settings.modelKey,
+    t.web ? "w1" : "w0",
+    String(toolTemperature())
+  ].join("|");
+  return TOOL_CACHE_PREFIX + id + "_" + toolHash(raw);
+}
+
+const LS_TOOL_CACHE_INDEX = "design_tool_ai_index_v1";
+
+function toolCacheIndex() {
+  try {
+    const raw = store.get(LS_TOOL_CACHE_INDEX);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (_) { return []; }
+}
+function toolCacheWriteIndex(arr) {
+  try { store.set(LS_TOOL_CACHE_INDEX, JSON.stringify(arr.slice(0, TOOL_CACHE_TOTAL))); } catch (_) {}
+}
+function toolCacheSweep() {
+  let arr = toolCacheIndex();
+  /* 每工具最多 LIMIT，总量最多 TOTAL，超限淘汰最旧的 */
+  const byTool = {};
+  const kept = [];
+  arr.forEach(function (e) {
+    if (!e || !e.id || !e.key) return;
+    byTool[e.id] = byTool[e.id] || 0;
+    if (byTool[e.id] >= TOOL_CACHE_LIMIT) { try { store.remove(e.key); } catch (_) {} return; }
+    byTool[e.id]++;
+    if (kept.length >= TOOL_CACHE_TOTAL) { try { store.remove(e.key); } catch (_) {} return; }
+    kept.push(e);
+  });
+  toolCacheWriteIndex(kept);
+  return kept;
+}
+function toolCacheRemember(key, id) {
+  let arr = toolCacheIndex().filter(function (e) { return e && e.key !== key; });
+  arr.unshift({ key: key, id: id, at: Date.now() });
+  toolCacheWriteIndex(arr);
+  toolCacheSweep();
+}
+function toolCacheGet(key) {
+  try {
+    const raw = store.get(key);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (!o || !o.at) return null;
+    return o;
+  } catch (_) { return null; }
+}
+function toolCacheSet(key, payload) {
+  try {
+    let json = JSON.stringify(payload);
+    /* 单条超过 20k 字：只留摘要与来源，不存大 JSON */
+    if (json.length > TOOL_CACHE_MAXLEN) {
+      json = JSON.stringify({
+        id: payload.id, at: payload.at, model: payload.model, web: payload.web,
+        inputBrief: String(payload.inputBrief || "").slice(0, 300),
+        result: null,
+        summary: String(payload.summary || "").slice(0, 800),
+        sources: (payload.sources || []).slice(0, 8),
+        truncated: true
+      });
+    }
+    store.set(key, json);
+    toolCacheRemember(key, payload.id);
+    return true;
+  } catch (_) { return false; }
+}
+function toolCacheClearCurrent() {
+  const id = state.tool.activeId;
+  const arr = toolCacheIndex();
+  arr.forEach(function (e) { if (e && e.id === id) { try { store.remove(e.key); } catch (_) {} } });
+  toolCacheWriteIndex(arr.filter(function (e) { return e && e.id !== id; }));
+}
+
+/* ---------- 取消 ---------- */
+
+function toolCancel() {
+  if (state.toolController) {
+    try { state.toolController.abort(); } catch (_) {}
+    state.toolController = null;
+  }
+  if (state.tool.busy) {
+    state.tool.busy = false;
+    state.tool.errorKind = "cancel";
+    state.tool.error = "已停止生成。";
+  }
+}
+
+/* ---------- 联网检索：返回 { text, sources } ---------- */
+
+async function toolWebSearch(prompt, maxTokens) {
+  const key = store.get(LS_APIKEY);
+  if (!key) return { text: "", sources: [], errorKind: "nokey" };
+
+  const ctrl = new AbortController();
+  state.toolController = ctrl;
+  const timer = setTimeout(function () { ctrl.abort(); }, 180000);
+
+  const payload = {
+    model: WEB_SEARCH_MODEL,
+    max_tokens: maxTokens || 3000,
+    system: "你是资料检索助手。用中文给出与问题直接相关的事实、价格区间、规范依据和真实案例，简洁具体，不要客套话，不要 Markdown 表格。涉及规范要写出编号。",
+    messages: [{ role: "user", content: prompt }],
+    stream: true,
+    tools: [WEB_SEARCH_TOOL]
+  };
+
+  try {
+    const res = await fetch(WEB_SEARCH_URL, {
+      method: "POST", headers: buildHeaders(key, true),
+      signal: ctrl.signal, body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      let m = "HTTP " + res.status;
+      try { const e = await res.json(); if (e && e.error && e.error.message) m = e.error.message; } catch (_) {}
+      return { text: "", sources: [], errorKind: "api", error: m };
+    }
+    if (!res.body || typeof res.body.getReader !== "function") {
+      return { text: "", sources: [], errorKind: "api", error: "这个浏览器拿不到流式响应" };
+    }
+
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "", text = "";
+    const sources = [];
+    const seen = {};
+    while (true) {
+      const st = await reader.read();
+      if (st.done) break;
+      buf += dec.decode(st.value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) {
+        if (line.indexOf("data:") !== 0) continue;
+        const raw2 = line.slice(5).trim();
+        if (!raw2 || raw2 === "[DONE]") continue;
+        let ev = null; try { ev = JSON.parse(raw2); } catch (_) { continue; }
+        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") {
+          text += ev.delta.text;
+        } else if (ev.type === "content_block_start" && ev.content_block &&
+                   ev.content_block.type === "web_search_tool_result") {
+          /* 真实检索结果：只收这里的 URL，杜绝模型编链接 */
+          const c = ev.content_block.content;
+          if (Array.isArray(c)) {
+            c.forEach(function (item) {
+              const u = item && (item.url || (item.source && item.source.url));
+              if (u && !seen[u]) { seen[u] = 1; sources.push(String(u)); }
+            });
+          }
+        } else if (ev.type === "message_delta" && ev.usage) {
+          try { recordUsage(ev.usage, WEB_SEARCH_MODEL); } catch (_) {}
+        } else if (ev.type === "message_start" && ev.message && ev.message.usage) {
+          try { recordUsage(ev.message.usage, WEB_SEARCH_MODEL); } catch (_) {}
+        }
+      }
+    }
+    return { text: text.trim(), sources: sources, errorKind: "" };
+  } catch (e) {
+    const aborted = e && e.name === "AbortError";
+    return { text: "", sources: [], errorKind: aborted ? "cancel" : "net",
+             error: aborted ? "已停止" : String((e && e.message) || e) };
+  } finally {
+    clearTimeout(timer);
+    if (state.toolController === ctrl) state.toolController = null;
+  }
+}
+
+/* ---------- 结构化生成：返回 { ok, data, text } ---------- */
+
+async function toolJsonRequest(system, user, maxTokens, images) {
+  const key = store.get(LS_APIKEY);
+  if (!key) return { ok: false, errorKind: "nokey", text: "" };
+
+  const model = effectiveModel();
+  const sysText = system + "\n\n【输出格式】只输出一个合法的 JSON 对象，不要 Markdown 代码块，不要任何解释文字。";
+
+  /* 带图时用 content 数组（与聊天同一种格式） */
+  let content;
+  if (images && images.length) {
+    content = [{ type: "text", text: user }];
+    images.forEach(function (x) {
+      if (x && x.dataUrl) content.push({ type: "image_url", image_url: { url: x.dataUrl, detail: settings.imageDetail } });
+    });
+  } else {
+    content = user;
+  }
+
+  const payload = {
+    model: model,
+    messages: [
+      { role: "system", content: sysText },
+      { role: "user", content: content }
+    ],
+    response_format: { type: "json_object" },
+    stream: false,
+    max_tokens: maxTokens || 4000
+  };
+  if (!isThinking()) payload.temperature = toolTemperature();
+
+  const ctrl = new AbortController();
+  state.toolController = ctrl;
+  const timer = setTimeout(function () { ctrl.abort(); }, 180000);
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+      signal: ctrl.signal,
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      let m = "HTTP " + res.status;
+      try { const e = await res.json(); if (e && e.error && e.error.message) m = e.error.message; } catch (_) {}
+      return { ok: false, errorKind: "api", error: m, text: "" };
+    }
+    const data = await res.json();
+    if (data && data.usage) { try { recordUsage(data.usage, model); } catch (_) {} }
+    const txt = (data && data.choices && data.choices[0] && data.choices[0].message &&
+                 data.choices[0].message.content) || "";
+    const parsed = parseJsonLoose(txt);
+    if (parsed && typeof parsed === "object") return { ok: true, data: parsed, text: txt };
+    /* JSON 解不出来：把原始文本带回去，外部降级成 Markdown 展示 */
+    return { ok: false, errorKind: "parse", text: txt, error: "返回的不是合法 JSON" };
+  } catch (e) {
+    const aborted = e && e.name === "AbortError";
+    return { ok: false, errorKind: aborted ? "cancel" : "net", text: "",
+             error: aborted ? "已停止" : String((e && e.message) || e) };
+  } finally {
+    clearTimeout(timer);
+    if (state.toolController === ctrl) state.toolController = null;
+  }
+}
+
+/* ---------- 总入口：跑一次工具箱生成 ---------- */
+
+async function toolRun(force) {
+  const id = state.tool.activeId;
+  const meta = TOOL_META[id];
+  if (!meta || state.tool.busy) return;
+
+  /* 先把界面上的输入收进 state，避免用户刚打完字就点生成时丢内容 */
+  try { toolSyncFromDom(); } catch (_) {}
+
+  const t = state.tool;
+  const hasInput = String(t.input || "").trim() || (t.images || []).length;
+  if (!hasInput) { toast("先写点内容，或者传一张图"); return; }
+
+  const key = store.get(LS_APIKEY);
+  if (!key) {
+    /* 没 Key：直接进兜底，并说明原因 */
+    t.fallback = true;
+    t.errorKind = "nokey";
+    t.error = "还没有填 DeepSeek API Key，现在显示的是内置通用参考。";
+    renderKeepingScroll();
+    return;
+  }
+
+  const ck = toolCacheKey(id);
+  if (!force) {
+    const hit = toolCacheGet(ck);
+    if (hit && (hit.result || hit.summary)) {
+      t.result = hit.result || null;
+      t.rawText = hit.summary || "";
+      t.sources = hit.sources || [];
+      t.generatedAt = hit.at || 0;
+      t.fromCache = true;
+      t.fallback = false;
+      t.error = "";
+      t.errorKind = "";
+      renderKeepingScroll();
+      popCacheNote();
+      return;
+    }
+  }
+
+  t.busy = true;
+  t.error = "";
+  t.errorKind = "";
+  t.fallback = false;
+  t.fromCache = false;
+  renderKeepingScroll();
+
+  const promptDef = TOOL_PROMPTS[meta.promptKey];
+  let sources = [];
+  let webNote = "";
+
+  try {
+    /* ① 需要联网就先检索，拿到真实来源 */
+    if (t.web) {
+      const searchPrompt = "请检索与下面这个问题相关的：现行做法与规范依据、市场价格区间、真实案例或常见坑。\n\n" +
+        String(t.input || "").slice(0, 1500) +
+        "\n\n补充：" + JSON.stringify(t.extra || {});
+      const sr = await toolWebSearch(searchPrompt, 3000);
+      if (sr.errorKind === "cancel") { t.busy = false; t.errorKind = "cancel"; t.error = "已停止生成。"; renderKeepingScroll(); return; }
+      if (sr.text) {
+        sources = sr.sources || [];
+        webNote = "\n\n【联网检索结果】（只能引用这里的链接，序号对应来源列表）\n" + sr.text.slice(0, 6000);
+        if (!sources.length) webNote += "\n\n（本次没有拿到可核对的来源链接，涉及价格和规范请标注「需自行核对」，并写明「本次没有检索到可验证来源」。）";
+      } else {
+        webNote = "\n\n（本次联网检索没有返回内容，请基于常识作答，并写明「本次没有检索到可验证来源」。）";
+      }
+    } else {
+      webNote = "\n\n（本次未开启联网：不要给具体价格和规范编号，或明确标注需自行核对。）";
+    }
+
+    const sys = TOOL_SYSTEM_BASE + "\n\n【你的角色】" + promptDef.role;
+    const user = promptDef.user.call(promptDef, t.input, t.extra || {}, webNote);
+    const images = (t.images || []).slice(0, 4);
+
+    let out = await toolJsonRequest(sys, user, 4000, images);
+    if (out.errorKind === "cancel") { t.busy = false; t.errorKind = "cancel"; t.error = "已停止生成。"; renderKeepingScroll(); return; }
+
+    /* ② JSON 失败就降级成文本展示 */
+    if (!out.ok && out.errorKind === "parse" && out.text) {
+      t.busy = false;
+      t.result = null;
+      t.rawText = out.text;
+      t.sources = sources;
+      t.generatedAt = Date.now();
+      t.error = "";
+      t.errorKind = "parse";
+      toolCacheSet(ck, { id: id, at: t.generatedAt, model: settings.modelKey, web: !!t.web,
+        inputBrief: String(t.input||"").slice(0,300), result: null, summary: out.text.slice(0, 800), sources: sources });
+      renderKeepingScroll();
+      toast("这次没返回结构化结果，已按文字展示");
+      return;
+    }
+
+    /* ③ 接口/网络失败 → 兜底 */
+    if (!out.ok) {
+      t.busy = false;
+      t.fallback = true;
+      t.errorKind = out.errorKind || "api";
+      t.error = (out.errorKind === "net" ? "网络没连上。" : "接口返回失败：" + truncateWidth(String(out.error || ""), 40)) +
+        " 下面显示的是内置通用参考。";
+      renderKeepingScroll();
+      return;
+    }
+
+    /* ④ 成功 */
+    t.busy = false;
+    t.result = out.data;
+    t.rawText = "";
+    t.sources = sources;
+    t.generatedAt = Date.now();
+    t.fromCache = false;
+    t.error = "";
+    t.errorKind = "";
+    toolCacheSet(ck, {
+      id: id, at: t.generatedAt, model: settings.modelKey, web: !!t.web,
+      inputBrief: String(t.input || "").slice(0, 300),
+      result: out.data, summary: String(out.data && out.data.summary || "").slice(0, 800),
+      sources: sources
+    });
+    renderKeepingScroll();
+  } catch (e) {
+    t.busy = false;
+    t.fallback = true;
+    t.errorKind = "api";
+    t.error = "出错了：" + truncateWidth(String((e && e.message) || e), 40) + " 下面显示的是内置通用参考。";
+    renderKeepingScroll();
+  } finally {
+    if (state.toolController) { try { state.toolController = null; } catch (_) {} }
+  }
+}
+
+/* 命中缓存时轻提示一下，避免用户以为「怎么没生成」 */
+function popCacheNote() {
+  const el = $("toolCacheNote");
+  if (!el) return;
+  el.textContent = "已读取上次生成的结果（点「重新生成」可忽略缓存）";
+}
+
 function isToolView(v) { return !!(TOOL_META[v]); }
 function openTool(id) {
   if (!TOOL_META[id]) return;
+  const t = state.tool;
+  /* 换工具才重置工作台；同一个工具再次进入保留上次内容 */
+  if (t.activeId !== id) {
+    t.activeId = id;
+    t.input = "";
+    t.images = [];
+    t.extra = {};
+    t.result = null;
+    t.rawText = "";
+    t.sources = [];
+    t.error = "";
+    t.errorKind = "";
+    t.fallback = false;
+    t.fromCache = false;
+    t.generatedAt = 0;
+  }
   state.view = id;
   render();
+}
+
+/* ---------- 工具箱事件处理 ---------- */
+
+/* 把界面上的输入同步进 state（生成、切换开关前都要先做） */
+function toolSyncFromDom() {
+  const t = state.tool;
+  const ta = $("toolInput");
+  if (ta) t.input = ta.value;
+  const meta = TOOL_META[t.activeId];
+  if (meta && meta.fields) {
+    t.extra = t.extra || {};
+    meta.fields.forEach(function (f) {
+      const el = $("toolField_" + f.k);
+      if (el) t.extra[f.k] = el.value;
+    });
+  }
+}
+
+function toolFillExample(i) {
+  const meta = TOOL_META[state.tool.activeId];
+  if (!meta || !meta.examples || !meta.examples[i]) return;
+  state.tool.input = meta.examples[i];
+  const ta = $("toolInput");
+  if (ta) ta.value = meta.examples[i];
+  renderKeepingScroll();
+}
+
+function toolPickImage() {
+  const t = state.tool;
+  if ((t.images || []).length >= 4) { toast("工具箱最多带 4 张图"); return; }
+  const el = $("toolImgInput");
+  if (el) el.click();
+}
+
+function toolRemoveImage(id) {
+  state.tool.images = (state.tool.images || []).filter(function (x) { return x.id !== id; });
+  renderKeepingScroll();
+}
+
+async function toolAddImages(files) {
+  const t = state.tool;
+  const room = 4 - (t.images || []).length;
+  if (room <= 0) { toast("工具箱最多带 4 张图"); return; }
+  const list = Array.prototype.slice.call(files || []).slice(0, room);
+  for (let i = 0; i < list.length; i++) {
+    const f = list[i];
+    if (!f || !/^image\//.test(f.type)) continue;
+    if (f.size > 12 * 1024 * 1024) { toast("单张图别超过 12MB"); continue; }
+    try {
+      const dataUrl = await compressImage(f);
+      t.images.push({ id: "ti" + Date.now() + "_" + i, dataUrl: dataUrl });
+    } catch (_) { toast("这张图读不出来，换一张试试"); }
+  }
+  renderKeepingScroll();
+}
+
+/* 把当前结果整理成一段可复制的文字 */
+function toolResultText() {
+  const id = state.tool.activeId;
+  const meta = TOOL_META[id];
+  const r = state.tool.result;
+  const lines = ["【" + (meta ? meta.title : "工具箱") + "】"];
+  if (state.tool.input) lines.push("我提供的内容：" + String(state.tool.input).slice(0, 500));
+  if (state.tool.rawText) lines.push("", state.tool.rawText);
+  if (r) {
+    if (id === "traps") {
+      if (r.summary) lines.push("", "总判断：" + r.summary);
+      (r.risks || []).forEach(function (x, i) {
+        lines.push("", (i + 1) + ".【" + (x.level || "待判") + "】" + (x.original || ""));
+        if (x.problem) lines.push("  问题：" + x.problem);
+        if (x.consequence) lines.push("  后面会怎样：" + x.consequence);
+        if (x.response) lines.push("  可以这么回：" + x.response);
+        if (x.contract) lines.push("  写进合同：" + x.contract);
+      });
+      if ((r.missing || []).length) lines.push("", "可能漏项：" + r.missing.join("；"));
+      if (r.paymentAdvice) lines.push("", "付款建议：" + r.paymentAdvice);
+    } else if (id === "talk") {
+      if (r.say) lines.push("", "他说：" + r.say);
+      if (r.literal) lines.push("字面意思：" + r.literal);
+      if (r.likely) lines.push("大概率意思：" + r.likely);
+      if (r.risk) lines.push("风险：" + r.risk);
+      (r.replies || []).forEach(function (x) { lines.push("", "【" + (x.tone || "回复") + "】" + (x.text || "")); });
+      if (r.contract) lines.push("", "写进合同：" + r.contract);
+      if (r.next) lines.push("下一步：" + r.next);
+    } else if (id === "ask") {
+      (r.stageGroups || []).forEach(function (g) {
+        lines.push("", "—— " + (g.stage || "问题") + " ——");
+        (g.items || []).forEach(function (x, i) {
+          lines.push((i + 1) + ". " + (x.q || ""));
+          if (x.why) lines.push("   为什么问：" + x.why);
+          if (x.answer) lines.push("   对方可能说：" + x.answer);
+          if (x.judge) lines.push("   怎么判断：" + x.judge);
+          if (x.followup) lines.push("   继续追问：" + x.followup);
+          if (x.contract) lines.push("   写进合同：" + x.contract);
+        });
+      });
+    } else {
+      lines.push("", "结论：" + (r.decision || ""));
+      if (r.why) lines.push("为什么做：" + r.why);
+      if (r.cost) lines.push("代价：" + r.cost);
+      if (r.avoid) lines.push("什么情况别做：" + r.avoid);
+      if ((r.alternatives || []).length) lines.push("替代方案：" + r.alternatives.join("；"));
+      if (r.verify) lines.push("验收/维护：" + r.verify);
+    }
+  }
+  if ((state.tool.sources || []).length) {
+    lines.push("", "来源：");
+    state.tool.sources.forEach(function (u, i) { lines.push("[" + (i + 1) + "] " + u); });
+  }
+  return lines.join("\n");
+}
+
+function toolCopyResult() {
+  const txt = toolResultText();
+  if (!txt || txt.length < 6) { toast("还没有可复制的结果"); return; }
+  copyText(txt, "工具箱结果已复制");
+}
+
+function toolExportResult() {
+  const txt = toolResultText();
+  if (!txt || txt.length < 6) { toast("还没有可导出的结果"); return; }
+  const meta = TOOL_META[state.tool.activeId];
+  const name = (meta ? meta.title : "工具箱") + "_" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + ".md";
+  const blob = new Blob([txt], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); if (a.parentNode) a.parentNode.removeChild(a); }, 500);
+  toast("已导出 Markdown");
+}
+
+/* 带着工具箱结果去聊天（不自动发送，让用户确认） */
+function askFromTool() {
+  const id = state.tool.activeId;
+  const meta = TOOL_META[id];
+  const title = meta ? meta.title : "工具箱";
+  const txt = toolResultText();
+  const brief = String(txt || "").slice(0, 1200);
+  /* 起一个新会话，标题用工具名 */
+  startSession(state.space || "kitchen", null, title);
+  state.draft = "我刚在「" + title + "」里得到下面这份参考，请帮我结合我家的情况确认一下，哪几条最重要、有没有不适用的：\n\n" + brief;
+  state.view = "chat";
+  render();
+  const ta = $("composerInput");
+  if (ta) { ta.value = state.draft; try { ta.focus(); } catch (_) {} }
+  toast("已填进输入框，确认后发送");
+}
+
+/* 只把摘要和原始输入存进当前对话（不存大 JSON） */
+function toolSaveToChat() {
+  if (!hasAnswer() && !state.messages.length) {
+    /* 还没有对话：先把工具内容起个会话 */
+    const meta = TOOL_META[state.tool.activeId];
+    startSession(state.space || "kitchen", null, meta ? meta.title : "工具箱");
+  }
+  const meta = TOOL_META[state.tool.activeId];
+  const title = meta ? meta.title : "工具箱";
+  const brief = String(toolResultText() || "").slice(0, 3000);
+  state.messages.push({ role: "user", text: "【" + title + "】" + String(state.tool.input || "").slice(0, 500) });
+  state.messages.push({ role: "ai", text: brief, saved: true });
+  state.view = "chat";
+  render();
+  toast("已保存到当前对话");
 }
 
 function openRank(spaceKey) {
@@ -5754,6 +6936,25 @@ document.addEventListener("click", e => {
     case "save-settings":  saveSettings(); break;
     case "clear-key":      clearKey(); break;
     case "open-tool":    openTool(node.dataset.tool); break;
+    case "tool-run":     toolSyncFromDom(); toolRun(false); break;
+    case "tool-retry":   toolSyncFromDom(); toolRun(true); break;
+    case "tool-stop":    toolCancel(); renderKeepingScroll(); break;
+    case "tool-clear":
+      state.tool.input = ""; state.tool.images = []; state.tool.extra = {};
+      state.tool.result = null; state.tool.rawText = ""; state.tool.sources = [];
+      state.tool.error = ""; state.tool.errorKind = ""; state.tool.fallback = false;
+      state.tool.fromCache = false; state.tool.generatedAt = 0;
+      renderKeepingScroll();
+      break;
+    case "tool-toggle-web": toolSyncFromDom(); state.tool.web = !state.tool.web; renderKeepingScroll(); break;
+    case "tool-example":    toolFillExample(Number(node.dataset.idx)); break;
+    case "tool-pick-image": toolPickImage(); break;
+    case "tool-remove-image": toolRemoveImage(node.dataset.id); break;
+    case "tool-copy":         toolCopyResult(); break;
+    case "tool-export":       toolExportResult(); break;
+    case "tool-ask":          askFromTool(); break;
+    case "tool-save-to-chat": toolSaveToChat(); break;
+    case "tool-open-settings": openModal(); break;
     case "open-rank":    openRank(node.dataset.key); break;
     case "rank-tab":     state.rankTab = node.dataset.tab; renderKeepingScroll(); break;
     case "rank-preset":  state.rankPreset = node.dataset.preset; renderKeepingScroll(); break;
@@ -5861,6 +7062,19 @@ document.addEventListener("change", e => {
 document.addEventListener("keydown", e => {
   const mod = e.ctrlKey || e.metaKey;
 
+  /* 工具箱：正在生成时，Esc 先停止生成，而不是直接回首页 */
+  if (e.key === "Escape" && state.tool.busy && isToolView(state.view)) {
+    e.preventDefault(); toolCancel(); renderKeepingScroll(); return;
+  }
+  /* 工具箱输入区：Ctrl/Cmd + Enter 触发生成 */
+  if (isToolView(state.view) && mod && e.key === "Enter") {
+    e.preventDefault(); toolSyncFromDom(); toolRun(false); return;
+  }
+  /* 输入框里的改动随时同步，避免切开关时丢内容 */
+  if (isToolView(state.view) && e.target && e.target.id === "toolInput") {
+    state.tool.input = e.target.value;
+  }
+
   /* 快捷键：Ctrl/Cmd + K 打开设置，Ctrl/Cmd + / 看速查 */
   if (mod && (e.key === "k" || e.key === "K")) { e.preventDefault(); openModal(); return; }
   if (mod && e.key === "/") { e.preventDefault(); showHelp(); return; }
@@ -5868,6 +7082,10 @@ document.addEventListener("keydown", e => {
   if (askOpen() && e.key === "Tab") { trapFocus(e, "askBox"); return; }
   if (modalOpen() && e.key === "Tab") { trapFocus(e, "modalBox"); return; }
   if (authOpen() && e.key === "Tab") { trapFocus(e, "authBox"); return; }
+  /* 工具箱：正在生成时，Esc 先停止生成，而不是直接回首页 */
+  if (e.key === "Escape" && state.tool.busy) {
+    e.preventDefault(); toolCancel(); renderKeepingScroll(); return;
+  }
   if (e.key === "Escape") {
     if (askOpen()) closeAsk({ ok: false });
     else if (rankWebOpen()) closeRankWeb();
@@ -5961,6 +7179,18 @@ document.addEventListener("focusin", e => {
 document.addEventListener("change", e => {
   const t = e.target;
   if (t && t.id === "imgInput") handleImageFiles(t.files);
+  if (t.id === "toolImgInput") toolAddImages(t.files);
+  if (t.id === "toolTempMode") {
+    state.tool.temperatureMode = (t.value === "custom") ? "custom" : "follow";
+    if (state.tool.temperatureMode === "custom" && state.tool.temperature === null) {
+      state.tool.temperature = Number(settings.temperature);
+    }
+    renderKeepingScroll();
+  }
+  if (t.id === "toolTempValue") {
+    const v = parseFloat(t.value);
+    state.tool.temperature = (isFinite(v) && v >= TEMP_MIN && v <= TEMP_MAX) ? v : null;
+  }
 }, true);
 
 if (window.visualViewport) {
@@ -6985,6 +8215,10 @@ function loadSettings() {
         else if (o.themeMode !== undefined) settings.themeMode = "auto";   /* 存了非法值就回到跟随系统 */
         settings.priceIn = (o.priceIn === null || o.priceIn === undefined || o.priceIn === "") ? null : (isFinite(parseFloat(o.priceIn)) ? parseFloat(o.priceIn) : null);
         settings.priceOut = (o.priceOut === null || o.priceOut === undefined || o.priceOut === "") ? null : (isFinite(parseFloat(o.priceOut)) ? parseFloat(o.priceOut) : null);
+        if (o.temperature !== undefined) {
+          const tv = parseFloat(o.temperature);
+          settings.temperature = (isFinite(tv) && tv >= TEMP_MIN && tv <= TEMP_MAX) ? tv : TEMP_DEFAULT;
+        }
         if (FONT_SCALES.indexOf(parseFloat(o.fontScale)) >= 0) settings.fontScale = parseFloat(o.fontScale);
         else if (o.fontScale !== undefined) settings.fontScale = 1;   /* 存储里有越界值就回落标准 */
       }
@@ -7026,6 +8260,23 @@ function openModal() {
   $("fontScaleSelect").value = String(settings.fontScale);
   $("afterSendSelect").value = settings.afterSend;
   $("themeSelect").value = settings.themeMode || "auto";
+  /* 灵活度：14 档 + 自定义。当前值不在预设里就自动切到「自定义」 */
+  (function () {
+    const sel = $("tempSelect"), ci = $("tempCustomInput");
+    if (!sel) return;
+    sel.innerHTML = TEMP_PRESETS.map(function (p) {
+      return '<option value="' + p.v + '">' + esc(p.label) + '</option>';
+    }).join("") + '<option value="custom">自定义…</option>';
+    const cur = Number(settings.temperature);
+    const hit = TEMP_PRESETS.filter(function (p) { return Math.abs(p.v - cur) < 1e-9; })[0];
+    if (hit) {
+      sel.value = String(hit.v);
+      if (ci) { ci.value = ""; ci.classList.add("hidden"); }
+    } else {
+      sel.value = "custom";
+      if (ci) { ci.value = String(isFinite(cur) ? cur : TEMP_DEFAULT); ci.classList.remove("hidden"); }
+    }
+  })();
   $("priceInInput").value = (settings.priceIn === null || settings.priceIn === undefined) ? "" : String(settings.priceIn);
   $("priceOutInput").value = (settings.priceOut === null || settings.priceOut === undefined) ? "" : String(settings.priceOut);
   $("sbUrlInput").value = settings.sbUrl || "";
@@ -7033,7 +8284,6 @@ function openModal() {
   $("sbTestState").classList.add("hidden");
   $("sbSqlHint").innerHTML = sbSqlHintHtml();
   $("lengthSelect").value = settings.length;
-  $("tempSelect").value = String(settings.temperature);
   $("idleSelect").value = String(settings.idleTimeout);
   renderAuthButton();                 /* 登录后才显示「退出登录」 */
   setKeyState("");
@@ -7132,7 +8382,16 @@ async function saveSettings() {
     recommendProducts: (function () { const rr = $("recommendSelect").value; return (rr === "on" || rr === "off") ? rr : "auto"; })(),
     fontScale: (function () { const v = parseFloat($("fontScaleSelect").value); return FONT_SCALES.indexOf(v) >= 0 ? v : 1; })(),
     length: $("lengthSelect").value,
-    temperature: parseFloat($("tempSelect").value) || 0.7,
+    temperature: (function () {
+      const sel = $("tempSelect");
+      const raw = sel ? sel.value : String(TEMP_DEFAULT);
+      const v = (raw === "custom")
+        ? parseFloat(($("tempCustomInput") || {}).value)
+        : parseFloat(raw);
+      /* 非法（空、非数字、超出 0~2）一律回到默认 0.7，不偷偷截断成边界值 */
+      if (!isFinite(v) || v < TEMP_MIN || v > TEMP_MAX) return TEMP_DEFAULT;
+      return v;
+    })(),
     idleTimeout: parseInt($("idleSelect").value, 10) || 45,
     afterSend: $("afterSendSelect").value === "follow" ? "follow" : "top",
     themeMode: (function () { const t = $("themeSelect").value; return (t === "light" || t === "dark") ? t : "auto"; })(),
