@@ -1570,7 +1570,7 @@
    ============================================================ */
 
 const APP_VERSION  = "0.1.4";
-const BUILD_TAG    = "b3";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
+const BUILD_TAG    = "b4";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
 const BASE_TITLE   = "室内设计助手 0.1.4 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
@@ -1899,6 +1899,8 @@ const state = {
   lastJsonError: "",       /* 最近一次 JSON 请求失败的具体原因（排行榜 / 整理成表共用） */
   lastJsonChannelFail: false,  /* 上面那次失败是不是「通道级」（连不上 / 被拒 / 拿不到流），只有这种才值得回退重试 */
   lastJsonDebug: "",       /* 最近一次联网请求的诊断摘要（请求 / 响应片段），失败时给用户复制 */
+  rankSelfTest: "",        /* 联网自检结果（给「到底哪一步不行」当探针用） */
+  rankSelfTestBusy: false,
   controller: null,
   histExpanded: false,
   histQuery: "",
@@ -4241,7 +4243,7 @@ function extractTextBlocks(data) {
    为什么非流式不行：DeepSeek 的 anthropic 兼容端点上，`stream:false` + `tools`
    这条组合不可靠；而聊天页一直用的是 `stream:true` + ANTHROPIC SSE，
    那条路是验证过能用的 —— 所以这里照它来，只把「边流边渲染」换成「收全文再解析」。 */
-async function jsonRequestWeb(prompt, maxTokens) {
+async function jsonRequestWeb(prompt, maxTokens, noTools) {
   const key = store.get(LS_APIKEY);
   if (!key) { openModal(); return null; }
 
@@ -4256,12 +4258,13 @@ async function jsonRequestWeb(prompt, maxTokens) {
           + "最终回复只包含一个 JSON 对象，不要解释、不要 Markdown 代码块。",
     messages: [{ role: "user", content: prompt }],
     stream: true,
-    temperature: settings.temperature,
-    tools: [WEB_SEARCH_TOOL]
+    temperature: settings.temperature
   };
+  /* noTools=true 时去掉联网工具：用来判断「是不是工具这条路本身有问题」 */
+  if (!noTools) payload.tools = [WEB_SEARCH_TOOL];
 
   let dbg = "构建 " + BUILD_TAG + " · POST " + WEB_SEARCH_URL
-          + "\nmax_tokens=" + (maxTokens || 6000) + " · stream=true · tools=web_search"
+          + "\nmax_tokens=" + (maxTokens || 6000) + " · stream=true · tools=" + (noTools ? "关闭" : "web_search")
           + "\nmodel=" + WEB_SEARCH_MODEL + " · temperature=" + settings.temperature;
   const setDbg = function (extra) { state.lastJsonDebug = (dbg + "\n" + extra).slice(0, 1200); };
 
@@ -4278,11 +4281,15 @@ async function jsonRequestWeb(prompt, maxTokens) {
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
-      let m = "HTTP " + res.status;
-      try { const e = await res.json(); if (e && e.error && e.error.message) m = e.error.message; } catch (_) {}
+      let m = "HTTP " + res.status, raw = "";
+      try {
+        raw = await res.text();
+        try { const e = JSON.parse(raw); if (e && e.error && e.error.message) m = e.error.message; else if (e && e.message) m = e.message; }
+        catch (_) { if (raw) m = String(raw).slice(0, 160); }
+      } catch (_) {}
       state.lastJsonError = "联网请求被拒：" + m;
       state.lastJsonChannelFail = true;
-      setDbg("HTTP " + res.status + " · " + m);
+      setDbg("HTTP " + res.status + " · " + m + (raw ? "\n原始响应：" + String(raw).slice(0, 400) : ""));
       return null;
     }
     if (!res.body || typeof res.body.getReader !== "function") {
@@ -4781,8 +4788,8 @@ const RANK_PROMPT_HEAD = `你是资深室内设计施工顾问。请为下面这
 5. 禁止编造标准号 —— 检索里查不到的就填 "经验"。
 6. 涉及承重墙、燃气、电气改造的，safety 必须 ≥ 8。
 7. cost 写 [下限, 上限] 两个整数（元），估不出就填 null。
-8. 每个子类至少 1 条，条目总数 8~12 条（别贪多，写短写准）。
-9. 文字要短：why ≤ 40 字，key ≤ 30 字，fail ≤ 40 字，check ≤ 40 字，ask ≤ 30 字。
+8. 每个子类至少 1 条，条目总数 6~9 条（宁少勿多，写短写准；输出被截断就全废了）。
+9. 文字要短：why ≤ 25 字，key ≤ 18 字，fail ≤ 25 字，check ≤ 25 字，ask ≤ 18 字。
 
 JSON 格式：{"space":"...","tabs":{"<tab>":{"items":[...]}}}
 每条字段：name / why / key / basis / standard / fail / cost / costUnit / check / ask / scores
@@ -4799,16 +4806,28 @@ async function generateRankTab(spaceKey, tab) {
     + "本次只生成 " + tab + " 这一个 tab，JSON 里 tabs 只包含 " + tab + " 一个键。";
   /* 先走联网（更准、能核规范）；联网通道不通就回退普通请求，
      保证「至少能生成」，不会因为一个通道有问题就彻底用不了。 */
-  const d = await jsonRequestWeb(prompt, 6000);   /* 联网会先检索再输出，额度给足 */
+  /* 三级降级，一级不行就退下一级 —— 目标是「先保证能用」，再谈好不好：
+       ① 联网 + 流式（最准，能核规范）
+       ② 不带联网工具的流式（排除「工具这条路本身有问题」）
+       ③ 普通非流式 + response_format（聊天页之外的老路）
+     只有「通道级」失败才降级；内容级问题（被截断、不是 JSON）降级也白搭，
+     还会盖掉真实原因，所以直接返回 null 把原因留给用户。 */
+  const d = await jsonRequestWeb(prompt, 6000, false);
   if (d) return d;
-  /* 只有「通道级」失败才值得回退重试（连不上 / 被拒 / 拿不到流）。
-     若是内容级问题（被截断、返回的不是 JSON），回退只会再花一次钱、还会把
-     真正的原因盖掉 —— 那种情况直接把原因留给用户看。 */
-  if (!state.lastJsonChannelFail) return null;
   if (state.lastJsonError === "超时或已取消") return null;   /* 用户主动停的，不偷偷重试 */
+  if (!state.lastJsonChannelFail) return null;
+
+  const keep = state.lastJsonError;
   state.lastJsonError = "";
-  const plain = await jsonRequest(prompt, 4500);
-  return plain;
+  const d2 = await jsonRequestWeb(prompt, 6000, true);
+  if (d2) return d2;
+  if (!state.lastJsonChannelFail) return d2;
+
+  state.lastJsonError = "";
+  const d3 = await jsonRequest(prompt, 5000);
+  if (d3) return d3;
+  if (!state.lastJsonError) state.lastJsonError = keep;
+  return null;
 }
 
 async function doGenerateRank() {
@@ -4845,6 +4864,90 @@ async function doGenerateRank() {
     state.rankLoading = false;
     renderKeepingScroll();
   }
+}
+
+/* 联网自检：跑两条极小的请求，把「通道 / 工具 / 输出」三层问题分开看清楚。
+   只回答「哪儿不行」，不写任何业务数据。 */
+async function selfTestOnce(noTools) {
+  const key = store.get(LS_APIKEY);
+  const payload = {
+    model: WEB_SEARCH_MODEL,
+    max_tokens: 300,
+    system: "回答要短，一两句话就行。",
+    messages: [{ role: "user", content: noTools
+      ? "用一句话说出厨房水电改造的正确顺序。"
+      : "搜一下「厨房防水高度一般做多少」，用一句话总结。" }],
+    stream: true,
+    temperature: 0.3
+  };
+  if (!noTools) payload.tools = [WEB_SEARCH_TOOL];
+  const ctrl = new AbortController();
+  const timer = setTimeout(function () { ctrl.abort(); }, 90000);
+  try {
+    const res = await fetch(WEB_SEARCH_URL, {
+      method: "POST", headers: buildHeaders(key, true),
+      signal: ctrl.signal, body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      let raw = "";
+      try { raw = await res.text(); } catch (_) {}
+      return "  ❌ HTTP " + res.status + " · " + String(raw).slice(0, 220);
+    }
+    if (!res.body || typeof res.body.getReader !== "function") return "  ❌ 这个浏览器拿不到流式响应";
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "", text = "", nTool = 0, nRes = 0, stop = "", err = "";
+    while (true) {
+      const st = await reader.read();
+      if (st.done) break;
+      buf += dec.decode(st.value, { stream: true });
+      const ls = buf.split("\n"); buf = ls.pop();
+      for (const line of ls) {
+        if (line.indexOf("data:") !== 0) continue;
+        const raw2 = line.slice(5).trim();
+        if (!raw2 || raw2 === "[DONE]") continue;
+        let e2 = null; try { e2 = JSON.parse(raw2); } catch (_) { continue; }
+        if (e2.type === "content_block_delta" && e2.delta && e2.delta.type === "text_delta") text += e2.delta.text;
+        else if (e2.type === "content_block_start" && e2.content_block) {
+          if (e2.content_block.type === "server_tool_use") nTool++;
+          if (e2.content_block.type === "web_search_tool_result") nRes++;
+        } else if (e2.type === "message_delta" && e2.delta && e2.delta.stop_reason) stop = String(e2.delta.stop_reason);
+        else if (e2.type === "error") err = JSON.stringify(e2.error || e2).slice(0, 200);
+      }
+    }
+    return "  ✔ HTTP 200 · 正文 " + text.length + " 字 · 工具调用 " + nTool + " 次 · 搜索结果 " + nRes + " 块"
+         + " · stop_reason=" + (stop || "—")
+         + (err ? "\n  服务端报错：" + err : "")
+         + (text ? "\n  正文开头：" + text.slice(0, 120) : "\n  ⚠ 没有正文内容");
+  } catch (e) {
+    return "  ❌ " + ((e && e.name === "AbortError") ? "超时（90 秒）" : String((e && e.message) || e));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function rankSelfTest() {
+  if (state.rankSelfTestBusy) return;
+  state.rankSelfTestBusy = true;
+  state.rankSelfTest = "正在自检，约 20~60 秒…";
+  renderKeepingScroll();
+  const L = [];
+  L.push("【联网自检】构建 " + BUILD_TAG + " · 端点 " + WEB_SEARCH_URL);
+  L.push("Key：" + (store.get(LS_APIKEY) ? "已填" : "❌ 未填（设置 ⚙ 里填）"));
+  if (store.get(LS_APIKEY)) {
+    L.push("");
+    L.push("① 流式 + 联网工具：");
+    L.push(await selfTestOnce(false));
+    L.push("② 流式、不带工具：");
+    L.push(await selfTestOnce(true));
+    L.push("");
+    L.push("怎么看：");
+    L.push("  ①✔ ②✔ → 通道没问题，问题出在「输出太大被截断 / JSON 不合法」");
+    L.push("  ①✘ ②✔ → 联网工具这条路有问题（工具层），②那条已经能生成");
+    L.push("  ①✘ ②✘ → 密钥 / 网络 / 端点的问题，看上面的 HTTP 与报错");
+  }
+  state.rankSelfTest = L.join("\n");
+  state.rankSelfTestBusy = false;
+  renderKeepingScroll();
 }
 
 /* 把上次失败的全套上下文拼成一段，方便用户直接发出来定位 */
@@ -4911,12 +5014,27 @@ function viewRank() {
              ? '<details class="sql-box"><summary>诊断信息（点开看一眼，或点上面复制）</summary><pre>'
                + esc(state.lastJsonDebug) + '</pre></details>'
              : '')
+         + '<div class="sb-acts"><button type="button" class="tbtn" data-act="rank-selftest">'
+         + (state.rankSelfTestBusy ? "自检中…" : "联网自检") + '</button>'
+         + (state.rankSelfTest ? '<button type="button" class="tbtn" data-act="rank-copyselftest">复制自检结果</button>' : '')
+         + '</div>'
+         + (state.rankSelfTest
+             ? '<details class="sql-box" open><summary>自检结果（复制给对方即可）</summary><pre>'
+               + esc(state.rankSelfTest) + '</pre></details>'
+             : '')
          + '</div>';
   } else if (!state.rankData) {
     body = '<div class="empty"><div class="et">这个空间还没有榜单</div>'
          + '<div class="es">让 AI 按「返工代价 / 安全影响 / 替换难度 / 使用频率 / 感知强度」五个维度打分，'
          + '再按 S / A / B / C 梯队排出来。生成后永久缓存，切预设不会重新请求。</div>'
-         + '<button type="button" class="btn" data-act="rank-regen">生成排行榜</button></div>';
+         + '<button type="button" class="btn" data-act="rank-regen">生成排行榜</button>'
+         + '<div class="sb-acts"><button type="button" class="tbtn" data-act="rank-selftest">'
+         + (state.rankSelfTestBusy ? "自检中…" : "联网自检") + '</button></div>'
+         + (state.rankSelfTest
+             ? '<details class="sql-box" open><summary>自检结果（复制给对方即可）</summary><pre>'
+               + esc(state.rankSelfTest) + '</pre></details>'
+             : '')
+         + '</div>';
   } else {
     body = rankListHtml();
   }
@@ -5031,6 +5149,8 @@ document.addEventListener("click", e => {
     case "rank-ask":     askRankItem(Number(node.dataset.idx)); break;
     case "rank-copy":    copyRankItem(Number(node.dataset.idx)); break;
     case "rank-copydebug": copyRankDebug(); break;
+    case "rank-selftest":  rankSelfTest(); break;
+    case "rank-copyselftest": copyText(state.rankSelfTest, "自检结果已复制"); break;
     case "open-space":     goSpace(node.dataset.key); break;
     case "open-object":    goObject(node.dataset.id); break;
     case "ask":            askFaq(node.dataset.key, Number(node.dataset.idx)); break;
