@@ -1895,6 +1895,7 @@ const state = {
   rankData: null,          /* 当前空间已生成的榜单 { space, generatedAt, tabs:{...} } */
   rankLoading: false,
   rankError: "",
+  lastJsonError: "",       /* 最近一次 JSON 请求失败的具体原因（排行榜 / 整理成表共用） */
   controller: null,
   histExpanded: false,
   histQuery: "",
@@ -4202,6 +4203,7 @@ async function jsonRequest(prompt, maxTokens) {
     if (!res.ok) {
       let m = "HTTP " + res.status;
       try { const e = await res.json(); if (e && e.error && e.error.message) m = e.error.message; } catch (_) {}
+      state.lastJsonError = m;
       throw new Error(m);
     }
     const data = await res.json();
@@ -4209,6 +4211,7 @@ async function jsonRequest(prompt, maxTokens) {
     const txt = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || "";
     return parseJsonLoose(txt);
   } catch (e) {
+    state.lastJsonError = (e && e.name === "AbortError") ? "超时或已取消" : String((e && e.message) || e);
     toast("请求失败：" + truncateWidth(String((e && e.message) || e), 40));
     return null;
   } finally {
@@ -4217,15 +4220,86 @@ async function jsonRequest(prompt, maxTokens) {
   }
 }
 
-/* 模型有时会包一层 ```json，这里宽容地剥掉 */
+/* 从 Anthropic 风格响应里取出所有文本块（跳过 server_tool_use 与搜索结果块） */
+function extractTextBlocks(data) {
+  if (!data) return "";
+  if (typeof data === "string") return data;
+  if (Array.isArray(data.content)) {
+    return data.content
+      .filter(function (b) { return b && b.type === "text" && typeof b.text === "string"; })
+      .map(function (b) { return b.text; }).join("\n");
+  }
+  /* 兜底：万一走了 chat/completions 的形状 */
+  try { return data.choices[0].message.content || ""; } catch (_) { return ""; }
+}
+
+/* 带联网检索的 JSON 请求：走 Anthropic Messages + web_search 工具，**非流式**。
+   排行榜要求「先查规范、再给结论」，所以它必须联网；而它要的是一整块 JSON，
+   非流式一次拿回来比边流边拼更省事，也不怕「先说明、后 JSON」的形态。 */
+async function jsonRequestWeb(prompt, maxTokens) {
+  const key = store.get(LS_APIKEY);
+  if (!key) { openModal(); return null; }
+
+  const payload = {
+    model: WEB_SEARCH_MODEL,
+    max_tokens: maxTokens || 4000,
+    system: "你只输出一个合法的 JSON 对象，不要输出解释、不要 Markdown 代码块或任何额外文字。",
+    messages: [{ role: "user", content: prompt }],
+    tools: [WEB_SEARCH_TOOL],
+    stream: false
+  };
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(function () { ctrl.abort(); }, 180000);   /* 联网慢，给 3 分钟 */
+  state.controller = ctrl;                                          /* 挂上去，「停止」才真的能停 */
+  state.lastJsonError = "";
+  try {
+    const res = await fetch(WEB_SEARCH_URL, {
+      method: "POST",
+      headers: buildHeaders(key, true),
+      signal: ctrl.signal,
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      let m = "HTTP " + res.status;
+      try { const e = await res.json(); if (e && e.error && e.error.message) m = e.error.message; } catch (_) {}
+      state.lastJsonError = "联网请求被拒：" + m;
+      toast("联网请求失败：" + truncateWidth(m, 40));
+      return null;
+    }
+    const data = await res.json();
+    if (data && data.usage) recordUsage(data.usage, WEB_SEARCH_MODEL);
+    const text = extractTextBlocks(data);
+    if (!text.trim()) { state.lastJsonError = "返回里没有文本内容"; return null; }
+    const parsed = parseJsonLoose(text);
+    if (!parsed) state.lastJsonError = "返回值不是合法 JSON（多半是被 max_tokens 截断了）";
+    return parsed;
+  } catch (e) {
+    state.lastJsonError = (e && e.name === "AbortError") ? "超时或已取消" : String((e && e.message) || e);
+    return null;
+  } finally {
+    clearTimeout(timer);
+    if (state.controller === ctrl) state.controller = null;
+  }
+}
+
+/* 模型有时会包一层 ```json，或者先说一句「我查到了…」再给 JSON，这里宽容地剥掉 */
 function parseJsonLoose(text) {
   let s = String(text || "").trim();
   s = s.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+
+  /* 依次尝试：整体 → 第一个 { 到最后一个 } → 最后一个 { 到最后一个 }
+     （联网时模型常在 JSON 前后各加一句话，取最后一段最稳） */
+  const tries = [s];
   const i = s.indexOf("{"), j = s.lastIndexOf("}");
-  if (i > 0 || (i === 0 && j < s.length - 1)) {
-    if (i >= 0 && j > i) s = s.slice(i, j + 1);
+  if (i >= 0 && j > i) tries.push(s.slice(i, j + 1));
+  const k = s.lastIndexOf("{");
+  if (k >= 0 && j > k) tries.push(s.slice(k, j + 1));
+
+  for (const t of tries) {
+    try { return JSON.parse(t); } catch (_) {}
   }
-  try { return JSON.parse(s); } catch (_) { return null; }
+  return null;
 }
 
 function normalizeExtract(d) {
@@ -4618,6 +4692,12 @@ function openRank(spaceKey) {
 /* ---- 生成：按 tab 拆三次请求，先出第一张 ---- */
 const RANK_PROMPT_HEAD = `你是资深室内设计施工顾问。请为下面这个空间的一个工程类别生成「优先级排行榜」数据。
 
+第一步：先用联网检索核对 —— 涉及国标 / 行业规范的地方，查证标准号与关键数值；
+常见尺寸、验收做法、造价区间，也顺手核一下当前行情。这一步必须做。
+
+第二步：检索完成后，最终回复只输出一个 JSON 对象 ——
+不要解释、不要复述搜索结果、不要 Markdown 代码块、不要在 JSON 前后加任何文字。
+
 严格规则：
 1. 必须覆盖我给出的全部子类，一条都不能漏。
 2. 每条给 5 个维度打分（0~10 整数）：
@@ -4627,12 +4707,12 @@ const RANK_PROMPT_HEAD = `你是资深室内设计施工顾问。请为下面这
    - frequency 使用频率：0=一年碰一次，10=每天几十次
    - feel      感知强度：0=好坏察觉不到，10=一眼看出差别
 3. 禁止出现「适当」「合理」「注意」这类没有信息量的词。
-4. basis 只能填 "规范" / "经验" / "建议"；填 "规范" 时必须给标准号，不确定就填 "经验"。
-5. 禁止编造标准号。
+4. basis 只能填 "规范" / "经验" / "建议"；填 "规范" 时必须给检索确认过的标准号，不确定就填 "经验"。
+5. 禁止编造标准号 —— 检索里查不到的就填 "经验"。
 6. 涉及承重墙、燃气、电气改造的，safety 必须 ≥ 8。
 7. cost 写 [下限, 上限] 两个整数（元），估不出就填 null。
-8. 每个子类至少 1 条，条目总数 8~15 条。
-9. 只输出 JSON 对象，不要解释、不要 Markdown 代码块。
+8. 每个子类至少 1 条，条目总数 8~12 条（别贪多，写短写准）。
+9. 文字要短：why ≤ 40 字，key ≤ 30 字，fail ≤ 40 字，check ≤ 40 字，ask ≤ 30 字。
 
 JSON 格式：{"space":"...","tabs":{"<tab>":{"items":[...]}}}
 每条字段：name / why / key / basis / standard / fail / cost / costUnit / check / ask / scores
@@ -4647,7 +4727,12 @@ async function generateRankTab(spaceKey, tab) {
     + "工程类别：" + label + "\n"
     + "必须覆盖的子类：" + cov.join("、") + "\n"
     + "本次只生成 " + tab + " 这一个 tab，JSON 里 tabs 只包含 " + tab + " 一个键。";
-  return await jsonRequest(prompt, 2600);
+  /* 先走联网（更准、能核规范）；联网通道不通就回退普通请求，
+     保证「至少能生成」，不会因为一个通道有问题就彻底用不了。 */
+  const d = await jsonRequestWeb(prompt, 4000);
+  if (d) return d;
+  if (state.lastJsonError === "超时或已取消") return null;   /* 用户主动停的，不偷偷重试 */
+  return await jsonRequest(prompt, 4500);
 }
 
 async function doGenerateRank() {
@@ -4660,7 +4745,11 @@ async function doGenerateRank() {
   renderKeepingScroll();
   try {
     const d = await generateRankTab(spaceKey, tab);
-    if (!d) { state.rankError = "没拿到有效数据，可能是网络、Key 或模型返回格式问题。"; return; }
+    if (!d) {
+      state.rankError = "没拿到有效数据" + (state.lastJsonError ? "：" + state.lastJsonError : "")
+        + "。可以点「重新生成」再试一次。";
+      return;
+    }
     const clean = sanitizeRank(d, spaceKey, 3);
     if (!clean) { state.rankError = "返回的数据不完整（条目太少或字段缺失），请重试。"; return; }
 
@@ -4721,7 +4810,7 @@ function viewRank() {
   let body = "";
   if (state.rankLoading) {
     body = '<div class="panel"><div class="dots"><span></span><span></span><span></span></div>'
-         + '<div class="thinking">正在生成「' + esc(sp.name) + '」的榜单，约 15~25 秒…</div></div>';
+         + '<div class="thinking">正在联网核对规范并生成「' + esc(sp.name) + '」的榜单，约 20~40 秒…</div></div>';
   } else if (state.rankError) {
     body = '<div class="sys-note err"><b>生成失败</b>' + esc(state.rankError)
          + '<button type="button" class="tbtn" data-act="rank-regen">重新生成</button></div>';
