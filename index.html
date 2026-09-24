@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#1b1917" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <meta name="color-scheme" content="light dark">
-<title>室内设计助手 0.1.6 · 对话式设计顾问</title>
+<title>室内设计助手 0.1.7 · 对话式设计顾问</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -841,19 +841,16 @@
   .rank-head b { font-size:0.9375rem; }
   .rank-head .grow { flex:1; }
   .rank-flag { font-size:0.75rem; color:var(--accent); margin-top:5px; }
-  /* 手册页 */
-  .hb-pre {
-    font-size:0.8125rem; line-height:1.75; white-space:pre-wrap; word-break:break-word;
-    background:var(--surface); border:1.5px solid var(--border); border-radius:12px;
-    padding:14px 16px; margin-top:10px; max-height:70vh; overflow:auto; color:var(--text-2);
-  }
-  .hb-list { margin-top:6px; }
-  .hb-entry { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
-  .hb-line {
-    font-size:0.8125rem; line-height:1.7; padding:7px 11px; color:var(--text-2);
-    background:var(--surface); border:1px solid var(--border-soft); border-radius:9px;
-    margin-bottom:6px; word-break:break-word;
-  }
+  /* 联网搜别人的案例 */
+  .rank-web-info { font-size:0.8125rem; color:var(--text-3); line-height:1.7; }
+  .rank-web-info b { color:var(--text); }
+  .rank-web-field { margin-top:14px; }
+  .rank-web-note { font-size:0.75rem; color:var(--text-4); line-height:1.7; margin-top:10px; }
+  .rank-web-result { margin-top:14px; }
+  .rank-web-case { background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:11px 13px; margin-bottom:9px; }
+  .rank-web-case-title { font-size:0.78125rem; font-weight:600; color:var(--accent); margin-bottom:5px; }
+  .rank-web-case-body { font-size:0.84375rem; color:var(--text-2); line-height:1.7; white-space:pre-wrap; }
+  .rank-web-case .src { display:inline-block; margin-top:6px; font-size:0.75rem; }
   .rank-basis {
     font-size:0.6875rem; padding:2px 7px; border-radius:5px;
     background:var(--surface-2); border:1px solid var(--border-soft); color:var(--text-3);
@@ -877,7 +874,7 @@
     <div class="ab-main" id="abMain">室内设计助手</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.1.6</span>
+  <span class="ver-tag" id="verTag">v0.1.7</span>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
   <button type="button" class="ab-btn hidden" id="abMoreBtn" data-act="toggle-more" aria-label="更多操作" title="更多操作">⋯</button>
@@ -1110,6 +1107,38 @@
         <button type="button" class="btn small" id="authSignInBtn" data-act="auth-signin">登录</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 联网搜别人的案例 -->
+<div class="modal-mask hidden" id="rankWebMask" role="dialog" aria-modal="true" aria-labelledby="rankWebTitle">
+  <div class="modal" id="rankWebBox">
+    <h3 id="rankWebTitle">联网搜别人的案例</h3>
+
+    <div class="rank-web-info">
+      正在搜：<b id="rankWebName">—</b><br>
+      关键词：<span id="rankWebKeywords">—</span>
+    </div>
+
+    <div class="field rank-web-field">
+      <label for="rankWebInput">还可以问 AI（可选）</label>
+      <textarea id="rankWebInput" rows="2" placeholder="例如：我家 2×2.5 米没窗的卫生间，防水怎么做？"></textarea>
+    </div>
+
+    <div class="rank-web-note">
+      这里是去网上搜<b>别人家怎么做的</b>——论坛帖子、装修日记、知乎回答、真实案例。
+      结果只作参考，各家情况不同，最终还是以手册和设计师的判断为准。
+    </div>
+
+    <div class="modal-btns">
+      <button type="button" class="tbtn hidden" id="rankWebReseach" data-act="rank-web-research">重新搜</button>
+      <div class="right">
+        <button type="button" class="btn ghost small" data-act="close-rank-web">关闭</button>
+        <button type="button" class="btn small" id="rankWebGo" data-act="rank-web-go">开始搜索</button>
+      </div>
+    </div>
+
+    <div id="rankWebResult" class="rank-web-result"></div>
   </div>
 </div>
 
@@ -1618,9 +1647,9 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.1.6";
+const APP_VERSION  = "0.1.7";
 const BUILD_TAG    = "v15";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
-const BASE_TITLE   = "室内设计助手 0.1.6 · 对话式设计顾问";
+const BASE_TITLE   = "室内设计助手 0.1.7 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
 const WEB_SEARCH_URL = "https://api.deepseek.com/anthropic/v1/messages";
@@ -1685,10 +1714,205 @@ const LENGTH_PRESETS = {
   detailed: { maxTokens: 3200, hint: "可以写详细一些，1000 字左右，多给数字、尺寸和施工做法。" }
 };
 
-/* ============================================================
-   一、数据
-   ============================================================ */
 
+/* ============================================================
+   排行榜数据：全部从《装修避坑手册（2025）》提炼（内置，不联网、不调用 AI）
+   结构：空间 key → 类别 key → 条目数组
+   每条：name / why / how / fail / check / cost / costUnit / key / ask / scores
+   ============================================================ */
+const RANK_DATA = {
+  kitchen: {
+    hidden: [
+      { name: "给水管径与打压试验", why: "管子埋在墙里，漏了要砸砖，返工代价最高。", how: "主管 6 分管（DN25），支管 4 分；打压 0.8~1.0MPa 半小时不掉压。", fail: "接头渗水、瓷砖空鼓、墙面发霉，严重了还泡到楼下。", check: "打压 30 分钟压力不降、接头无渗水，拍压力表照片存证。", cost: [600, 1500], costUnit: "元", key: "打压 0.8MPa / 30 分钟", ask: "厨房水管要做打压试验吗？多少压力才算合格？", scores: {"rework": 10, "safety": 9, "replace": 9, "frequency": 3, "feel": 2} },
+      { name: "电气回路与线径", why: "厨房电器最多，回路不够就是一起用就跳闸。", how: "单独 2~3 个回路；主线 4 平方，普通插座 2.5 平方，冰箱单独一路。", fail: "同时开几个电器就跳闸、电线发热，极端情况会起火。", check: "看配电箱回路划分与线径，通电带负载试一次。", cost: [800, 2500], costUnit: "元", key: "主线 4 平方 / 2~3 回路", ask: "厨房电路要分几个回路？用多粗的电线？", scores: {"rework": 9, "safety": 10, "replace": 9, "frequency": 6, "feel": 2} },
+      { name: "排水坡度与存水弯", why: "坡度不够就积水返味，这是天天能闻到的难受。", how: "排水管坡度留 1%~2% 坡向地漏，管径不小于 50mm，水槽下做存水弯。", fail: "水排得慢、地面积水、下水口返味。", check: "倒一盆水看流速，再闻下水口有没有味道。", cost: [300, 800], costUnit: "元", key: "坡度 1%~2%", ask: "厨房排水管坡度留多少合适？要不要存水弯？", scores: {"rework": 9, "safety": 7, "replace": 9, "frequency": 5, "feel": 3} },
+      { name: "燃气管道与阀门", why: "涉及安全，改错有爆炸风险，必须最先定下来。", how: "只能由燃气公司改；管道走明管或吊顶内，装独立阀门，并预留燃气报警器位置。", fail: "漏气、爆炸风险，物业和燃气公司验收也不让过。", check: "用肥皂水涂接口看冒不冒泡；装燃气报警器。", cost: [300, 1200], costUnit: "元", key: "只能由燃气公司改", ask: "厨房燃气管道能自己改吗？要注意什么？", scores: {"rework": 10, "safety": 10, "replace": 10, "frequency": 3, "feel": 1} },
+      { name: "烟道与止逆阀", why: "没装好，就是天天闻别人家的油烟。", how: "接公共烟道必须加金属双叶片止逆阀，接口用锡箔胶带缠严，不留缝。", fail: "楼上楼下油烟串味、返味，油烟机吸力明显变差。", check: "开油烟机，把手放在接口处，不应该有风往回吹。", cost: [100, 400], costUnit: "元", key: "金属双叶片止逆阀", ask: "厨房烟道止逆阀怎么装才不返味？", scores: {"rework": 8, "safety": 5, "replace": 8, "frequency": 7, "feel": 5} },
+    ],
+    surface: [
+      { name: "台面高度与材质", why: "高度差 5 公分，腰就要难受好几年。", how: "台面高 ≈ 身高÷2 + 5 公分（常用 80~85）；石英石或岩板，别用薄人造石。", fail: "切菜一直弯腰、炒菜架着胳膊，时间长了腰疼肩疼。", check: "装完用手肘比一下台面，现场站着试着切两下。", cost: [600, 2500], costUnit: "元/米", key: "高 ≈ 身高÷2 + 5 公分", ask: "厨房台面做多高才不腰疼？用什么材质好？", scores: {"rework": 8, "safety": 2, "replace": 7, "frequency": 9, "feel": 8} },
+      { name: "橱柜板材与五金", why: "板材差两年就鼓包，五金差门就往下吊。", how: "柜体选多层实木或 E0 级板材；铰链用阻尼的，抽屉用承重滑轨，别用便宜三合一。", fail: "潮气一泡就鼓包、柜门下垂关不严、抽屉拉一半卡住。", check: "看板材截面和封边是否严实；抽屉拉到底，看晃不晃、顺不顺。", cost: [1500, 6000], costUnit: "元/米", key: "E0 级板材 / 阻尼五金", ask: "厨房橱柜用什么板材不容易变形？五金要选什么样的？", scores: {"rework": 7, "safety": 4, "replace": 6, "frequency": 8, "feel": 7} },
+      { name: "瓷砖防滑与美缝", why: "厨房有水有油，滑倒在地上很常见。", how: "地砖防滑等级 R10 以上；墙地砖留缝 2mm，用环氧彩砂或美缝剂填实。", fail: "地面打滑，尤其端热锅时；缝隙发黑发霉擦不掉。", check: "洒点水踩一下；看缝隙是不是填实、有没有凹陷。", cost: [80, 200], costUnit: "元/㎡", key: "防滑 R10 以上", ask: "厨房地面用什么砖不打滑？美缝做什么材料好？", scores: {"rework": 6, "safety": 7, "replace": 6, "frequency": 8, "feel": 6} },
+      { name: "吊顶与灯位", why: "灯位没留够，切菜全靠自己的影子。", how: "吊顶留检修口；吊柜下加灯带或筒灯，主灯用 4000K 白光。", fail: "切菜背光看不清食材；吊顶没检修口，以后修管道要拆顶。", check: "站到操作台前，看手上有没有阴影挡住。", cost: [800, 2500], costUnit: "元", key: "吊柜下要有光", ask: "厨房照明怎么布置才不会背光？", scores: {"rework": 7, "safety": 3, "replace": 7, "frequency": 8, "feel": 7} },
+      { name: "门槛石与挡水条", why: "不挡一下，水会顺着门口流到外面去。", how: "门槛石比地面高 1~1.5 公分；水槽柜内壁贴铝箔防潮。", fail: "水漫到客厅泡地板；柜体受潮发胀、发霉。", check: "往地面泼水，看门口挡不挡得住；摸柜内壁是不是干的。", cost: [150, 600], costUnit: "元", key: "挡水高 1~1.5 公分", ask: "厨房门口要做挡水条吗？水槽柜怎么防潮？", scores: {"rework": 7, "safety": 4, "replace": 7, "frequency": 5, "feel": 5} },
+    ],
+    soft: [
+      { name: "拉篮与调味架", why: "柜子深处永远够不到，最后东西全堆在台面上。", how: "地柜做窄调味拉篮（宽 200~250mm）；转角用小怪物或转盘。", fail: "台面越堆越乱，柜子深处的东西放到过期发霉。", check: "装满碗盘拉到底，看顺不顺、晃不晃。", cost: [300, 1500], costUnit: "元", key: "窄柜 200~250mm", ask: "厨房拉篮选哪种最实用？转角柜怎么办？", scores: {"rework": 4, "safety": 1, "replace": 3, "frequency": 8, "feel": 7} },
+      { name: "垃圾处理器与净水器", why: "这两样必须提前留插座和空间，事后加很折腾。", how: "水槽下留 2 个带防水盖的插座，净空高度留 45 公分以上。", fail: "买回来装不进去；没插座要重新拉线、拆柜。", check: "量水槽下的净空高度，看插座有没有防水盖。", cost: [1000, 4000], costUnit: "元", key: "水槽下留 2 个插座", ask: "水槽下面要预留什么？垃圾处理器值得装吗？", scores: {"rework": 7, "safety": 4, "replace": 6, "frequency": 7, "feel": 6} },
+      { name: "照明灯具", why: "一盏灯照全屋，操作区永远在阴影里。", how: "主灯 + 吊柜下灯带 + 水槽上方射灯，色温统一 4000K。", fail: "切菜背光、看食材发暗；色温不统一显得脏乱。", check: "晚上开灯，站操作位看有没有阴影，各处亮度是否一致。", cost: [300, 1200], costUnit: "元", key: "色温统一 4000K", ask: "厨房灯买多少色温的？需要几盏？", scores: {"rework": 4, "safety": 2, "replace": 3, "frequency": 9, "feel": 8} },
+      { name: "收纳分隔件", why: "抽屉一拉全是乱的，找东西要翻半天。", how: "抽屉内加分隔盒和餐具盘；柜内加层板增高架。", fail: "抽屉一开全乱、餐具互相磕碰。", check: "拉开抽屉看有没有分区，碗盘能不能竖着放。", cost: [100, 500], costUnit: "元", key: "抽屉内做分隔", ask: "厨房抽屉怎么收纳最顺手？", scores: {"rework": 2, "safety": 1, "replace": 2, "frequency": 8, "feel": 6} },
+    ]
+  },
+  bathroom: {
+    hidden: [
+      { name: "防水与闭水试验", why: "漏水要砸砖、赔楼下，是返工代价最高的一件事。", how: "墙面刷刚性防水，地面刷柔性防水；淋浴区刷到 1.8 米以上，其他墙面 30 公分上返。", fail: "瓷砖空鼓、墙面发霉、楼下天花板滴水，还要赔邻居。", check: "闭水 48 小时，水深 2.5 公分以上，去楼下看顶面。", cost: [400, 800], costUnit: "元/桶", key: "淋浴区防水 ≥1.8 米", ask: "卫生间防水应该做多高？闭水试验怎么做？", scores: {"rework": 10, "safety": 10, "replace": 10, "frequency": 4, "feel": 3} },
+      { name: "排水坡度与地漏深水封", why: "坡度和地漏没弄好，天天返味、天天积水。", how: "地面坡度 1%~2% 坡向地漏；地漏选深水封（水封 ≥50mm）型，别用便宜的翻板。", fail: "洗澡时水漫脚面、下水口返臭味、返小飞虫。", check: "泼水看水流方向，量地漏水封深度；闻返不返味。", cost: [80, 400], costUnit: "元", key: "水封 ≥50mm", ask: "卫生间地漏怎么选才不返味？坡度留多少？", scores: {"rework": 9, "safety": 7, "replace": 9, "frequency": 8, "feel": 6} },
+      { name: "等电位联结", why: "洗澡时人体电阻最低，漏电最危险。", how: "在卫生间装等电位箱，把金属水管、金属框架都接进去。", fail: "一旦漏电，洗澡时有触电风险。", check: "打开等电位箱，看有没有把金属件接进去、端子是否拧紧。", cost: [200, 600], costUnit: "元", key: "等电位箱必须接", ask: "卫生间等电位联结是必须做的吗？怎么检查？", scores: {"rework": 9, "safety": 10, "replace": 9, "frequency": 2, "feel": 1} },
+      { name: "排风道与止逆阀", why: "没有止逆阀，就是天天闻楼上楼下的味道。", how: "排风管接公共风道，加装金属止逆阀；风管尽量短、少拐弯。", fail: "返味、潮气排不出去、墙角发霉。", check: "开排风扇，把手放风口，不应有风往回吹。", cost: [100, 400], costUnit: "元", key: "金属止逆阀", ask: "卫生间排风返味怎么办？止逆阀装在哪？", scores: {"rework": 8, "safety": 5, "replace": 8, "frequency": 7, "feel": 5} },
+      { name: "给水管径与热水管保温", why: "管径选小水压不够，热水管不保温就白等热水。", how: "进户 6 分（DN25），分支 4 分；热水管包保温棉，冷热管间距 ≥10 公分。", fail: "花洒出水小、热水要放很久、管壁凝露滴水。", check: "开满花洒看水压；摸热水管有没有保温棉，放热水等多少秒。", cost: [400, 1200], costUnit: "元", key: "冷热管间距 ≥10 公分", ask: "卫生间水管用多粗的？热水管要不要保温？", scores: {"rework": 9, "safety": 6, "replace": 9, "frequency": 7, "feel": 6} },
+    ],
+    surface: [
+      { name: "地砖防滑等级", why: "湿地面上摔倒，在卫生间最容易发生。", how: "地砖防滑等级 R10 以上，选哑光面；淋浴区可做防滑槽或防滑垫。", fail: "地面遇水打滑，老人小孩尤其危险。", check: "洒水后踩一下，脚底明显有阻力才算合格。", cost: [80, 200], costUnit: "元/㎡", key: "防滑 R10 以上", ask: "卫生间地砖选什么砖不滑？", scores: {"rework": 7, "safety": 9, "replace": 6, "frequency": 9, "feel": 7} },
+      { name: "墙地对缝与美缝", why: "不对缝看着就廉价，缝隙不填实就发黑。", how: "墙地砖排砖时先对缝；留缝 2mm，用环氧彩砂美缝（湿区别用白水泥）。", fail: "缝歪看着别扭、缝隙发黑发霉、久了渗水。", check: "看竖缝是否上下对齐；用指甲按缝，应硬实不掉粉。", cost: [60, 180], costUnit: "元/㎡", key: "留缝 2mm / 环氧彩砂", ask: "卫生间美缝用什么材料好？要不要对缝？", scores: {"rework": 6, "safety": 4, "replace": 6, "frequency": 5, "feel": 7} },
+      { name: "淋浴房玻璃安全", why: "玻璃自爆是真会伤人的，这块不能省。", how: "选钢化玻璃并贴防爆膜；玻璃厚度 8mm 以上，五金用 304 不锈钢。", fail: "玻璃自爆割伤人；五金生锈、门下垂关不严。", check: "看玻璃角落有没有 3C 标志，问清是否钢化并贴膜。", cost: [1200, 4000], costUnit: "元", key: "3C 钢化 + 防爆膜", ask: "淋浴房玻璃怎么选才安全？需要贴膜吗？", scores: {"rework": 8, "safety": 10, "replace": 8, "frequency": 6, "feel": 5} },
+      { name: "吊顶材质与检修口", why: "卫生间潮气重，吊顶选错两年就发霉变形。", how: "用铝扣板（0.6 厚够用）；留检修口方便以后修管道和风道。", fail: "石膏板受潮发霉脱落；没检修口，修管道要拆顶。", check: "看扣板拼缝是否平整；确认留了检修口。", cost: [100, 300], costUnit: "元/㎡", key: "0.6 厚铝扣板", ask: "卫生间吊顶用什么材料好？要不要留检修口？", scores: {"rework": 7, "safety": 4, "replace": 7, "frequency": 3, "feel": 5} },
+      { name: "门槛石与窗台防水", why: "水最容易从门口渗出去，窗台也是常漏点。", how: "门槛石比地面高 1~1.5 公分，侧面也刷防水；窗台做泛水坡度并密封。", fail: "水渗到门外泡地板；窗台渗水导致墙面发霉起皮。", check: "泼水看门口挡水；雨天看窗台内侧有没有水痕。", cost: [200, 700], costUnit: "元", key: "挡水高 1~1.5 公分", ask: "卫生间门槛石要不要做防水？窗台怎么防渗？", scores: {"rework": 8, "safety": 5, "replace": 7, "frequency": 4, "feel": 4} },
+    ],
+    soft: [
+      { name: "镜柜", why: "台面永远不够放，东西全挤在洗手台上。", how: "选带柜的镜柜（深度 12~15 公分），内部留插座给电动牙刷和剃须刀。", fail: "台面堆满瓶瓶罐罐、天天擦水渍。", check: "打开镜柜看层板高度能不能放下高瓶；插座能不能用。", cost: [400, 1500], costUnit: "元", key: "深度 12~15 公分", ask: "卫生间镜柜选多深的？里面要留插座吗？", scores: {"rework": 4, "safety": 2, "replace": 4, "frequency": 9, "feel": 7} },
+      { name: "浴帘或浴屏", why: "不做干湿分离，洗完澡满地是水。", how: "空间小用浴帘（配挡水条），空间够用浴屏；无论哪种都要配挡水条。", fail: "洗完澡地面全湿，出来一脚水；木门受潮发胀。", check: "开一次花洒，看水有没有溅到干区外面。", cost: [100, 1500], costUnit: "元", key: "一定要配挡水条", ask: "卫生间小，用浴帘还是做淋浴房？", scores: {"rework": 5, "safety": 5, "replace": 4, "frequency": 9, "feel": 7} },
+      { name: "毛巾架与暖风", why: "卫生间潮湿，毛巾不干就有味道。", how: "装电热毛巾架或预留风暖插座；位置离淋浴远一点。", fail: "毛巾长期潮、发霉有异味；冬天洗澡冷。", check: "确认预留了插座（带防水盖），位置够放毛巾。", cost: [300, 1500], costUnit: "元", key: "预留带防水盖插座", ask: "电热毛巾架值得装吗？插座留哪？", scores: {"rework": 5, "safety": 4, "replace": 4, "frequency": 8, "feel": 7} },
+      { name: "防滑垫与收纳", why: "湿区加一块防滑垫，能明显降低摔倒风险。", how: "淋浴区放带吸盘的防滑垫；墙面加免钉置物架放洗浴用品。", fail: "地面更滑；瓶瓶罐罐放地上，容易踢倒。", check: "踩一下垫子看吸不吸住，别买一踩就滑的。", cost: [50, 300], costUnit: "元", key: "带吸盘防滑垫", ask: "卫生间防滑垫买什么样的不打滑？", scores: {"rework": 2, "safety": 7, "replace": 1, "frequency": 8, "feel": 5} },
+    ]
+  },
+  living: {
+    hidden: [
+      { name: "电气回路与线径", why: "客厅电器多，回路不够就是插座一插就跳。", how: "空调单独一路 4 平方；普通插座 2.5 平方；照明 1.5 平方分开走。", fail: "同时开空调和取暖器就跳闸；老旧线路发热有火灾风险。", check: "看配电箱回路标注；带负载（开空调+烧水）试一次。", cost: [700, 2000], costUnit: "元", key: "空调单独 4 平方", ask: "客厅空调要不要单独走一路电？", scores: {"rework": 9, "safety": 9, "replace": 9, "frequency": 5, "feel": 2} },
+      { name: "插座点位与高度", why: "沙发两边没插座，手机充电就得拉长线。", how: "沙发两侧各 1~2 个（高 30cm）；电视墙 4~6 个（高 40cm）。", fail: "到处拉插线板，又乱又绊脚；家具一摆挡住插座。", check: "按家具实际位置量一遍，插上电器试试够不够用。", cost: [300, 900], costUnit: "元", key: "沙发两侧各留 1~2 个", ask: "客厅插座要留几个？留多高？", scores: {"rework": 8, "safety": 4, "replace": 8, "frequency": 9, "feel": 6} },
+      { name: "弱电与网线预留", why: "现在不预埋，以后只能拉明线或靠信号差的路由。", how: "电视墙预埋网线到弱电箱（六类线）；卧室预留网口；弱电箱要留插座。", fail: "Wi-Fi 穿墙差、看 4K 卡顿；明线难看还容易踢到。", check: "看网线是否到位、水晶头是否压好，用测线仪测通断。", cost: [300, 800], costUnit: "元", key: "预埋六类网线", ask: "装修要不要每个房间都预埋网线？", scores: {"rework": 8, "safety": 2, "replace": 8, "frequency": 7, "feel": 5} },
+      { name: "空调孔位与排水", why: "孔位留错，空调装不上或冷凝水滴到楼下。", how: "孔位内高外低（防倒流），冷凝水管引到室外或下水，别排墙上。", fail: "冷凝水倒流进屋、墙面渗水发霉；孔位不对空调装不正。", check: "看孔有没有坡度、排水管是否接到位，倒水试流。", cost: [100, 300], costUnit: "元", key: "孔内高外低", ask: "空调孔要留多高？冷凝水往哪排？", scores: {"rework": 8, "safety": 5, "replace": 8, "frequency": 6, "feel": 3} },
+    ],
+    surface: [
+      { name: "地面材质", why: "客厅走得多，地面选错就是天天看着不舒服。", how: "地砖耐磨等级 PEI 4 以上或三层实木；有地暖优先瓷砖或复合地板。", fail: "地板起翘、瓷砖磨花；有地暖的实木容易开裂。", check: "看耐磨等级标识；地板踩上去有没有空鼓响。", cost: [120, 400], costUnit: "元/㎡", key: "耐磨 PEI 4 以上", ask: "客厅铺地砖还是地板好？有地暖怎么选？", scores: {"rework": 7, "safety": 4, "replace": 5, "frequency": 9, "feel": 9} },
+      { name: "墙面材质与颜色", why: "颜色选错，整个空间的亮度都会被压下去。", how: "采光差选浅色（米白、暖灰）；背景墙做实色或简单板，别做造型翻边。", fail: "显得又暗又小；复杂造型几年就过时，还积灰。", check: "在自然光和灯光下各看一次样板；看阴阳角是否顺直。", cost: [30, 120], costUnit: "元/㎡", key: "采光差就选浅色", ask: "客厅墙面刷什么颜色显大显亮？", scores: {"rework": 6, "safety": 2, "replace": 4, "frequency": 5, "feel": 9} },
+      { name: "吊顶与灯位", why: "灯位在装修里最容易被糊弄，装完就改不动了。", how: "先定沙发和电视位置再定灯位；用无主灯（筒灯+灯带）更均匀，别全靠一个吸顶灯。", fail: "坐到沙发上头顶一片亮、旁边一片暗；灯位对着墙面不是对着人。", check: "弹线时站到预定位置，看光落点对不对。", cost: [1500, 5000], costUnit: "元", key: "先定家具再定灯位", ask: "客厅无主灯怎么布置？要留几个筒灯？", scores: {"rework": 9, "safety": 3, "replace": 8, "frequency": 6, "feel": 8} },
+      { name: "踢脚线", why: "它决定墙地收口的干净程度，也保护墙面。", how: "与门套同色系；高度 6~10 公分；嵌入式要提前在墙面开槽。", fail: "颜色不统一显得零碎；没预埋装不了嵌入式，只能贴外面。", check: "看阴阳角拼接是否严密、与地面有没有缝隙。", cost: [20, 70], costUnit: "元/米", key: "高度 6~10 公分", ask: "踢脚线选多高的？嵌入式要不要提前留槽？", scores: {"rework": 6, "safety": 1, "replace": 4, "frequency": 3, "feel": 6} },
+      { name: "电视墙处理", why: "做太复杂，几年后一定后悔。", how: "简单做：乳胶漆+电视柜；要挂电视就预埋 50 管走线，中间加一层背板加强。", fail: "线露在外面乱；轻质墙上挂大电视有脱落风险。", check: "确认电视位置有加固（龙骨/背板），把线穿管试一次。", cost: [500, 4000], costUnit: "元", key: "预埋 50 管走线", ask: "电视墙要不要预埋穿线管？挂墙怎么加固？", scores: {"rework": 7, "safety": 5, "replace": 6, "frequency": 4, "feel": 7} },
+    ],
+    soft: [
+      { name: "沙发尺寸与布局", why: "买大了走道没了，买小了坐着挤。", how: "净距 3.5 米内选 2.4~2.7 米三人位；沙发前留 40~50 公分过道。", fail: "进不了电梯、挡过道；坐深不合适腰难受。", check: "在地面用胶带贴出沙发外框，走一圈感受通道。", cost: [2000, 8000], costUnit: "元", key: "过道留 40~50 公分", ask: "客厅沙发买多大合适？怎么算尺寸？", scores: {"rework": 5, "safety": 2, "replace": 3, "frequency": 9, "feel": 8} },
+      { name: "茶几与边几", why: "大茶几是最容易后悔的家具，占地方还磕腿。", how: "小客厅用小边几或圆形茶几；高度略低于沙发坐垫。", fail: "挡路、磕小腿，最后被推到墙角堆东西。", check: "量一下坐下后腿部空间，伸手够不够得着。", cost: [300, 2000], costUnit: "元", key: "高度略低于坐垫", ask: "小客厅还要不要茶几？选什么样的？", scores: {"rework": 3, "safety": 3, "replace": 2, "frequency": 8, "feel": 6} },
+      { name: "电视或投影", why: "决定你怎么看片子，也决定墙面要预留什么。", how: "看电视：按屏幕高度 1.1~1.2 米中心对齐视线；投影要留电源、HDMI 和幕布槽。", fail: "电视挂太高，看久脖子酸；投影没留线，线垂下来。", check: "坐沙发上看屏幕中心是否与视线齐平。", cost: [1500, 8000], costUnit: "元", key: "屏幕中心 1.1~1.2 米", ask: "电视挂多高合适？投影要预留什么？", scores: {"rework": 6, "safety": 3, "replace": 3, "frequency": 8, "feel": 8} },
+      { name: "窗帘", why: "遮光和垂感差，客厅白天就没法看电视。", how: "做满墙帘（比窗宽 30~40 公分）；客厅用遮光 50%~70%；需电动就提前留电源。", fail: "漏光、白天反光看不清屏幕；短一截显得小气。", check: "白天拉上帘看漏不漏光；确认电动预留了插座。", cost: [800, 3000], costUnit: "元", key: "比窗宽 30~40 公分", ask: "客厅窗帘要多宽？电动窗帘要留电吗？", scores: {"rework": 5, "safety": 2, "replace": 3, "frequency": 7, "feel": 8} },
+      { name: "地毯与挂画", why: "这两样是让客厅「像个家」的关键，但也不必一次到位。", how: "毯面比沙发宽 20 公分以上；挂画中心离地 1.45~1.55 米。", fail: "买小了显局促；挂太高像挂了盏灯。", check: "铺上去看比例；站门口看画的高度顺不顺眼。", cost: [300, 2500], costUnit: "元", key: "画中心离地 1.45~1.55 米", ask: "客厅地毯买多大？挂画挂多高？", scores: {"rework": 2, "safety": 1, "replace": 1, "frequency": 4, "feel": 7} },
+    ]
+  },
+  bedroom: {
+    hidden: [
+      { name: "电气回路与双控", why: "床头没开关，冬天要下床关灯，这是最常见的后悔。", how: "门口和床头做双控；空调单独一路 2.5 平方；床头预留充电插座。", fail: "每晚下床关灯；插座不够，手机充电线拉一地。", check: "躺到床上试：能不能够到开关和插座。", cost: [400, 1200], costUnit: "元", key: "门口+床头双控", ask: "卧室开关怎么装才不用下床关灯？", scores: {"rework": 8, "safety": 4, "replace": 8, "frequency": 9, "feel": 6} },
+      { name: "隔音构造", why: "卧室最贵的东西是安静，墙体没做好就永远吵。", how: "临街墙加隔音棉+隔音石膏板；门用实木复合+密封条；管道包隔音棉。", fail: "听得见外面车声、隔壁说话、楼上走路的脚步声。", check: "装完关门窗，安静时候听一听还有没有漏声的缝。", cost: [150, 400], costUnit: "元/㎡", key: "临街墙加隔音层", ask: "卧室隔音怎么做？临街墙面怎么处理？", scores: {"rework": 9, "safety": 3, "replace": 9, "frequency": 7, "feel": 8} },
+      { name: "空调孔位与排水", why: "孔位和排水没做对，装机时要重新打墙。", how: "孔位内高外低；留 4 平方专线和 16A 插座在空调侧上方。", fail: "冷凝水倒流、墙面发霉；插座位置不对要拉线。", check: "看孔位坡度、插座是否在空调位上方。", cost: [150, 400], costUnit: "元", key: "孔内高外低 + 16A 插座", ask: "卧室空调插座留哪？孔要打多高？", scores: {"rework": 8, "safety": 5, "replace": 8, "frequency": 6, "feel": 3} },
+      { name: "衣柜嵌入式线路", why: "要在柜里做灯带，就必须在改电的时候把线留进去。", how: "衣柜位置预留一路照明线（做人体感应灯带）；衣柜上方留 4 平方电源备用。", fail: "柜内永远黑漆漆；想加灯带时没有线，只能走明线。", check: "开柜门看灯带亮不亮；确认线是从墙里出来的。", cost: [200, 600], costUnit: "元", key: "柜内预留照明线", ask: "衣柜里想装感应灯带，要提前留线吗？", scores: {"rework": 7, "safety": 3, "replace": 7, "frequency": 7, "feel": 6} },
+    ],
+    surface: [
+      { name: "地面材质与隔音垫", why: "卧室地面除了脚感，更要考虑楼上楼下的噪音。", how: "卧室优先木地板（脚感好、静音）；铺之前加一层隔音垫，减少空鼓声。", fail: "瓷砖冰冷、走路有回声；没垫层，走路声音传到楼下。", check: "踩一踩听声音；地板接缝有没有翘边。", cost: [120, 350], costUnit: "元/㎡", key: "铺一层隔音垫", ask: "卧室铺地板还是瓷砖？隔音怎么做？", scores: {"rework": 7, "safety": 3, "replace": 5, "frequency": 8, "feel": 8} },
+      { name: "墙面材质与颜色", why: "卧室颜色直接决定你躺下时放松还是兴奋。", how: "选低饱和暖色（奶白、灰米、浅豆绿）；床头墙可稍深一档做背景。", fail: "颜色太艳睡不着；全白又显得冷清。", check: "在床头位置关灯开夜灯看一下整体感觉。", cost: [30, 120], costUnit: "元/㎡", key: "低饱和暖色", ask: "卧室刷什么颜色最助眠？", scores: {"rework": 6, "safety": 2, "replace": 4, "frequency": 5, "feel": 8} },
+      { name: "吊顶与灯位", why: "卧室灯光要能「亮起来也能暗下去」。", how: "不要只留一个主灯；床头留壁灯/吊灯电源，做分路调光。", fail: "躺下时主灯直射眼睛；想装床头灯时没线。", check: "试一下躺姿，看天花板灯会不会直射眼睛。", cost: [600, 2500], costUnit: "元", key: "床头留壁灯电源", ask: "卧室灯光怎么安排才不刺眼？", scores: {"rework": 8, "safety": 3, "replace": 7, "frequency": 7, "feel": 8} },
+      { name: "窗帘盒与遮光", why: "床上最需要的是黑，漏光是睡眠杀手。", how: "做窗帘盒或预留电动轨道电源；选双层帘（纱+遮光），遮光率 90% 以上。", fail: "早晨被光叫醒；轨道露在外面很丑。", check: "白天拉上帘，看边缘和顶部漏不漏光。", cost: [600, 2500], costUnit: "元", key: "遮光率 90% 以上", ask: "卧室窗帘要多遮光？要不要做窗帘盒？", scores: {"rework": 6, "safety": 2, "replace": 4, "frequency": 8, "feel": 8} },
+    ],
+    soft: [
+      { name: "床与床垫尺寸", why: "这是卧室最大件的家具，尺寸定错动线全乱。", how: "1.5 米床要 3 米以上净宽；床尾留 60 公分过道；床垫比床架小 2 公分。", fail: "床一放，衣柜门打不开、过道没了。", check: "用胶带在地上贴出床+过道的框，走一圈。", cost: [3000, 12000], costUnit: "元", key: "床尾留 60 公分", ask: "卧室 3 米宽放多大的床合适？", scores: {"rework": 7, "safety": 2, "replace": 4, "frequency": 10, "feel": 9} },
+      { name: "衣柜容量与开门方式", why: "衣柜永远不嫌大，开门方式决定能不能用。", how: "以挂为主：长衣区 1.4 米、短衣区 1 米；柜前留 60 公分再用平开。", fail: "门打不开、衣服堆成一团；平开门前方被床挡住。", check: "打开柜门试，看会不会撞床；挂件区高度够不够。", cost: [1500, 5000], costUnit: "元/米", key: "柜门前方留 60 公分", ask: "卧室衣柜做推拉还是平开？容量怎么分？", scores: {"rework": 7, "safety": 3, "replace": 6, "frequency": 8, "feel": 7} },
+      { name: "床头柜与照明", why: "床两边最需要的是「伸手就能拿到东西」。", how: "床头柜高与床垫齐平或略低；留台灯插座（带开关）或做床头壁灯。", fail: "灯开关够不到、水杯没地方放、手机在地上充电。", check: "躺床上伸手试：开关、插座、柜面都要够得到。", cost: [200, 1200], costUnit: "元", key: "柜面与床垫齐平", ask: "床头柜买多高的？要留插座吗？", scores: {"rework": 3, "safety": 2, "replace": 2, "frequency": 9, "feel": 6} },
+      { name: "色彩氛围与收纳盒", why: "小件收纳和一点软装，是卧室最后「住得舒服」的那一步。", how: "用同色系床品+1~2 件挂画；床下用带轮收纳箱放换季被褥。", fail: "杂物堆在外面看着就烦；换季被子没处放。", check: "拉开床下收纳看顺不顺手、会不会卡。", cost: [200, 1000], costUnit: "元", key: "床下留收纳高度", ask: "卧室换季被褥怎么收纳？", scores: {"rework": 2, "safety": 1, "replace": 1, "frequency": 6, "feel": 6} },
+    ]
+  },
+  dining: {
+    hidden: [
+      { name: "电气回路与插座点位", why: "餐边柜上的小家电、火锅电磁炉，都得有电。", how: "餐边柜上方留 3~4 个（离台面 10~15 公分）；餐桌附近留 1 个。", fail: "吃火锅要拉长线从厨房接；餐边柜电器没处插。", check: "按餐边柜实际高度量插座位置，插上电器试。", cost: [200, 700], costUnit: "元", key: "餐边柜上方 3~4 个", ask: "餐厅要留几个插座？留多高？", scores: {"rework": 8, "safety": 4, "replace": 8, "frequency": 7, "feel": 4} },
+      { name: "弱电预留", why: "想在餐厅放个小电视或音箱，没网线就只能靠 Wi-Fi。", how: "餐边柜位置预埋一根网线到弱电箱；要装电视就加预埋穿线管。", fail: "音箱/小电视信号不稳；明线拉过去很难看。", check: "网口通不通，用测线仪测一下。", cost: [150, 400], costUnit: "元", key: "预埋一根网线", ask: "餐厅要不要预留网线？", scores: {"rework": 7, "safety": 2, "replace": 7, "frequency": 4, "feel": 3} },
+      { name: "地面找平", why: "地面不平，餐桌椅会一直晃。", how: "铺装前做找平（2 米靠尺内误差 ≤3mm）；铺地砖留缝 2mm。", fail: "餐桌一直晃、椅子吱吱响；缝隙不均匀看着糙。", check: "用 2 米靠尺扫一遍地面，看有没有明显空隙。", cost: [30, 80], costUnit: "元/㎡", key: "2 米内误差 ≤3mm", ask: "地面找平怎么验收？", scores: {"rework": 7, "safety": 2, "replace": 7, "frequency": 4, "feel": 5} },
+    ],
+    surface: [
+      { name: "地面材质", why: "餐厅是吃饭的地方，掉东西、洒汤很常见。", how: "同客厅统一材质；若要分开，选耐磨地砖（PEI 4 以上）比木地板更好打理。", fail: "木地板被水泡起翘；接缝处不同材质容易绊脚。", check: "看与客厅的接缝是否平整、有没有明显高低差。", cost: [100, 350], costUnit: "元/㎡", key: "与客厅接缝要平", ask: "餐厅地面用砖还是地板？", scores: {"rework": 6, "safety": 4, "replace": 5, "frequency": 8, "feel": 7} },
+      { name: "墙面装饰", why: "餐厅墙面最容易空，也最容易做过头。", how: "一面主墙做重点（挂画、照片墙、洞洞板）；其余留白，别四面都做造型。", fail: "四面都做造型显得拥挤；全白又空得慌。", check: "挂完站远看比例，主墙是否超过整体 1/3。", cost: [50, 300], costUnit: "元/㎡", key: "只做一面主墙", ask: "餐厅墙面怎么做不显空又不花哨？", scores: {"rework": 4, "safety": 1, "replace": 2, "frequency": 4, "feel": 7} },
+      { name: "吊顶与吊灯位", why: "吊灯位偏一点，餐桌就得挪着坐。", how: "先定餐桌位置，吊灯要在餐桌正中心上方；预留电线时就要定好点位。", fail: "灯歪在一边，看着别扭；要挪餐桌才能对齐。", check: "弹线时把餐桌位置摆出来，看灯点是否居中。", cost: [500, 2000], costUnit: "元", key: "灯要在餐桌正上方", ask: "餐厅吊灯位怎么定？偏了怎么办？", scores: {"rework": 8, "safety": 3, "replace": 7, "frequency": 5, "feel": 8} },
+      { name: "踢脚线", why: "与客厅统一，收口才干净。", how: "和客厅同色同高；餐厅若贴墙做餐边柜，柜后可以不贴。", fail: "颜色不统一显得零碎。", check: "看与客厅是否能对上、阴阳角严不严。", cost: [20, 70], costUnit: "元/米", key: "与客厅同色同高", ask: "餐厅踢脚线和客厅要不要一致？", scores: {"rework": 5, "safety": 1, "replace": 3, "frequency": 3, "feel": 5} },
+    ],
+    soft: [
+      { name: "餐桌尺寸与形状", why: "餐桌大小决定餐厅还能不能走动。", how: "每人宽 60、四周留 80 公分拉椅；4 人方桌 80×80、6 人长桌 1.4 米起。", fail: "拉开椅子就顶着墙；夹菜要站起来。", check: "按尺寸在地上贴框，实际拉一下椅子。", cost: [1000, 6000], costUnit: "元", key: "每人宽 60 公分", ask: "餐厅多大放多大的餐桌？", scores: {"rework": 6, "safety": 2, "replace": 4, "frequency": 9, "feel": 8} },
+      { name: "餐椅数量与材质", why: "椅子少了来客人不够坐，材质选错还硌背。", how: "按常驻人数 +2 把；选带靠背弧度的（腰部有支撑），可叠放的更省地方。", fail: "来客人没椅子；硬板椅久坐腰难受。", check: "坐上去试 10 分钟，看腰部有没有支撑。", cost: [200, 1500], costUnit: "元/把", key: "按人数 +2 把", ask: "餐椅怎么选坐着不累？", scores: {"rework": 3, "safety": 2, "replace": 2, "frequency": 8, "feel": 7} },
+      { name: "餐边柜", why: "热水壶、水杯、零食都需要一个落脚点，否则全堆在餐桌。", how: "柜深 35~40 公分；台面留 40~60 公分操作位；插座按台面高 +10 公分。", fail: "餐桌上永远堆满东西；深度买太深又挡道。", check: "量净宽，看柜门打开会不会撞椅子。", cost: [800, 4000], costUnit: "元", key: "柜深 35~40 公分", ask: "餐边柜做多深？台面留多宽？", scores: {"rework": 5, "safety": 2, "replace": 4, "frequency": 8, "feel": 7} },
+      { name: "吊灯高度", why: "太低容易碰头，太高显得空。", how: "灯罩底边距桌面 70~85 公分（长桌 70~80，圆桌 80~90）。", fail: "站起来碰头；灯太高光线发散没氛围。", check: "装完站起来、坐下各看一次高度是否舒服。", cost: [300, 2000], costUnit: "元", key: "距桌面 70~85 公分", ask: "餐厅吊灯挂多高合适？", scores: {"rework": 4, "safety": 3, "replace": 2, "frequency": 5, "feel": 8} },
+      { name: "挂画与配色", why: "餐厅需要一点颜色让人有食欲。", how: "暖色调（橙、红陶、木色）挂画 1~2 幅；白色餐具比深色更显干净。", fail: "冷色调显得没食欲；东西太杂显得乱。", check: "坐下吃饭时看，视线范围内颜色是否舒服。", cost: [200, 1000], costUnit: "元", key: "暖色调一两幅", ask: "餐厅挂什么画好看？颜色怎么配？", scores: {"rework": 1, "safety": 1, "replace": 1, "frequency": 4, "feel": 7} },
+    ]
+  },
+  study: {
+    hidden: [
+      { name: "电气回路与插座点位", why: "电脑、显示器、台灯都要电，插座不够就满地线板。", how: "书桌下留 4~6 个插座（离地 30 公分或桌下走线槽）；单独一路 2.5 平方给电脑区。", fail: "桌面全是插线板；一个插座插满大功率会发热。", check: "按书桌尺寸量插座位置，插满设备试。", cost: [300, 900], costUnit: "元", key: "桌下留 4~6 个", ask: "书桌区域要留几个插座？留多高？", scores: {"rework": 8, "safety": 5, "replace": 8, "frequency": 8, "feel": 5} },
+      { name: "网线预留", why: "打游戏、开会最怕掉线，网线比 Wi-Fi 稳。", how: "书桌位置预埋六类网线到弱电箱；若要双设备就留两个网口。", fail: "开会卡顿、游戏掉线；事后只能拉明线。", check: "用测线仪测通断，看是不是跑满千兆。", cost: [150, 400], costUnit: "元", key: "预埋六类网线", ask: "书房一定要预埋网线吗？", scores: {"rework": 8, "safety": 2, "replace": 8, "frequency": 7, "feel": 4} },
+      { name: "隔音构造", why: "书房要的是安静，墙体不隔音就等于没书房。", how: "临街墙加隔音棉+隔音板；门用实木复合+密封条；地面加隔音垫。", fail: "外面车声、客厅电视声都听得一清二楚。", check: "关门窗后安静时候听，有没有明显漏声的缝。", cost: [150, 400], costUnit: "元/㎡", key: "临街墙加隔音层", ask: "书房隔音怎么做最有效？", scores: {"rework": 9, "safety": 3, "replace": 9, "frequency": 6, "feel": 8} },
+      { name: "空调孔位", why: "书房小，空调装错位置就直吹头。", how: "孔位内高外低；房间小优先装在对角位置，别正对书桌。", fail: "冷凝水倒流；空调直吹人头，坐一会就头疼。", check: "看孔位位置是否避开座位正上方，坡度是否向外。", cost: [100, 300], costUnit: "元", key: "别正对书桌", ask: "书房空调装在哪个位置好？", scores: {"rework": 7, "safety": 5, "replace": 7, "frequency": 5, "feel": 4} },
+    ],
+    surface: [
+      { name: "地面材质", why: "书房要静音、脚感好，又要能拖动椅子。", how: "木地板或软木地板更静音；如果铺砖，配静音脚轮椅垫保护地面。", fail: "瓷砖上拖椅子吵、地板被椅子刮花。", check: "拖一下椅子听声音，看有没有刮痕。", cost: [120, 350], costUnit: "元/㎡", key: "配静音脚轮", ask: "书房铺什么地面安静？", scores: {"rework": 6, "safety": 3, "replace": 5, "frequency": 7, "feel": 7} },
+      { name: "墙面材质与颜色", why: "书房颜色影响专注度，太花就看不下书。", how: "选低饱和冷色或中性色（浅灰、米白、灰蓝）；避免大面积深色。", fail: "墙面太艳容易分心；全深色显得压抑。", check: "坐下看书 20 分钟，感受是否容易分心。", cost: [30, 120], costUnit: "元/㎡", key: "低饱和中性色", ask: "书房墙面刷什么颜色容易专注？", scores: {"rework": 5, "safety": 1, "replace": 3, "frequency": 4, "feel": 7} },
+      { name: "吊顶与灯位", why: "灯光位置不对，就会一直在自己影子里看书。", how: "主灯偏后（在座位后方），配台灯补光；不用射灯直射桌面。", fail: "写字时手挡光、屏幕反光。", check: "晚上坐下写字，看纸上有没有阴影。", cost: [500, 2000], costUnit: "元", key: "主灯在座位后方", ask: "书房灯位怎么留才不背光？", scores: {"rework": 7, "safety": 3, "replace": 7, "frequency": 6, "feel": 7} },
+      { name: "窗帘盒与遮光", why: "屏幕反光和西晒，都需要能随时压下去。", how: "做窗帘盒或预留电动轨道电源；用双层帘（纱+遮光），西晒严重加遮光率 90%。", fail: "屏幕反光看不清；下午西晒房里待不住。", check: "拉上帘看反光有没有消失。", cost: [500, 2000], costUnit: "元", key: "双层帘 + 遮光", ask: "书房窗帘怎么选才能不反光？", scores: {"rework": 6, "safety": 2, "replace": 4, "frequency": 6, "feel": 7} },
+    ],
+    soft: [
+      { name: "书桌尺寸与高度", why: "桌子高度差几公分，坐久了肩颈就疼。", how: "桌面高 72~75（配 45~48 的椅子）；深 60 公分以上，宽 1.2 米起。", fail: "桌子太矮低头、太高架肩；桌面太浅放不下显示器和书。", check: "坐下把手肘放在桌面，前臂应接近水平。", cost: [500, 3000], costUnit: "元", key: "桌面高 72~75 公分", ask: "书桌多高合适？深度要多少？", scores: {"rework": 6, "safety": 3, "replace": 3, "frequency": 9, "feel": 7} },
+      { name: "椅子人体工学", why: "椅子比桌子更影响身体，坐八小时全靠它。", how: "选可调高度、有腰部支撑、扶手可升降的；坐深调到膝盖后留 2~3 指。", fail: "腰空着、肩膀耸着，久了颈椎腰椎都有问题。", check: "坐满 30 分钟，腰和肩有没有明显的疲劳感。", cost: [400, 3000], costUnit: "元", key: "腰部要有支撑", ask: "办公椅怎么挑才不腰疼？", scores: {"rework": 3, "safety": 4, "replace": 2, "frequency": 10, "feel": 8} },
+      { name: "书柜容量与布局", why: "书只会越来越多，柜子做小了永远不够用。", how: "深 30 公分即可（放书）；层高 30~35 公分；留 1~2 层可调层板；重书放下层。", fail: "层板太薄被压弯；深柜放书浪费空间。", check: "看层板厚度（1.8 公分以上）和是否可调。", cost: [800, 4000], costUnit: "元", key: "层高 30~35 公分", ask: "书柜做多深？层高留多少？", scores: {"rework": 5, "safety": 4, "replace": 4, "frequency": 7, "feel": 6} },
+      { name: "台灯与防眩光", why: "主灯照不到桌面，屏幕又怕反光。", how: "台灯放写字手对侧，色温 4000K，照度够亮但不直射屏幕；加防眩光罩。", fail: "屏幕反光看不清；手挡光写字发暗。", check: "开灯后看屏幕有没有反光斑、手上有没有阴影。", cost: [150, 800], costUnit: "元", key: "放写字手对侧", ask: "书房台灯放哪边？买什么参数？", scores: {"rework": 2, "safety": 3, "replace": 1, "frequency": 8, "feel": 7} },
+      { name: "设备走线", why: "线乱是书房最显乱的地方，也是最容易提前解决的。", how: "桌下装走线槽或理线架；设备预留在同一侧；网线电源线分开捆。", fail: "线垂一地、扫地时缠住；换设备要拔半天。", check: "蹲下看桌下线束是否归拢、有没有余量。", cost: [100, 500], costUnit: "元", key: "桌下装理线槽", ask: "电脑线怎么理才不乱？", scores: {"rework": 3, "safety": 3, "replace": 2, "frequency": 6, "feel": 6} },
+    ]
+  },
+  entry: {
+    hidden: [
+      { name: "电气回路与插座点位", why: "玄关要插扫地机、烘鞋器，没插座就得从客厅拉线。", how: "鞋柜内留 1~2 个插座（给烘鞋器/扫地机充电座）；预留门铃或智能门锁的电源线。", fail: "扫地机没地方充电、烘鞋器没处插；门锁没电源只能换电池。", check: "打开鞋柜看插座位置，插上设备试。", cost: [200, 600], costUnit: "元", key: "鞋柜内留 1~2 个", ask: "玄关鞋柜里要不要留插座？", scores: {"rework": 7, "safety": 4, "replace": 7, "frequency": 7, "feel": 4} },
+      { name: "感应灯线路", why: "晚上回家一片黑，摸开关最容易踢到鞋。", how: "进门位置预留感应灯电源（离地 30 公分或吊顶内）；鞋柜下可做人体感应灯带。", fail: "回家摸黑找开关；鞋柜底下永远看不到鞋。", check: "进门走一遍，看灯是否立刻亮。", cost: [200, 600], costUnit: "元", key: "进门预留感应灯电源", ask: "玄关感应灯怎么装？要提前留线吗？", scores: {"rework": 7, "safety": 5, "replace": 7, "frequency": 8, "feel": 6} },
+      { name: "地面找平与防水", why: "玄关靠近入户门，雨天最容易带进水和泥。", how: "地面做 1%~2% 向外微坡（防往室内渗水）；铺砖前做好找平，留 2mm 缝。", fail: "雨天水渗到室内地板；地面不平，鞋柜站不稳。", check: "泼点水看往哪边流；用靠尺扫地面。", cost: [30, 80], costUnit: "元/㎡", key: "向外微坡 1%~2%", ask: "玄关地面要做坡度吗？", scores: {"rework": 7, "safety": 5, "replace": 7, "frequency": 5, "feel": 4} },
+    ],
+    surface: [
+      { name: "地面材质耐脏防滑", why: "玄关地面是全屋最脏的地方，也最容易滑。", how: "选深色或花色的防滑砖（R10 以上），脏了不显；别用浅色抛光砖。", fail: "浅色地面一天就显脏；遇水打滑。", check: "洒水踩一下，看有没有阻力、脏了是否明显。", cost: [100, 300], costUnit: "元/㎡", key: "防滑 R10 / 深色系", ask: "玄关地面选什么砖耐脏？", scores: {"rework": 6, "safety": 7, "replace": 5, "frequency": 8, "feel": 7} },
+      { name: "墙面材质", why: "进门第一眼看到的是玄关墙面，最容易被包和鞋蹭脏。", how: "用可擦洗的乳胶漆或护墙板；挂衣区背后加一块易擦洗的板。", fail: "墙面都是鞋印和包印，擦不掉。", check: "用湿布擦一下样板，看能不能擦干净。", cost: [40, 200], costUnit: "元/㎡", key: "选可擦洗材质", ask: "玄关墙面怎么选不容易脏？", scores: {"rework": 5, "safety": 1, "replace": 3, "frequency": 6, "feel": 6} },
+      { name: "吊顶与灯位", why: "玄关空间小、天花低，灯光决定进门的观感。", how: "不做复杂吊顶；一盏筒灯或吸顶灯 + 感应灯带即可，色温 3000~4000K。", fail: "灯太暗显压抑；做复杂造型反而更矮。", check: "晚上进门开灯，看有没有暗角和压抑感。", cost: [300, 1200], costUnit: "元", key: "色温 3000~4000K", ask: "玄关灯怎么选？要不要做吊顶？", scores: {"rework": 5, "safety": 2, "replace": 5, "frequency": 6, "feel": 7} },
+      { name: "门套与门槛石", why: "收口不严，门套底下就会进水发霉。", how: "门套底部做防水处理；门槛石比地面高 1~1.5 公分挡水。", fail: "门套底部受潮发黑；雨水渗进室内。", check: "泼水看门口挡不挡水；摸门套底部是否干燥。", cost: [200, 700], costUnit: "元", key: "比地面高 1~1.5 公分", ask: "入户门槛石要做吗？门套怎么防潮？", scores: {"rework": 7, "safety": 4, "replace": 7, "frequency": 4, "feel": 4} },
+    ],
+    soft: [
+      { name: "鞋柜容量与深度", why: "鞋只会越来越多，柜子做太浅就只能外放。", how: "深 35 公分（放 44 码男鞋）；层高 15~20 可调；按人数×8 双估容量。", fail: "鞋子放不进去只能堆在门口；鞋子挤变形。", check: "拿一双最大的鞋放进去试，门能不能关。", cost: [800, 3500], costUnit: "元", key: "深 35 公分", ask: "玄关鞋柜做多深？层高留多少？", scores: {"rework": 6, "safety": 2, "replace": 5, "frequency": 9, "feel": 7} },
+      { name: "换鞋凳", why: "站着换鞋容易摔，尤其穿靴子的时候。", how: "凳高 40~45 公分（与小腿相当）；下方留空放当天穿的鞋。", fail: "站着换鞋不稳；玄关地上永远散着鞋。", check: "坐上去试高度，看抬脚是否舒服。", cost: [200, 1000], costUnit: "元", key: "凳高 40~45 公分", ask: "换鞋凳买多高的？要不要带收纳？", scores: {"rework": 3, "safety": 6, "replace": 1, "frequency": 8, "feel": 6} },
+      { name: "挂衣区与镜子", why: "进门先脱外套，没有挂的地方就会扔在沙发上。", how: "挂衣杆高度 1.6~1.7 米，深度 55 公分；镜子离地 1.1~1.2 米（照全身）。", fail: "外套全堆沙发；出门前看不到整体。", check: "挂一件长大衣试，看拖不拖地；照镜子看是否全身。", cost: [200, 1000], costUnit: "元", key: "挂杆高 1.6~1.7 米", ask: "玄关挂衣区留多高？镜子挂哪？", scores: {"rework": 3, "safety": 2, "replace": 2, "frequency": 8, "feel": 6} },
+      { name: "收纳盒与感应灯", why: "小东西（钥匙、口罩、快递刀）不归位就是永远乱。", how: "台面放一个浅盘收钥匙；配一个感应小夜灯。", fail: "钥匙到处找、晚上摸黑。", check: "放一个月的钥匙和票据，看是否还在原位。", cost: [50, 300], costUnit: "元", key: "台面留一块置物区", ask: "玄关小东西怎么收纳不乱？", scores: {"rework": 2, "safety": 3, "replace": 1, "frequency": 8, "feel": 5} },
+    ]
+  },
+  balcony: {
+    hidden: [
+      { name: "给排水与地漏", why: "阳台要洗衣、拖地，没地漏就只能拿盆接水。", how: "预留进水管（4 分管）和下水管（≥50mm）；装深水封地漏，地面 1%~2% 坡向地漏。", fail: "洗衣服没处排水；积水泡到客厅地板。", check: "倒一盆水看排水快不快、往哪流。", cost: [300, 1000], costUnit: "元", key: "下水 ≥50mm / 坡 1%~2%", ask: "阳台要不要留地漏？排水怎么走？", scores: {"rework": 9, "safety": 7, "replace": 9, "frequency": 6, "feel": 4} },
+      { name: "防水与闭水", why: "阳台常年在外面，防水不做就是漏到楼下。", how: "地面和墙面上返 30 公分做防水；闭水 48 小时，去楼下看顶面。", fail: "楼下漏水、墙面发霉，要赔邻居。", check: "闭水 48 小时，水深 2 公分以上，楼下顶面无渗痕。", cost: [300, 700], costUnit: "元", key: "闭水 48 小时", ask: "阳台防水要做多高？闭水怎么做？", scores: {"rework": 10, "safety": 9, "replace": 10, "frequency": 3, "feel": 2} },
+      { name: "电气回路与防水插座", why: "阳台有水，普通插座用起来有风险。", how: "所有插座带防水盖，离地 30 公分以上；洗衣机用单独回路 + 16A 插座。", fail: "水溅到插座上漏电；和洗衣机一起用就跳闸。", check: "看插座有没有防水盖，回路是否独立。", cost: [400, 1200], costUnit: "元", key: "带防水盖 + 独立回路", ask: "阳台插座怎么装才安全？", scores: {"rework": 9, "safety": 10, "replace": 9, "frequency": 6, "feel": 3} },
+      { name: "封窗结构与安全", why: "封窗是阳台最贵也最危险的一项，做错会漏水甚至掉窗。", how: "选断桥铝（楼层越高型材等级越高）+ 钢化玻璃；打好发泡胶和密封胶，排水孔要留。", fail: "下雨渗水、风大有异响，严重时有窗体脱落风险。", check: "下大雨后看窗台内侧有没有水；推一推看框体稳不稳。", cost: [600, 2000], costUnit: "元/㎡", key: "断桥铝 + 钢化玻璃", ask: "阳台封窗怎么选？漏水怎么查？", scores: {"rework": 10, "safety": 10, "replace": 10, "frequency": 4, "feel": 5} },
+    ],
+    surface: [
+      { name: "地面材质防滑", why: "阳台常湿，防滑比好看重要。", how: "选防滑砖（R11 以上）或防滑地砖；铺前做好找平与坡度。", fail: "地面遇水打滑，尤其晾衣服时容易摔。", check: "洒水踩一下，看有没有阻力。", cost: [100, 300], costUnit: "元/㎡", key: "防滑 R11 以上", ask: "阳台地面用什么砖不滑？", scores: {"rework": 7, "safety": 8, "replace": 6, "frequency": 7, "feel": 6} },
+      { name: "墙面材质", why: "阳台墙面要经得住日晒雨淋。", how: "用外墙漆或瓷砖；若要贴砖，选耐候性好的，缝隙用防水填缝。", fail: "乳胶漆起皮脱落、墙面发霉。", check: "看墙面有没有起皮、发霉，摸一下是否干燥。", cost: [50, 200], costUnit: "元/㎡", key: "外墙漆或瓷砖", ask: "阳台墙面刷什么不掉皮？", scores: {"rework": 6, "safety": 3, "replace": 6, "frequency": 4, "feel": 5} },
+      { name: "吊顶材质", why: "阳台要挂晾衣杆，吊顶要能承重也要防潮。", how: "用铝扣板或防潮石膏板；晾衣杆的膨胀螺栓要打到结构层，别只打在吊顶上。", fail: "吊顶受潮变形；晾衣杆被拽下来。", check: "用力拉一下晾衣杆，看是否稳；看吊顶有没有水痕。", cost: [100, 300], costUnit: "元/㎡", key: "晾衣杆打在结构层", ask: "阳台吊顶用什么材料？晾衣杆怎么固定？", scores: {"rework": 8, "safety": 7, "replace": 8, "frequency": 5, "feel": 4} },
+      { name: "门槛石", why: "阳台地面通常比室内低，不加门槛容易倒灌。", how: "装门槛石，比阳台地面高 1~1.5 公分，挡水也好看。", fail: "雨水倒灌进客厅泡地板。", check: "泼水看门口挡不挡得住。", cost: [150, 500], costUnit: "元", key: "高出 1~1.5 公分", ask: "阳台和客厅之间要不要装门槛石？", scores: {"rework": 7, "safety": 4, "replace": 7, "frequency": 4, "feel": 4} },
+    ],
+    soft: [
+      { name: "洗衣机与烘干机", why: "叠放还是并排，会直接决定阳台还能不能走路。", how: "叠放要买专用连接架；并排各留 65 公分宽；机后留 5~10 公分散热与接管空间。", fail: "放不进去、门打不开；机身顶住墙没法接管。", check: "量好净宽净深再买；接好进排水试一次。", cost: [2000, 8000], costUnit: "元", key: "机后留 5~10 公分", ask: "阳台洗衣机怎么摆最省地方？", scores: {"rework": 6, "safety": 3, "replace": 5, "frequency": 8, "feel": 7} },
+      { name: "晾衣杆或隐形晾衣", why: "晾衣方式决定阳台的日常样子。", how: "固定晾衣杆装在承重处；隐形晾衣架要预留电源（电动款）或留够长度。", fail: "晾衣杆太短不够用；电动款没留电，装了用不了。", check: "挂满湿衣服试看会不会晃、够不够挂。", cost: [300, 2000], costUnit: "元", key: "电动款要预留电源", ask: "阳台晾衣杆怎么选？要留电吗？", scores: {"rework": 5, "safety": 5, "replace": 4, "frequency": 9, "feel": 7} },
+      { name: "收纳柜与绿植", why: "拖把、清洁剂、花盆都需要有地方放。", how: "阳台柜选防潮板材（不锈钢或多层板+防水处理）；柜底离地 5 公分防潮。", fail: "柜子受潮发霉变形；拖把扫把堆在角落。", check: "摸柜内壁是否干燥，看有没有做防潮处理。", cost: [800, 3000], costUnit: "元", key: "柜底离地 5 公分", ask: "阳台柜用什么材料防潮？", scores: {"rework": 5, "safety": 2, "replace": 4, "frequency": 6, "feel": 6} },
+      { name: "照明", why: "晚上晾衣服、浇花都需要看得见。", how: "装防潮吸顶灯或壁灯（IP44 以上）；有吊柜就加灯带。", fail: "晚上阳台一片黑；灯具受潮短路。", check: "晚上开灯看够不够亮；看灯具是否标明防潮等级。", cost: [150, 600], costUnit: "元", key: "防潮 IP44 以上", ask: "阳台灯怎么选防潮？", scores: {"rework": 3, "safety": 5, "replace": 2, "frequency": 6, "feel": 6} },
+    ]
+  }
+};
+
+/* 五个维度权重：切预设只本地重算，不重新请求 API */
+const RANK_WEIGHTS = {
+  balanced: { rework:.30, safety:.30, replace:.20, frequency:.10, feel:.10 },
+  family:   { rework:.25, safety:.45, replace:.15, frequency:.08, feel:.07 },
+  budget:   { rework:.42, safety:.25, replace:.23, frequency:.05, feel:.05 },
+  quality:  { rework:.20, safety:.22, replace:.15, frequency:.15, feel:.28 }
+};
+const RANK_PRESETS = [
+  { key:"balanced", label:"均衡（默认）" },
+  { key:"family",   label:"家有老人小孩" },
+  { key:"budget",   label:"预算紧" },
+  { key:"quality",  label:"追求品质" }
+];
+const RANK_TABS = [
+  { key:"hidden",  label:"硬装 · 隐藏" },
+  { key:"surface", label:"硬装 · 表面" },
+  { key:"soft",    label:"软装" }
+];
+const RANK_TIER_META = {
+  S: { label:"S 级 · 做错要砸掉重来", hint:"藏在里面、返工代价极高、涉及安全" },
+  A: { label:"A 级 · 重点花钱",       hint:"每天都用，好坏差别直接能感觉到" },
+  B: { label:"B 级 · 够用就行",       hint:"达标即可，多花钱买不到体验" },
+  C: { label:"C 级 · 可以后补",       hint:"随时能换、能加、能扔" }
+};
 const DATA = {
   kitchen: {
     name: "厨房", icon: "🍳", desc: "烹饪与收纳的核心区域",
@@ -1819,84 +2043,6 @@ const DATA = {
   }
 };
 
-/* 条件：3 项（面积 / 预算档位 / 补充），其余交给 AI 在对话里问 */
-
-/* 装修避坑手册（2025）正文 —— 生成排行榜时按关键词检索引用，也供「手册」页查看 */
-const HANDBOOK_RAW = "目 录\n第一节 装修流程计划表 1\n第二节 毛坯房验房记录表 2\n第三节 装修材料 3\n主材明细及选购表 3\n辅材明细及选购表 8\n瓷砖和木地板 12\n装修防漏项表 14\n装修需要提前考虑及购买的 43 样东西 15\n第四节 施工工艺注意事项 18\n主体拆改与新建 18\n水电 19\n瓦工 29\n木工 38\n油漆 42\n第五节 厨房橱柜 46\n第六节 全屋定制 54\n装修板材分类与使用 54\n全屋定制 55\n全屋定制合同模板 64\n第七节 装修环保 65\n第八节 全屋水电点位布置 67\n第九节 空间收纳与搭配设计要点 73\n第十节 签合同注意事项 84\n第十一节 验收资料 85\n装修流程计划表\n项目 序号 分项 时间 注意事项\n前期\n准备\n1 设计规划 提前了解\n交房前6个月准备，网上搜集图片，也可以先看家具风格，装\n修跟着家具风格走；请设计师常规家装40-80/m²,1-3年经验\n设计师一般免费；也可以网上找喜欢的案例，让设计师按自\n己意愿绘图，节省设计费。\n2 选择装修\n方式\n自装 提前确定装修风格，了解装修顺序，多去建材\n市场了解，在网上搜集喜欢的案例、风格\n公司装 多对比，交房了再签合同，不要相信活动，没交房再着急也\n装不了，钱在自己手里要安全，签了就开工，要么不签\n3 收房验房 提前了解 按《毛坯房验房记录表》去验房，网上选购验房工具\n基础\n开工\n1 开工拆除 施工单位 提前确定好拆改位置，承重墙不可拆改，向物业要结构图\n2 更换窗户 提前了解 拆除后就可以测量了，一般用断桥铝，楼层越高等级越高\n3 中央空调安装 提前了解 拆除后进场，预算不足可以考虑风管机\n4 新风安装 提前了解 拆除后进场，与中央空调或风管机同时安装\n5 水电改造 施工单位 属于施工单位施工项目，无需计划，注意材料质量就行\n6 智能布线 提前了解 水电改造前沟通并确定\n7 地暖安装 提前了解 常用PERT管，分水器铜的好，开发商铺设好的可根据情况选\n择保留还是更换\n8 防水施工 施工单位 属于施工单位施工项目，无需计划，注意材料质量就行\n9 瓦工施工 施工单位 注意先看师傅手艺，完工可以测量橱柜、门、定制家具\n10 美缝施工 铺砖前了解 最好在铺完砖5-7天之后进行，先让地面水分干透\n11 木工施工 施工单位 如果不打柜子，可以先做木工后做瓦工项目；材料要环保\n12 油漆施工 施工单位 属于施工单位施工项目，无需计划，注意材料质量就行\n开荒\n保洁 保洁后就可以安装主材了\n主材\n安装\n1 铝扣板 油漆完工后 一般0.6厚就行，如果吊柜多可以先装橱柜，没有缝隙\n2 橱柜安装 铺完砖测量 最好用多层实木板材，承重力好，铺完砖测量下单；\n阳台洗衣机柜别忘了，有专门定制的，提前测量家电尺寸\n3 铺贴壁布 油漆后 糯米胶和基膜需要环保，常用；嘉力丰，绿松林、壁虎\n4 木门和定制 铺砖后下单 衣柜注意板材环保，建议看E0和ENF级别板材\n卧室门常用实木烤漆门，实木免漆门，铺完砖后测量下单\n5 木地板 油漆后 安装前注意找平，打扫一遍卫生，刷地固；\n儿童房别用强化地板，环保等级低，用三层或多层\n6 厨电安装 油漆后 燃气具尽量选质量好的，晾衣架最好用电动的\n7 开关插座 油漆后 建议用好一点的，公牛，TCL,施耐德，正泰等\n8 主灯安装 有灰尘项目\n结束后 商家负责安装，安装好要用塑料薄膜包裹，防止灰尘污染\n9 家具 有灰尘项目\n结束后\n家具最好不选密度板，家具也是甲醛主要来源， 一定注\n意环保，少用密度板家具，定制家具铺砖后下单测量\n10 布艺 有灰尘项目\n结束后 根据装修风格购买，提前计划好是否做窗帘盒\n11 洁具 工人都撤场 有水汽的地方密封胶注意用防霉型的；安装完后保护好\n12 入住环保 乔迁新房 建议通风至少3个月后入住，如果还有明显刺鼻气味建议做环\n保检测。\n蓝色字属于半包常规项目，黑色字属于主材自选类\n本之装修设计编辑仅供参考，严禁抄袭或传播\n1\n毛坯房验房记录表\n小 区 ： 楼 号 ： 房屋结构：\n业主姓名： 验收时间： 检查结果\n检查内容 部位 验收内容 合格 不合格 问题处理方法\n水\n1)防水是否有效、防水层是否有裂缝\n2)下水排放是否畅通\n3)厨卫排水管是否有阻火圈\n4)水管是否正常通水\n电\n1)插座是否有电，注意是否是左零右相\n2)宽带是否入户\n3)检查标明电线规格是否符合国标规范要求\n4)空气开关是否能自跳\n5)电视信号是否到位\n6)可视电话是否有信号\n7)室内报警系统是否安装\n墙面\n客厅\n卧室\n餐厅\n厨房\n卫生间\n1)墙面是否平整，靠尺或观察\n2)是否有裂缝，仔细观察\n3)是否局部有空鼓现象，用响鼓锤测试\n4)阴阳角是否垂直\n5)靠近厨卫的区域是否有水印\n顶面\n干区顶面\n1)各个房间是否有渗水痕迹\n2)是否有裂缝\n3)用验房棒查看是否空鼓\n4)4个角是否有高低差\n厨卫顶面 1)顶面是否有水印，掉皮现象\n2)楼上是否有渗水(注意上下水管根部位)\n地面\n1)是否平整\n2)是否有大裂缝\n3)是否有空鼓现象，但有保温层正常\n4)卫生间是否有渗漏\n5)地角是否平直\n6)上下管道，暖气接口是否有渗漏\n门窗\n防盗门\n1)门是否有划伤\n2)锁点是否到位\n3)门锁是否好开启\n窗\n1)门窗开关是否灵活，拉手，锁具是否好用\n2)门窗是否有玻璃损坏，变形、中空玻璃是否存水\n3)纱窗是否开启轻松，玻璃有无3C标志\n注：此验房表仅为业主参考\n 客户签字： 验房师签字：\n年 月 日\n2\n装修主材明细表\n序号 名称 品牌参考\n空调 中央空调/风管机 日立、大金、格力、东芝、美的、海信、约克、三菱、海尔\n新风 新风 远大、兰舍、大金、日立、松下、博士\n地暖 地暖 伟星、保利、日丰、金牛\n瓷砖\n地砖、墙砖 简一、诺贝尔、东鹏、马可波罗、鹰牌陶瓷、蒙娜丽莎、欧神诺、斯米克\n、萨米特、金丝玉玛、新南悦、冠珠、新中源、金意陶、能强、\n冠军、卡米亚、依诺、宏宇、LD瓷砖、大角鹿、顺辉踢脚线过门石\n石材 主要看花色\n木地板 木地板 圣象、大自然、生活家，德尔地板、卢森、贝尔、肯帝亚、久盛\n塞纳春天、多米阳光、世友、菲林格尔、万象、安信、书香门地\n卫浴\n马桶\n箭牌、九牧、恒洁、美标、汉斯格雅、TOTO、法恩莎、\n东鹏、科勒、安华、摩恩、浪鲸、惠达、申鹭达、帝王浴室柜\n花洒\n橱柜\n地柜、吊柜 欧派、尚品宅配、博洛尼、金牌、志邦、好莱客、我乐、玛格\n水龙头，水盆 摩恩、华帝、TOTO、悍高、箭牌、九牧、四季沐歌、\n拉篮五金合页 悍高、顶固，固特、海蒂诗、百隆五金、DTC、汇泰龙\n衣柜 定制衣柜 全友，科凡，好莱客，莱茵艾格，维意，金牌，欧派，海尔，索菲亚\n兔宝宝，艾依格，百得胜，尚品，志邦，丽维家，诗尼曼，我乐，玛格\n灯具\n客餐厅卧室灯 主要看款式，建议线下体验后购买\n射灯、灯带 雷士、欧普、西顿照明、松下、三雄极光、佛山照明、TCL\n开关，插座 公牛、西门子、罗格朗、施耐德、德力西、欧普、正泰、西蒙、鸿雁\n门窗\n室内门，窗套 TATA木门、梦天、美心、盼盼、尚品本色、开开、\n华鹤、北翠、3D木门、皇朝T型门、轩叶、千川、金迪\n门锁 中立、王力、天宇、金丰、卡贝、名门\n断桥铝 凤铝、伟昌、南山、亚铝、兴发、中铝、忠旺、海螺、实德\n吊顶 铝扣板吊顶 友邦，法狮龙，奥普，松下，容声，科耐特，志邦\n壁布 壁布 领秀、乐图、斯图、孚太、锦绣花开、亚沙壁纸、\n爱柏壁纸、玉兰墙纸、欧雅\n净水 厨房净水/前置 怡口、安吉尔、3M、美的、小米、沁园、史密斯、飞利浦、海尔\n集成灶 集成灶 火星人，美大，亿田，帅丰，海尔，森歌\n燃气具 热水器、燃气灶\n油烟机 老板、方太、万和、海尔、万家乐、华帝、美的、史密斯、林内、能率\n本之装修设计编辑仅供参考 ，严禁抄袭或传播\n主材采购小技巧 :\n通常很多主材都是有3种价格。第一种是针对有钱不懂行的业主的零售价 。第二种是渠道价，也就是和装修公司或者\n设计师合作的价格，比零售价低。第三种价格是工程价。工程价是面对大工程的 ，我们拿不到这种价格，所以我们只\n能在渠道价上动动心思 。比如，你想买这家店的材料之前 ，先迂回一下，看看周围几家同类型的店 ，对比一下价格，\n最后再去你想去的那一家 ，重点来了，要伪装成设计师，你就说你是设计师，想合作一下，后期有单给他介绍，让他\n给渠道价给你。渠道价比零售价低20%以上。不要怕被识破，就算明知道你不是设计师 ，也没关系，不会拆穿你的，\n没有人那么傻，到手的钱都不赚。\n3\n装修主材选购表 1\n序号 名称 品牌参考及知识讲解\n瓷\n砖\n地砖\n墙砖\n简一、诺贝尔、东鹏、马可波罗、鹰牌、蒙娜丽莎、金丝玉玛\n新南悦、冠珠、新中源、欧神诺、斯米克、萨米特、金意陶、能强、冠军\n、卡米亚、依诺、宏宇、LD瓷砖、大角鹿、顺辉\n1、首推广东砖，生产技术更先进款式更新颖 ；一线和二线品牌都可以购\n 买，根据自己预算。\n2、选砖注意事项:①选择优等品，②生产日期色号同时间，③看CCC认证，\n ④品牌瓷砖背面都有自己LOG0,没有的不要，⑤看包装具体生产地址是\n 否和承诺一样，只有营销地址的不行，⑥地砖防滑性要选择0.5以上。\n3、10层以下选浅色系，光线好可以看中色系，深色慎选。\n 纹理选一石多面，多块砖放一起看，不要单看一块砖。\n4、一线品牌的砖款式新颖，有自己的图案设计团队。\n5、一线品牌吨压机超7200,甚至过万，二线品牌一般在7000之下。\n6、一线品牌耐磨度高，釉料耐磨度可达到4级2100转，二线二级750转。\n7、铺贴方式一：高性价比就选规格800*800的，全房对缝通铺；\n 铺贴方式二：客厅用750*1500，卧室用800的，经济实惠。\n10、厨房卫生间选规格600*1200，两片砖直接到顶更大气；个别业主需要\n 考虑经济实惠，墙砖都往小规格选，比如规格：300*600，400*800\n踢脚线\n过门石\n石材 主要看花色，需要业主参与挑选， 一般去当地石材城\n木\n地\n板\n木\n地\n板\n圣象、大自然、肯帝亚、生活家、德尔地板、贝尔、卢森、久盛\n塞纳春天、多米阳光、世友、万象、安信、菲林格尔、书香门地\n1、强化地板品牌的约60-130m²,密度板材料环保度低，不建议儿童房。\n 厚度建议选择1厘米以上的。\n2、9层地板上面是实木层脚感好 ，环保度中，价格250-350m²左右。\n3、新三层、5层地板，强化地板的升级版，环保好一点，脚感无变化。\n4、真三层地板，上面是3-4mm的实木层，舒适度高，中间夹层板一般是\n 桦木或云杉木，可以选择，价格300m²左右。\n5、纯实木地板，原木切割内部有清晰树纹，价格约400-600m²。\n衣\n柜\n定制\n衣柜\n全友，科凡，好莱客，莱茵艾格，维意，金牌，欧派，海尔，索菲亚，\n兔宝宝，艾依格，百得胜，尚品，志邦，丽维家，诗尼曼，我乐，玛格\n参考本课件的装修板材分类表 。\n吊\n顶\n铝扣板\n吊顶\n友邦，法狮龙，奥普，松下，容声，科耐特，志邦\n1、铝扣板的厚度一般0.6-0.7mm的就可以。\n2、颜色方面尽量选纯色、浅色的，不要选带花纹的，看着容易乱。\n3、300*300、300*600性价比比较高。\n4、选烤漆的，不易变黄，不选覆膜的，选哑光的不选亮光的。\n本之装修设计编辑仅供参考 ，严禁抄袭或传播。\n4\n装修主材选购表 2\n橱\n柜\n地柜\n吊柜\n欧派橱柜，尚品宅配，金牌，志邦，好莱客，我乐，博洛尼，玛格\n1、柜体建议选择多层实木，耐水性和承重性比颗粒板好 。\n2、优先选择台下盆， 好打扫卫生，但是有垃圾处理器建议做成台中盆 。\n3、吊柜位置一般距离地面1550mm- 1600mm，方便拿取，不易碰头。\n4、台面主要材料是石英石，厚度1.5-2.0cm都可以，主要材质是石英砂，\n 含量不应该低于93%，硬度和耐划性更好，台下一定 要加承重条。\n5、岩板台面也可以使用，不锈钢台面不推荐，胶粘的容易和垫板脱层。\n6、打密封胶要用好的，市场价50元/支，就很好了。\n水龙头\n水盆\n悍高，箭牌，九牧，四季沐歌，摩恩，华帝，TOTO\n1、尽量选择大号单盆，双盆洗大件物品不方便。\n2、性价比高的认准SUS304不锈钢水盆，壁厚选3mm的稳定结实。\n 更加好点的可以看看，有纳米涂层的水槽。\n3、水龙头选抽拉式的，槽内的卫生好清理，水槽深度选20公分以上的。\n拉篮\n五金\n固特，悍高，顶固，DTC,海蒂诗，百隆五金，汇泰龙\n1、五金假货比较多， 一定选择正规渠道，内行都不好看出来。\n2、全阻尼比半阻尼好，二段力比一段力的好，快装的比不能脱卸的好。\n3、拉篮选抽屉式的，不选调料拉篮不实用，选304不锈钢的，不怕生锈。\n 导轨一定要选带缓冲的。\n开\n关\n插\n座\n开关\n插座\n公牛，西门子，罗格朗，施耐德，德力西，正泰，欧普，西蒙，鸿雁\n1、看用料、PC的阻燃性要好，ABS的要差一些。\n2、铜材质锡磷青铜好，不容易打火，另外要有安全孔功能。\n3、去正规渠道，只要不买到假的品牌的都没问题 。\n灯\n具\n射灯\n灯带\n雷士，欧普，飞利浦，西顿照明，松下，三雄极光，佛山照明，TCL\n1、色温建议选4000k左右，2、射灯角度建议选30-38°。\n3、靠墙建议用射灯，居中照明如阳台、过道可以用筒灯。\n4、射灯铝材材体散热好，使用寿命更长。\n5、一定选择深藏防眩灯，可以做到见光不见灯。\n6、显指CRI≥90，更好还原物品颜色。\n7、灯带不要选频闪的，对眼睛不好，可以用手机摄像机照一下测试 。\n客厅\n卧室\n灯\n1、主要看款式，建议线下体验后购买。\n2、过于复杂的不要选，容易过时，尽量不选碗口朝上的藏灰尘 。\n3、看色温，客厅卧室一般建议选4000k左右，厨房建议选择5000k左右。\n本之装修设计编辑仅供参考 ，严禁抄袭或传播。\n5\n装修主材选购表 3\n空\n调\n中央\n空调\n风管机\n日立，大金，格力，东芝，约克，三菱，海尔，美的，海信\n1、中央空调价格贵，装修成本高，需要全房吊顶，装修效果好。\n2、风管机主要用在客厅，解决了柜机占空间的问题。\n 卧室用壁挂机，整体优势价位比中央空调便宜 ，维修方便。\n新\n风\n新风\n远大，兰舍，日立，松下，大金，博士\n管道式新风系统和壁挂式新风系统\n1、送风类型：选双向排送\n2、过滤方式：选HEPA高效网+静电集尘盒，高效滤网用的是空气净化\n 器滤网里的HEPA，可以拦截 灰尘、PM2.5\n3、制热功能：北方选显热交换，南方选全热交换，不推荐电辅热\n地\n暖\n地暖\n伟星，金牛，保利，日丰，金德\n1、分水器纯铜的好，80平米约4组，100平米约5组，120平米约6组。\n2、要选择颜色应一致，色泽均匀，无分解变色的加热管。\n2、管材常用是PERT管，柔韧型好，耐腐蚀、导热能力好。\n3、铺设按实际面积计算，管子间距20cm。\n4、带上回填，一般市场价是60-85/平米、分水器150-200一组。\n5、选择物理脉冲波清洗，脉冲清洗采用水与气混合产生的振动波冲击\n 加热管，从而达到清洗效果，该方法简单且清洗效果好 。\n净\n水\n净\n水\n器\n怡口，安吉尔，3M,美的，小米，沁园，史密斯，飞利浦，海尔\n1、前置过滤器约400元左右，尽量选择，主要可以过滤大颗粒物。\n2、净水器选R0反渗透，可以过滤98%的重金属，净水效果接近纯水。\n集\n成\n灶\n集\n成\n灶\n火星人，美大，亿田，帅丰，海尔，森歌，美的\n1、因为是下排烟距离烟道要近 ，远了占地柜空间。\n2、各种功能过于集中，要选就选大品牌，要么不选。\n3、火力买大不买小，家里常做中餐建议火力还是尽量往大了选\n4、风压买大不买小，一般家庭选择大于300帕的就够用，老小区和高\n 层用户，选择400PA以上的。\n热\n水\n器\n热\n水\n器\n万和，海尔，万家乐，华帝，美的，史密斯，林内，能率\n1、能选燃气尽量不选电，燃气更安全、更节能。\n2、 一卫选10-13升、二卫生选16升。\n3、零冷水热水器千万不能乱选 ，要选有遥控器的、或者有定时功能\n 的，零冷水热水器尽量看史密斯 、能率、林内。\n本之装修设计编辑仅供参考 ，严禁抄袭或传播\n6\n装修主材选购表 4\n门\n窗\n室\n内\n门\n梦天，美心，盼盼，华鹤，北翠，尚品本色，TATA木门，3D木门，\n皇朝木门，轩叶，千川，金迪\n1、不能用的材质：蜂窝纸门、实木复合门\n2、可以用的门：多层实木门、碳纤门、实木烤漆门、开放漆门等\n门锁 三环，中立，王力，天宇，金丰，卡贝，名门\n断\n桥\n铝\n凤铝，伟昌，南山，亚铝，兴发，中铝，忠旺，海螺，实德\n1、三分材料七分安装，测量的时候要准确，不能缝隙过宽，下侧缝隙外面\n 是防水重点。\n2、框架安装好要看窗台外流水坡度 ，要做到内高外低，密封胶一定打严实\n3、10层楼左右选70、75、80壁厚都可以，15层之上可以考虑108壁厚的。\n4、型材厚度建议用足1.4-1.8mm的。5、隔热条要用PA66的耐高温耐腐蚀。\n6、玻璃肯定选钢化，要有CCC认证， 一般选择2层中空就够用，如果居住\n环\n 境噪音比较大，选择夹胶玻璃或三层玻璃 。\n7、单块玻璃面积越大，玻璃厚度要求越高。5mm玻璃最大面积2.8m²,8毫米\n 玻璃最大面积5.8m²,10mm玻璃最大面积7.8m²等。\n8、五金选择也需要注意品牌 ，国产的有坚朗、顶固、HOP0。\n9、密封胶条要选择三元乙丙的 ，密封性好，和汽车使用的一样。\n壁\n布\n壁布\n领秀、乐图，斯图，孚太，锦绣花开，亚沙壁纸，爱柏壁纸，玉兰墙纸\n1、墙布是否环保主要和糯米胶基膜有关 ，建议选嘉力丰、绿松林、壁虎\n2、涤纶的一般30-60/m²,不吸水的防污性好，无异味的好。\n3、壁布另外的优势、有一定的防墙体开裂功能 。\n卫\n浴\n马桶\n箭牌、九牧、恒洁、惠达、TOTO,法恩莎、东鹏、科勒、安华、浪鲸、\n申鹭达、帝王、摩恩、美标、汉斯格雅\n1、马桶的烧制温度要达到1200°以上，整体重量80斤以上，高密度陶瓷\n 含水率低，不易渗污。\n2、釉面必须光滑平整，可以用记号笔测试5分钟内能擦掉的好，\n 管道内部，也必须有釉，才不容易堵和渗水。\n3、排水方式选择虹吸，声音小，冲力大。马桶盖选择带缓降功能的 。\n4、智能马桶记得提前预留插座 ，而且必须选下沉式水箱带助冲系统\n (停电也可以用)\n5、浴室柜多层实木、橡胶木、太空铝，台面尽量选择陶瓷一体盆 。\n6、花洒建议买带喷枪功能的 (打扫卫生更加方便)。\n浴室柜\n花洒\n本之装修设计编辑仅供参考 ，严禁抄袭或传播。\n7\n装修辅材明细表\n项目 名称 常用品牌 备注\n水电\n电路 远东、熊猫、德力西、正泰、广州珠江、郑州三厂、公牛、金雕、\n上上、特变电工、津成、宝胜、江南 国标电线\n水路PPR水管 伟星、金德、日丰、保利、金牛、中财、联塑、公元、天力、白蝶 PP-R水管\n网线 飞利浦、秋叶原、绿联、安普、康普、山泽、 一舟 6类非屏蔽网线\nPVC下水管 中财、日丰、联塑 PVC-U下水管\n防水 防水 雨虹、西卡、立邦防水、德高防水、嘉宝莉、三棵树、大禹神工多\n乐士、科顺防水、伟星防水、龙马防水、\n(德高)\n地K11柔性\n墙K11刚性\n瓦工\n水泥 海螺水泥、南方水泥、华新水泥、华润水泥、中联水泥、\n西南水泥、北方水泥、中财水泥 325硅酸盐水泥\n背胶\n瓷砖粘接剂 唐姆、德高、楼邦、303、西卡、雨虹、立邦、三棵树\n(德高)瓷砖胶\nTTB二型\nJC/T547-\n2017(C1)\n木工\n生态板 兔宝宝、莫干山、腾飞、千年舟、林氏、金秋、福湘、大王椰、雪\n宝 E0级东北杨板材\n轻钢龙骨 可耐福、龙牌、圣戈班、杰森、泰山、拉法基 国标\n石膏板 可耐福、圣戈班、龙牌、泰山、兔宝宝 1.2*2米\n白乳胶 顶立18升、三棵树、兔宝宝、百得、立邦 18升/桶\n油漆\n墙固/界面剂\n美巢、303腻子粉、德高、立邦、三棵树、马贝、\n圣戈班、 多乐士、嘉宝莉、西卡\n透明色18升/桶\n石膏粉 20KG/袋\n腻子粉\n乳胶漆 立邦、多乐士、三棵树、嘉宝莉、华润漆、美涂士、大师、芬琳都\n芳 金装五合一\n美缝 美缝剂 德高、皇氏工匠、卓高、雨虹、立邦 炫彩型\n玻璃胶 玻璃胶 立邦、瓦克、潜水艇、西卡 厨卫专用防霉型\n辅材小材料：\n弯头、三通、黄腊管、底盒、锁扣、胶布、插线板、灯泡、网络线、闭路线、电话线、音响线、\n6平方客厅空调、4平方厨卫壁挂空调、2.5平方普通插座、1.5灯线、PVC专用胶、生胶带、堵头、\n锯片、铁钉、直钉、码钉、螺丝、万能胶、胶盆、纤维网、纸胶带、漆盆、刷子、滚筒\n 本之装修设计编辑仅供参考，严禁抄袭或传播。\n \n8\n装修辅材选购表 1\n序号 名称 常用品牌与知识讲解\n水\n电\n材\n料\n电线\n正泰电线，远东电线，熊猫，广州珠江电线，德力西电线，郑州三厂，特\n变电工，津成，鲁能泰山\n1 、CCC认证\n2 、执行标准：GB/T5023.3-2008 GB/T19666-2019\n3 、隐蔽工程，选正规厂家渠道，小厂或铝线不能使用；\n4 、铜芯线径分配规范， 灯线1.5平方，普通插座2.5平方， \n 厨卫 4 平方， 客厅空调 6 平方；\n5 、电路有水汽的空间严禁走地面 ，建议卫生间厨房走顶。\n水管\n伟星、日丰、金德、保利、金牛、中财、联塑、公元、天力、白蝶\n1、执行标准GB/T18742.2-2017。\n2、只看PP-R管，抗压耐腐蚀；\n3、红线代表热水管，蓝线冷水管，建议全屋用热水管，热水管壁更厚，\n 抗压更强，使用寿命更久；\n4、卫生间水管建议走顶，管外要包吸水棉，防止冷凝水滴落；\n 若走地，做防水前需要找平；\n5、建议选绿色 、橙色， 灰色， 白色多用于工程款；\n6、2.0直径一个卫生间使用，2.5直径2-4个卫生间使用，水流更好。\n网线\n秋叶原、安普、康普、飞利浦、绿联、山泽、一舟 \n1、网线怎么看：CAT6A是超6类网线，CAT6是6类网线，CAT5E是超5类网线\n2、6类和超6类网线都可以实现千兆之上网速 ，超6类中的双屏蔽网线施工 \n难度较大，普通家庭用6类足够。\n3、弱电箱常用尺寸400*300*12,路由器，光纤猫，插座都要放进去\nPVC\n下水管 中财、日丰、联塑 等\n防\n水\n材\n料\n防水\n涂料\n万华、雨虹、西卡、科顺、立邦、德高、嘉宝莉、三棵树、大禹神工、多\n乐士、伟星、龙马\n1、防水型号很多，价格区别也很大，价位建议选400-500元一桶。\n2、执行标准：\n 常用：JC/T2090-2011聚合物水泥防水浆料。\n I型适用于厨卫墙面，Ⅱ型适合墙地面。\n 常用：JC/T23445-2009聚合物水泥防水涂料。\n JSⅢ型(厨卫墙地面),JSⅡ型(厨卫地面),JSI型不推荐\n3、丙纶布可以地面施工，墙面最好不要高于30厘米。\n4、刚性防水材料适合墙面使用 ，不能用于地面。\n5、柔性防水材料适合地面，不能用于墙面。\n6、通用型防水材料可以墙地面使用 。\n7、灰色蓝色都可以用，蓝色的易观察。\n8、建议卫生间防水高度刷到 2米。\n9、无论是购买什么品牌，都要不含“增塑剂”成分的防水。\n本之装修设计编辑仅供参考 ，严禁抄袭或传播。\n9\n装修辅材选购表 2\n泥\n瓦\n工\n材\n料\n水泥\n海螺水泥、南方水泥、中联水泥、西南水泥、北方水泥、中财水泥、\n华新水泥、华润水泥、金隅水泥、本地的一些知名品牌也可以用 。\n1、正规厂家水泥要标注以下内容 ：注册商标、产地、生产许可证编号、\n 执行标准、包装日期、袋装净重、出厂编号、水泥品种等\n2、家装一般用325水泥铺贴瓷砖，425水泥一般厂房桥梁、地基打桩。\n3、水泥质保期一般3个月，时间越久效果越差，价格建议选30左右一袋。\n瓷砖胶\n背胶\n楼邦、303、德高、马贝、立邦、西卡、雨虹、三棵树，唐姆\n瓷砖胶：\n1、预拌砂浆执行标准：GB/T25181-2019不能铺贴全瓷砖，约30-50元/袋；\n2、瓷砖胶执行标准：JC/T547-2017,C1/C2,包装上没这个标准不建议选 。\n C1 装修中常用于铺贴＜800*800以下的墙砖，约50元/袋；\n C2 装修中常用于铺贴≥800*800以上的墙砖，约70-100元/袋；\n C2TE 装修中常用于铺贴≥1800以上的墙砖，约130-180元/袋； \n C2TE介绍：c代表水泥基，2是增强，t是抗滑移，E是晾晒时间。\n3 、瓷砖胶切忌混合水泥砂浆\n4、 一袋瓷砖胶重20kg,一袋铺贴约2-3平米，具体看墙面平整度。\n5、使用瓷砖胶适合薄贴工艺 ，厚度3-5mm厚度左右。\n背胶：\n1、背胶目前没有国家执行标准 ，有企业执行标准；\n2、使用背胶一般是铺贴400*800以下的瓷砖，也就是背胶+水泥的方式；\n3、用了瓷砖胶不用配合背胶了 ；\n4、目前市场上的背胶还比较混乱 ，谨慎选择，如有需要必须选大品牌。\n木\n工\n材\n料\n生态板\n兔宝宝、莫干山、千年舟、腾飞、林氏、金秋、福湘、大王椰、雪宝\n1、生态板只适合木工现场做柜体 ，不适合做柜门，容易变形；\n2、生态板环保级别，E0级别以上的可以使用。\n3、生态板的价格建议不要低于 180一张；\n4、板芯有杨木、金杉木 都可以用，马六甲属于速生木不建议用 。\n轻钢\n龙骨\n可耐福、龙牌、圣戈班、泰山、杰森、拉法基\n平顶、大面积吊顶必须选轻钢龙骨 ，边顶可以用木龙骨。\n石膏板 龙牌石膏板、泰山石膏板、兔宝宝石膏板、圣戈班、可耐福\n白乳胶\n三棵树、兔宝宝，百得，立邦、美巢\n木工和油漆工都用到，注意环保，选价位130左右就行。\n本之装修设计编辑仅供参考 ，严禁抄袭或传播。\n10\n装修辅材选购表 3\n油\n漆\n工\n材\n料\n墙固/\n界面剂\n美巢，303腻子粉，德高，立邦，三棵树，百得，马贝，圣戈班，多乐士\n1、墙固也叫界面剂，也就是我们平时看到的黄墙绿地 ，主要是固沙，\n 后期批刮腻子不容易和墙体脱层 。涂刷时间最好是油漆工进场 ，\n 太早刷铺砖、木工都有灰尘。\n 墙固环保执行标准:GB18583-2008 墙固性能执行标准:Jc/T907-2018\n2、石膏粉是墙面找平材料，和腻子粉同一个品牌就行 。\n3、腻子粉执行标准；\n JG/T298-2010(Y)是普通腻子粉，价格建议选择30左右一袋。\n JG/T298-2010(N)耐水型腻子，约40-80一袋，适合潮湿环境但打磨\n 费力，一般要加工费。\n JG/T298-2010(R)柔韧型，用的不多。\n 对环保要求高要看国家环保执行标准 GB18582-2020\n4、腻子粉直接加清水，严禁加108、801、107胶水，加了甲醛会高。\n石\n膏\n粉\n腻\n子\n粉\n乳\n胶\n漆\n立邦，多乐士、三棵树、嘉宝莉、华润漆、美涂士，大师，芬琳，都芳\n1、乳胶漆有很多型号，常见二合一、三合一、五合一，家装选择三合一\n 以上即可\n2、价位选择600-800一桶，18 升/桶可涂刷100平方米左右\n 乳胶漆涂刷面积=房间使用面积*3\n3、购买渠道，线上官方旗舰店或线下有厂家授权号店 。\n4、乳胶漆环保执行标准：GB 18582-2020\n 乳胶漆性能执行标准：GB/T9756-2018 正规乳胶漆必须有这个两个标\n准\n5、面漆有合格品、一等品、优等品、底漆没有，主要区别是耐刷洗次数\n6、VOC 也叫挥发性有机化合物，国家标准小于80g/L，市面上常见的\n 50-80g/L,数值越低越环保。\n7、儿童漆执行标准：GB/T34676-2017，VOC＜10g/L，不能含有石棉成分\n美\n缝\n材\n料\n美\n缝\n剂\n德高美缝剂、皇氏工匠、卓高美缝剂、雨虹、立邦\n1、建议铺砖后一个星期后做 ，施工时保证场地干净、干燥，并且砖缝\n 必须清理干净；做美缝剂前，卫生间或客厅地面不能大量洒水 。\n2、美缝剂对铺贴要求，必须阴阳角都留缝隙，不能把胶只打在瓷砖表\n 面，容易脱落；\n3、美缝剂价格建议选40-60元一只即可，一平米约15元左右。\n4、如何选购美缝剂：包装上要有环保标准GB18583-2008；还须执行\n GB/T 36797-2018或某个以Q开头的企业标准，质量是比较靠谱的；\n5、如何选购环氧彩砂：包装上要有环保标准GB18583-2008；还须执行\n JC/T1004-2017这个陶瓷砖填缝剂行业标准 。\n其它\n辅材小材料：\n弯头有90°还有大弯，水压低用大弯。\n黄腊管，底盒，锁扣，胶布，插线板，灯泡，\n弱电类，网络线，闭路线，电话线，音响线，PVC专用胶，生胶带，堵头，锯片\n铁钉，直钉，码钉，螺丝，万能胶，胶盆，纤维网，纸胶带，漆盆，刷子，滚筒\n本之装修设计编辑仅供参考 ，严禁抄袭或传播。\n11\n瓷砖和木地板\n类别 材料名称 常用规格 吸水率 品牌\n参考价\n二线\n参考价 特性\n地砖\n抛光砖\n(不推荐) 30-150 表面光洁，但易吸污，不推荐\n抛釉砖\n(主流) 规格\n800*800\n900*900\n600*1200\n750*1500\n900*1800\n约0.5%\n参考\n40-60\n50-80\n50-90\n100-200\n200以上\n参考\n25-40\n40-60\n40-60\n60-100\n100-200\n与通体比密度略低，花色较少，95度光泽\n纹理好，看也可以使用，适合用于卫生间和厨\n房的墙地砖\n通体大理石\n(主流) 约0.5% 密度高，花纹纹理多，95度光泽，选择人多\n仿古砖 约0.5%\n颜色、图案比较怀旧，因防滑适合卫生间地\n面，适合客厅/阳台/卧室，光线好的空间，仿\n古砖有凸凹不建议用在厨房\n柔光砖\n(主流)\n有多种工艺，肌肤釉、天鹅绒、细干粒面等\n等，建议肌肤釉，12-15光泽度，好清洁\n微晶石 质地细腻，光泽度大于95度，适合电视背景\n墙，不适用地面，容易刮花\n瓷抛砖 约0.5% 噱头有点大，市面上假瓷抛砖太多\n负离子砖 约0.5% 噱头有点大，喜欢的话看特地，有发明专利\n木纹砖\n150*800\n200*1000\n200*1200\n800*800\n600*1200\n约0.5% 100-200\n/平米\n60-100\n平米\n表面具有天然木材纹理图案，代替木地板效\n果，适合卧室使用，更加适合有地暖的家庭，\n环保等级高\n墙砖\n瓷片\n吸水砖\n陶土砖\n(几乎淘汰)\n300*600 约15% 10/块 6/块 厨房、卫生间、阳台墙面使用，不能做地砖\n常用泡水+水泥铺贴。\n中板瓷砖 400*800 约0.5% 12-18\n/块 10/块 中板瓷砖属于内墙砖的一种，主要用于室内\n的墙壁装修，厨房、卫生间、阳台等场景\n地砖上墙\n400*800\n600*1200\n50*1500\n约0.5%\n400*800铺贴方式一：刷好的背胶+水泥铺贴\n400*800铺贴方式二：直接用C1瓷砖胶铺贴\n600*1200铺贴方式：用C2型号瓷砖胶铺贴\n岩板 岩板\n800*2400\n800*2600\n1200*2400\n80*2600的一般\n500-2000\n厚度3MM、5MM、5.5MM、6MM、9MM、 11MM\n12MM\n超过2.4米需要注意是否能进电梯\n木\n地\n板\n实木地板 400-600 环保等级高，价位偏高，变形几率大\n三层实木 250-350\n环保等级高，表面是一层3-4mm的实木，假的\n三层上面是一层密度板，一定要分清楚，商家\n说是新三层\n新三层地板 200-300 环保等级中，价位适中，脚感好选择的人多\n多层地板 200-300 环保等级中，价位适中，脚感好选择的人多\n强化地板 60-130 环保等级低，价位低，不建议儿童房\n石塑地板 50-80 适合潮湿环境和办公使用，家装用的少\n 价格每个城市都不同，并且砖的品牌款式不同。\n本之装修设计编辑仅供参考，严禁抄袭或传播。\n12\n瓷砖胶等级表 (德高)\n序号 型号 瓷砖胶等级 执行标准 常见适合规格范围 参考价格\n1 TTBI型 — GB/T25181-2019\n(预拌砂浆)\n铺贴瓷片砖吸水砖\n300*600 25\n2 TTBⅡ型 C1级别 JC/T547-2017 墙砖规格≤400*800mm 45\n3 TTBⅢ型 C1级别\n企标CIF\nJC/T547-2017\nQ/DGJC 2-2019 墙砖规格≤600*600mm 65\n4 大砖宝 C1T级别 JC/T547-2017 墙砖规格≤800*800mm 60\n5 大理石型 C1级别 JC/T547-2017 天然石材、人造石 65\n6 玻化砖 C2级别 JC/T547-2017 墙砖规格≤750*1500mm 75\n7 超大板\n柔韧型 C2 ES1级别 JC/T547-2017 800*2400mm左右 220\n注意：不管选什么瓷砖胶都要保证瓷砖背面无粉尘 、脱模剂\n使用瓷砖胶可以不刷背胶 ，墙面防水无需拉毛\n保险起见，尽量按厂家说明书操作\n(T) 抗滑移增强型水泥基胶粘剂 ， (E) 加长晾置时间\n瓷砖胶等级表 (雨虹)\n序号 型号 瓷砖胶等级 执行标准 家装常见落地施工范围 参考价格\n1 C90 — Q/DXHSJ0004-2019\n (企业标准)\n铺贴瓷片砖吸水砖\n300*600 30\n2 C100 — GB/T25181-2019\n (预拌砂浆)\n铺贴瓷片砖吸水砖\n300*600 40\n3 C200 C1级别 JC/T547-2017 墙砖规格≤600*600mm\n墙砖规格≤400*800mm 69\n4 C300 C1T级别 JC/T547-2017 墙砖规格≤800*800mm 118\n5 C400 C2级别 JC/T547-2017 墙砖规格≤750*1500mm 130\n6 C500 C2 ES1级别 JC/T547-2017 800*2400mm左右 198\n注意：不管选什么瓷砖胶都要保证瓷砖背面无粉尘 、脱模剂\n使用瓷砖胶可以不刷背胶 ，墙面防水无需拉毛\n保险起见，尽量按厂家说明书操作\n(T) 抗滑移增强型水泥基胶粘剂 ， (E) 加长晾置时间\n其它品牌推荐：马贝、唐姆、西卡等\n13\n装修防漏项表\n项 目 必要性 必要性\n拆除 1 拆除，新建墙体，修补门洞 2 打地坪，打孔\n客餐厅\n过道\n阳台\n1 石膏板吊顶 √ 8 电视背景墙 √\n2 石膏线，建议木工做 √ 9 沙发餐厅背景墙\n3 阳台窗帘盒 10 入户单包门套，双包阳台套 √\n4 改动电路 √ 11 阳台贴砖，包管道，防水 √\n5 贴地砖、踢脚线 √ 12 鞋柜餐边柜，柜类定制 主材类\n6 铲墙皮，刷墙固 √ 13 晾衣架，洗衣机柜 主材类\n7 批腻子刷漆 √ 14 主灯，射灯，开关插座 主材类\n卧\n室\n1 石膏板吊顶 8 包窗套\n2 石膏线，现场制作双眼皮 √ 9 窗台石 √\n3 木工做窗帘盒 √ 10 床头背景 √\n4 改动电路 √ 11 墙布\n5 大衣柜 √ 12 壁灯线路预埋\n6 墙顶刷墙固，批腻子刷漆 √ 13 卧室门 主材类\n7 贴瓷砖踢脚线过门石 √ 14 灯具，开关插座 主材类\n厨\n房\n1 水、电路改造 √ 7 包烟道，加固再贴砖 √\n2 贴墙砖、贴地砖 √ 8 照明灯具 √\n3 安装前置过滤 √ 9 钛镁合金推拉门 √\n4 厨铝扣板吊顶 √ 10 橱柜、吊柜，拉篮五金 主材类\n5 防水，无地漏可以不做 11 灯具，插座 主材类\n6 砖包管道 √ 12 烟机灶具，热水器 主材类\n卫\n生\n间\n1 水、电路改造 √ 8 浴室柜镜前灯流线 √\n2 贴墙砖、地砖 √ 9 新建墙体\n3 做防水，拉毛 √ 10 淋浴房浴缸选择 主材类\n4 砖包管道/壁龛 √ 11 浴霸照明，花洒角蓝 主材类\n5 管道隔音 √ 12 马桶，浴室柜 主材类\n6 铝扣板吊顶 √ 13 水管包保温棉 √\n7 钛镁合金门 √ 14\n其它\n项目\n1 地暖，新风 10 成品保护费 √\n2 中央空调/风管机 11 材料运输费8元/m²左右 √\n3 瓷砖美缝 √ 12 强弱电箱移位和更换\n4 瓷砖倒角磨边 13 零冷水\n5 刷底漆 √ 14 筒灯灯线套波纹管 √\n6 乳胶漆调色 15 管理费10-15% √\n7 全屋刮腻子挂网 16 垃圾清运费8元/m²左右 √\n8 保洁费2次 √ 17 家装设计费50-100/m²\n9 开关插座小灯具安装费 √ 18 税金\n打√是比较人多做的\n14\n装修需要提前买的43个东西\n阶段 购买物品 因果关系\n正式开工前\n临时马桶 以免工人随地在你家大小便；如果找公司装的话就不用考虑，一般都\n提供；\n地面保护膜 如果不提前买好，会被邻居和物业投诉，还会扣装修押金；如果找公\n司装的话就不用考虑，一般都提供；\n水管保护盖 防止砸墙的时候碎石子堵塞管道\n钥匙盒 工人可以自己用密码开锁，你再也不用跑断腿送钥匙了\n敲墙砌墙前\n风管机/中央空调 要提前约商家测量风管机的位置\n封窗 制作好要25天，要提前测量尺寸\n橱柜 橱柜此时要来初次量尺，然后再预留水电的位置\n水电进场前\n前置过滤器 家庭用水的第一道防线，水电师傅进场前要买好，否则师傅走了再找\n别人安装就产生额外费用了\n马桶 确认水箱是墙排还是地排\n确认嵌入式家电尺寸 电视，油烟机，集\n成灶，洗碗机，蒸\n就算这个阶段没有买，也需要确定大概\n尺寸，让设计柜子的把位置预留好。\n确认其他家电位置 投影仪、智能马桶\n智能镜、浴霸、电动晾衣架\n需要提前预留电位，否则买了电动晾衣\n架才发现居然没留电源，那就惨了!\n瓦工进场前\n入户门 一定要在贴砖之前搞好\n水管隔音棉 要提前买，否则泥工贴砖了，再包隔音棉，就要敲墙了\n石材 门槛石，窗台石，要提前买，不然耽误\n工期止逆阀/风帽 要提前买，否则泥工贴砖了，就没办法安了\n玻璃胶 要用的地方不少，比如粘窗台石，门缝时会用到\n角阀 要提前购买好\n隐形地漏 要提前购买好，提前预埋\n木工进场前\n厨房卫生间吊顶 这个需要在吊顶前，找好款式，约好商家安装\n厨房卫生间灯 这个需要在吊顶前，提前找好\n风暖 这个需要在吊顶前，找好款式，约好商家安装\n弧形阳角条 实体店没得买，要提前网购好\n浴霸 这个需要在吊顶前，提前找好\n石膏线 要提前买好\n地面保护膜 泥工贴完的瓷砖，要在木工进场前保护好\n室内门 在木工安装前，要提前买好\n油工进场前\n乳胶漆 选色和挑选需要时间，要提前购买好\n木地板 要提前购买好\n全屋灯具 要提前购买好\n强弱电箱更换 要提前购买好\n淋浴隔断 贴完砖之后，就要师傅上门量尺了\n墙面保护膜 油漆很难清洗， 一定要提前保护好墙面\n碗碟拉篮 全屋定制前需要选定好，预留尺寸，可以提前网购，师傅现场安装\n开关插座 水电师傅退场前安装好省费用\n花洒 要提前选定好预留水位比如浴缸龙头等\n集成灶 这个需要在水电阶段提前选定好预留插座\n15\n需要提前考虑或购买的材料\n图例 名称 品牌价位参考\n嵌入式\n家电\n提前布局\n的电路\n洗碗机：海尔，西门子，博士，松下，方太，价格5000-8000\n酒柜灯光：鞋柜感应灯，电动窗帘，智能开关面板等\n冰箱，洗衣机、油烟机等都需要提前确定尺寸\n水电前做功课准备\n管线机\n美的，奥克斯，COLMO,老板，海尔，苏泊尔，飞利浦，沁园\n价格一般是1000-2000\n水管出口留在管线机后方偏下一点\n需要水电期间预埋2-3分PE软管，所以要提前考虑。\n水电前做功课准备\n烘干机\n西门子9公斤约8300元\n海尔10公斤约5000元\n博士9公斤约8000元\n小天鹅9公斤约5000元\n松下9公斤约7600元\n卡萨帝10公斤约14000元\n水电前做功课准备\n前置过滤\n器\n过滤精度一般是40微米；带自动反冲式滤网清洗功能；流量每小时\n4T-6T足够，大户型考虑再大的；材质选择无铅铜材质，滤网316不\n锈钢；防爆防冻，万向安装。价格4吨300左右，6吨500左右。\n水电前准备\n小厨宝\n小厨宝是一个被装修公司不推荐的产品，因为有了它少走水管\n少赚了钱，其实它还是有优势的。两个卫生间的家庭距离远的一\n个，可以洗脸盆下用小厨宝，洗澡用热水器里的水，省去了做大循\n环的费用。\n品牌有飞利浦、美的、海尔、博士、史密斯，价格约500-800元\n水电前准备\n隔音棉\n隔音棉分两种：\n普通型的只有一层隔音棉，效果一般，装修公司收费300左右，\n第二种是阻尼片+隔音棉，效果类似汽车隔音，但是价格高，\n如果包给装修公司500元左右，自己买处理200元左右\n水电期间准备\n16\n需要提前考虑或购买的材料\n图例 名称 品牌价位参考\n玻璃胶\n工人带的质量不会太好，都是几块钱的，甲醛非常容易超标，正规品\n牌的甲醛挥发也需要2个月。所以建议业主自己去买好点的。\n品牌建议立邦，瓦克，潜水艇，西卡，防霉胶一定选30元以上的；\n厨卫一般只需要每个空间1支防霉的就行，客厅卧室用美容胶。\n施工期间可以购买准备\n下水三通\n这个东西好多业主都不知道，橱柜水盆下面需要安装很多排污管\n如净水器的废水管、前置过滤器的排污管，洗菜盆的下水管，\n洗碗机的排污管，所以需要提前定制个三通，价格一般是40左右\n施工期间可以购买准备\n带止水的\n洗衣机\n龙头\n洗衣机水龙头很多业主也不会考虑到，等安装洗衣机的工人说到了才\n知道需要用专用带止水的才行，但是工人带的一般都100多，还不一\n定是品牌的，建议自己购买。\n做的比较好的有潜水艇、箭牌等。\n施工期间可以购买准备\n角阀\n角阀分三种：\n合金的含铁，用个3年左右生锈坏掉了风险大，价格10元内\n不锈钢的，价格10-15元，可以使用\n纯铜的，价格20-35元每个，可以使用，档次高\n施工期间可以购买准备\n地漏\n地漏分三种：\n普通合金地漏不建议选择30元以下\n不锈钢地漏可以选择30-50元\n纯铜地漏60-120元，以上价格说的都是10*10cm的\n地漏注意选防臭芯的，淋浴区用水封芯，洗衣机，干区用直排芯\n瓦工前购买准备，品牌参考六防、潜水艇\n止逆阀\n油烟机止逆阀和卫生间止逆阀需要提前购买。材料选ABS的多，还有\n不锈钢的价格贵。abs的价格40左右，不锈钢的100之上。\n烟道安装的时候注意让瓦工把砖贴平，安装没有缝隙。\n品牌六防、潜水艇\n瓦工前购买准备\n17\n主体拆改与新建\n序号 项目 注意事项\n1 拆除\n旧房墙面多为刚性腻子，耐\n水腻子，正常检验方式洒水\n检验，耐水腻 子防水性强不\n吸水，铲除施工需机械打磨\n。\n旧房墙面需检测原饰面强\n度，做出后续合理施工方\n案，部分旧房沙灰层松散空\n鼓，不具备后期施工条件的\n需铲除至红砖层，墙面重新\n挂网粉刷，防止后期墙面开\n裂空鼓脱落。\n旧房瓷砖拆除：\n1.旧房瓷砖铲除后基层空鼓需\n铲除至红砖层重新粉刷铺贴\n瓷砖；\n2.新房瓷砖铲除后原防水层需\n打磨后铺贴瓷砖。\n旧房墙布拆除 毛坯房顶面白水泥需铲除，\n若未铲除会导致后期基层大\n面积脱落。\n砸墙师傅来了后一定要沟通\n好先切割在砸墙，不然会对\n其他墙体造成损坏\n2 新建墙体\n放线：\n一定要按照图纸尺寸在地面\n划好线并核对，要确保所有\n墙体方正呈90度，给后期施\n工带来更高的准确性和更快\n的工作效率。\n止水梁：\n卫生间干湿区域新建墙体底\n层浇筑止水梁，模版固定用\n碎石 水泥砂浆浇筑，止水\n梁，混凝土地梁隔水性强起\n到强化防水条件。\n植筋工艺：\n新建墙体使用 6-10 钢筋固定\n连接， 其优点是新建墙体与\n老 墙体的结合处更加牢固， \n不容易开裂， 一般在 1 米左\n右进行 一次钢筋加固。\n顶部斜砌：\n顶部斜砌是为了使墙体顶部\n更加密实，抹灰后不容易开\n裂； 平砌的牢固度差，且不\n易操作 ,斜砌能更好的紧密砌\n筑；还可以增加墙体与梁之 \n间的摩擦力使其更加稳固。\n架过门梁：\n架钢筋混凝土过梁，内置钢\n筋直径10mm，门头梁两侧\n宽度长出门洞至少10cm。\n挂网粉刷：\n新建墙体需挂玻璃纤维网粉\n刷 ,新老墙交接处需要挂网延\n伸至老墙体三十公分，降低\n新老墙体接缝处开裂概率。\n18\n水电\n序号 项目 注意事项\n1 洗手盆排水\n1.地排外露排水管，有卫生死角，不方便清洁及收纳。而墙排水管都藏在墙里，更美\n观，方便进行清洁，增大收纳空间。\n2.墙排下水建议要加一个三通做地漏，不然后期做检修很麻烦。地面下水不需\n要存水弯，台盆下水器会带有存水弯。\n2 墙排90°出墙与\n45°出墙哪个好\n45度墙排：\n1.施工简单，水电定位时没有完全确定好台盆尺寸高度等都没事，排水口不居中台盆，\n后期接台盆的软管排水都是可以的；\n2.不用买专门的排水器，软管直接插入45度斜插排水管或连接一个下水小配件即可；\n3.下水速度相对快，比较通畅，但是密封性不佳；\n4.贴大块瓷砖，45度水管和两边的水阀位置很难精准切割，会有大块裸露，不美观。\n90度墙排：\n1.水电定位之前，台盆宽度、离地高度需要确定好，这样才可以确定台盆的下水口和墙\n排下水口垂直对齐；\n2.需要买专门的下水器，会稍微有点小贵，但是防臭、密封，且不会反水；\n3.独立式、悬空台盆、无浴室柜的、浴室柜有镂空的，为了美观一定要做90度墙排。\n19\n3 四代墙排\n墙排90°＋直角下水器＋75管下水＋斜三通；\n斜三通顺水不易返水，预留地漏便于疏通。\n4 防止卫生间\n堵塞和返臭\n1.排水角度：做斜三通排水工艺，不做直三通排水，不容易堵塞；\n2.排水坡度：有高差排水才快；\n3.存水弯：地漏排水做存水弯，代替防臭地漏；\n4.二次排水：做共享存水弯，或中央集水器；\n5.污废分离： 马桶下水管尽可能和地漏台盆下水管分开排水，若不能分开地漏必须留 \n在马桶排污的反方向；\n5 隔层排水\n马桶移位\n1.马桶移位器（扁管）：适用于移位尺寸较小的情况，不能超过50公分，距离太大，造\n成堵塞几率比较大；\n2.楼板重新打孔：需要与楼下沟通商量好，且必须在楼下还未进行装修之前改造，改造\n后防水一定要做好，一旦后期使用出现漏水，将涉及到楼上楼下两户卫生间的政造，会\n比较麻烦。\n3.做墙排下水：如果马桶排污管与主排污管距离不远，且在同侧，可采用壁挂马桶的方\n式。\n20\n6 厨房排水\n1.厨房如果要留存水弯，要注意存水弯的安装高度，根据有无地暖来确定；\n2.不留存水弯的话，横向水管直接落地，橱柜做好后横管在踢脚板内部，不占用橱柜内\n部空间，橱柜内部更干净；\n3.厨房选用下水多通分流器，密封防臭。\n4.厨房下水管存水弯不要留检修口： 鸡肋，厨柜装完会被卡住导致后期无法检修；\n无存水弯 有存水弯 存水弯过低\n破坏柜体 无法检修 存水弯高度\n无下水器 下水神器 75管转50管\n7 阳台水电布局\n1.如果阳台地漏和洗衣机是共用一根下水管的，由于洗衣机的下水过快，容易导致洗衣\n机下水不能及时排走，会从地漏口返水上来，导致阳台地面到处都是水；\n2.如何避免地漏返水：洗衣机地漏接斜三通，同时下水管加长，加45度弯头，能有效缓\n冲洗衣机下水较强的冲击力，防止地漏返水；\n3.放洗衣机的正后面不要做水电，应该做在旁边，因为洗衣机伴侣常规深度60公分，洗\n衣机也是60公分，如果洗衣机后面做了水电，洗衣机无法完全放进去，凸出来就不美\n观了；\n4.如果要做壁挂洗衣机需提前预埋50管，避免线管外露不美观。\n21\n7 阳台水电布局\n阳台柜 阳台柜水电布局 地漏易返水\n地漏易返水 地漏不易返水 地漏不易返水\n8 线管布线工艺\n1.横平竖直：不建议，后期电路出现问题不好抽拉换线；\n2.大弧弯：建议，活线方便后期检修；\n3.点对点：自装省钱可以选，电线更容易抽换，便于后期维护，比较节省材料。但是线\n管较乱，铺木地板打龙骨容易打到线管；\n4.线管之间要有2公分间距，防止后期铺贴瓷砖出现空鼓问题；\n5.固定线管骑马卡间距在80公分以内，转弯处的间距30公分以内。\n横平竖直 大弧弯 点对点\n22\n8 线管布线工艺\n大弧弯 线管间距 骑马卡固定\n9 水电开槽\n1.水电管不能同槽；\n2.冷热水管不能同槽；\n3.强弱电线管不能同槽；\n4.非承重墙横槽不得超过50公分，承重墙不超过30公分；\n5.开线槽的深度及宽度要保持一致，一般是线管的直径＋10mm，开横槽的话横容易造\n成开槽部位开裂；\n水电开槽 水电管不能同槽 强弱电线管不能同槽\n不能开长距离横槽 开竖槽 可开短距离横槽\n10 水电走顶\n还是走地\n1.厨房、卫生间一般要做吊顶，再加上这些区域需要用水，所以建议厨卫水电都走顶，\n其他区域水电走地。\n2.水电走顶注意细节：①电在上水在下；②水管走顶要上热 下冷；③水管在60cm固定\n管卡，三通处在20公分内固定3个管卡，弯头处20公分处内设置两个管卡，可以有效的\n抗击水锤效应的冲击；④水管要用保温棉包裹，起到保温的作用，也可防止产生冷凝\n水；⑤冷热水交叉的地方，过桥弯必须装在冷水管上面；\n3.黄腊管： 房间没做吊顶，若顶面灯需要移位，电线不能套线管，因为楼板不能开深\n槽，但也不能裸线，需要套黄腊管保护；\n4.波纹管： 防止线路的回缩及后期线路老化破损。\n23\n10 水电走顶\n还是走地\n水电走顶 卫生间水电走顶 水电走地\n楼板开槽走线 黄腊管 波纹管\n11 锁母\n锁母的主要作用是防止破坏电线的绝缘皮，电工穿线时力度比较大，线管的壁厚比较\n薄，直接穿线可能会刮破绝缘皮，导致漏电的风险。\n12 双联内丝弯头\n淋浴花洒出水口一定要用双联内丝弯头，标准的间距尺寸，中心间距15cm，可以保证\n冷热水口在同一水平面上， 防止后期花洒装不上或者漏水的问题。\n24\n13 水管\n1.认准水管的国家执行标准：GB/T 18742.2-2017\n2.全部用PPR材质的热水管，不用PVC材质的，不用冷水管；\n3.主管用6分管(外径25mm)选择壁厚4.2mm，管径大出水速度更快；管壁厚承压力更\n强；\n4.水管颜色选绿色、橙色和白色都可以，不要选灰色的（基本上都是回 收料做的工程\n管）；\n5.管材配件尽量选择水管同一品牌的，更配套。\n4.水管打压测试步骤：\n①用软管连接冷热水口；②打压 0.8-1Mpa（8-10 公斤）,半个小时内压力值下降不超\n过 0.05Mpa 为合格；③看一下各个接口有无渗漏现象。\n14 电箱回路分配\n1.总开： 正常家庭空开用63A， 总入户线正常应为6-10平方电线；\n2.冰箱+监控+路由器： 正常家庭用20A，单独走一路2.5平方电线；\n3.厨房： 正常家用空开为25A,厨房电器比较多， 功率大用4或者6平方；\n4.蒸烤箱： 正常家用空开为25A,单独走一路4平方电线；\n5.空调： 正常家用空开为32A,单独走一路4平方电线；\n6.卫生间： 正常家用空开为25A,单独走一路4平方电线；\n7.普通插座： 正常家用空开为20A,建议每个空间单独走一路2.5平方电线；\n8.普通照明： 正常家用空开为16A，整体走一路1.5平方电线.\n15 电线\n• 1.5平方线：一般用于单路照明灯具。\n• 2.5平方线：用于开关灯、普通插头等连接，也适用于插座和照明。\n• 4平方线：用于大功率电器插头连接，如空调、电热水器等。柜机空调在3P以上需使\n用6平方线，挂机空调4平方线够用。\n• 6平方线：3台以上空调或中央空调使用。\n• 10平方线：用于家居进户的总线，可直接承载电力，安全地为家庭所有电器供电。\n• BV电线是单股硬线：\n优点：不易氧化腐蚀，耐电流冲击，价格较BVR低一些；\n缺点：多次弯折易折，家装中常用于隐蔽性工程。\n• BVR电线是多股铜丝绕的软线：\n优点:相对较软，容易穿线，不易折断；\n缺点:接线常需要挂锡处理，价格也较BV线稍高。\nBVR线价格稍高，所以我们想省钱，可以全屋就用BV线，当然也可以搭配BVR线一起\n用，厨房、卫生间、客厅和走廊这些吊顶的地用BVR线，其余地方用BV线。\n• 线管：选20以上的线管，可穿多点线，也有利于散热。\n25\n15 电线\n• 1.5平方线：一般用于单路照明灯具。\n• 2.5平方线：用于开关灯、普通插头等连接，也适用于插座和照明。\n• 4平方线：用于大功率电器插头连接，如空调、电热水器等。柜机空调在3P以上需使\n用6平方线，挂机空调4平方线够用。\n• 6平方线：3台以上空调或中央空调使用。\n• 10平方线：用于家居进户的总线，可直接承载电力，安全地为家庭所有电器供电。\n• BV电线是单股硬线：\n优点：不易氧化腐蚀，耐电流冲击，价格较BVR低一些；\n缺点：多次弯折易折，家装中常用于隐蔽性工程。\n• BVR电线是多股铜丝绕的软线：\n优点:相对较软，容易穿线，不易折断；\n缺点:接线常需要挂锡处理，价格也较BV线稍高。\nBVR线价格稍高，所以我们想省钱，可以全屋就用BV线，当然也可以搭配BVR线一起\n用，厨房、卫生间、客厅和走廊这些吊顶的地用BVR线，其余地方用BV线。\n• 线管：选20以上的线管，可穿多点线，也有利于散热。\n16 网线\n1.考虑长期居住，时间跨度有可能是以10年为单位，所以建议网线选择六类非屏蔽的网\n线，方便后续宽带速率提升。需要注意的是，双屏蔽网线需要弱电箱接地线才可以发挥\n屏蔽作用，但是需要专业人士才能操作，普通水电工不太会，如果不接地线，和普通六\n类网线一样，甚至抗干扰能力还不如六类。\n2.屏蔽网线标识为：STP；非屏蔽网线标识为：UTP。\n17 水电改造及\n计价方式\n1.半改还是全改：\n• 老房子，水路肯定要全改，很多老房子的水管是镀锌管，如果半改，不但接头多容易\n造成漏水，而且不美观；电路老化也需要全改。\n• 毛坯房的电路不需要全改，半改就可以；水管做打压试验，如果有多处漏水，这种情\n况下建议水管全改。\n2.计价方式：\n最好按平方计算，不要按照按米计算（故意绕线或者走单管单线）按米计算的都是预估\n价，前期预估价较低，后期做多少算多少，那样增项会很多。\n26\n18 需要预埋50管\n四的地方\n1.燃气热水器预埋一根50PVC线管； \n2.电视机预埋一根50PVC线管；\n3.管线机预埋一根50PVC线管；\n4.壁挂式洗衣机预埋一根50PVC线管；\n19 循环水\n(零冷水)\n1.大循环：回水管将所有的热水主管和支管都串联起来，整个回路都进行热水循环。\n既然选择了做零冷水，那么建议做到极致，选择大循环。\n2.小循环：热水主管上循环，支管上不循环。\n20 净水系统\n• 前置过滤器：入户水初步过滤，滤掉泥沙等大颗粒。\n• 中央净水：改善全屋水，滤掉余氯、重金属残留等。\n• 软水机：进一步改善用的水，软化水质。\n• 末端净水机：进一步改善喝的水，提供纯净的饮用水。\n• 管线饮水机：即热饮水机，方便随时取用。\n前置过滤器和净水机是必须要装的，软水看具体需求，如果当地的水质比硬的话，装这\n两个有很大用处。如果预算有限，选择装前置过滤器＋净水机即可。\n27\n20 净水系统\n21 全屋WIFI\n1.AC+AP面板：1.首先在弱电箱里面留一个电源插座给光猫供电；2.从弱电箱中拉3根\n网线到客厅电视柜里；3.从客厅电视柜拉多跟网线到各个房间，建议每个独立房间内都\n拉一根网线。 \n2.Mesh组网：所有路由器要单独跑一路插座，这样在你出门的时候，房子内的所有插\n座都可以断电，但是路由器不能断。如果是AC+AP面板的方式就不需要了，因为AP是\nPOE供电的，不需要插座供电，只需要给主路由器单独跑一路插座就可以。\n3.FTTR全屋光纤：不是所有地方都覆盖，考虑到未来，能做FTTR尽量做,网速快，且目\n前很实惠。\n22 壁挂空调怎么\n安装才美观\n1.隐藏插座电线更美观，空调机身将空调孔和插座都遮挡在背面；\n2.注意空调孔的位置，位置不对需要改孔。\n28\n瓦工\n序号 项目 注意事项\n1\n1\n卫生间\n沉降池回填\n（建筑垃圾回填\n陶粒回填\n发泡水泥回填\n架空回填）\n卫生间\n沉降池回填\n建筑垃圾回填：\n• 优点：这是最早期的回填方式，可直接用墙体拆除的建筑余料回填，施工简单，价格\n便宜。\n• 缺点：但是建渣比较尖锐，容易划破管线和防水层，导致漏水，而且这种材料比较\n重，会增加楼板的负担，有可能会产生开裂等问题，逐渐被淘汰。\n如果一定要做这种，记得用红砖保护好排水管，用水泥砂浆保护好地面的防水层。\n陶粒回填：目前主流的回填方式，陶粒质轻，吸水性强，是一种非常不错的回填材料，\n但如果施工不当，很容易造成找平层下沉开裂。\n• 优点：材质轻，可以吸湿吸水，而且施工干净利落，具有良好的隔音效果。\n• 缺点：性价比高，施工要求高，陶粒回填后需在上方做一层钢筋结构找平层，中间用\n砖分区隔断。\n发泡水泥：也叫回填宝，是一种泡沫混凝土外加剂，加水和水泥经专用搅拌机搅拌后，\n形成一种含有大量封闭气孔的新型轻质材料。\n• 优点：重量轻，每立方只有0.15吨，不开裂不沉降，施工简单。具有轻质、阻水、 整\n体、抗压、环保和耐久等特点，与防水材料结合配套使用，能有效解决卫生间沉箱积水\n、异味，减轻建筑物整体荷载等问题。发泡回填层流动性强，无缝隙填充，一次浇筑，\n整体成型。\n• 缺点：后期检修拆除很麻烦，噪声极大。而且管道被包裹，牵一发而动全身，很容易\n把管道打坏造成溢水，维修难度大、成本很高。\n29\n1\n1\n卫生间\n沉降池回填\n（建筑垃圾回填\n陶粒回填\n发泡水泥回填\n架空回填）\n卫生间\n沉降池回填\n架空回填：\n• 优点：减轻了沉箱的重量，对沉箱里面的下水管道具有一定的保护作用，同时架空处\n理，不用怕弄坏了下面的防水层。维修的时候非常方便，我们只需要把上面的水泥板掀\n开，这样就可以直接对下水管道进行维修。\n• 缺点：对防水要求很高，架空的下沉卫生间在出现漏水隐患时，如果底部没有做好二\n次防水，那么中空的沉箱就会变成一个污水池，等到发现问题的时候可能邻居家早就渗\n透了大量的水了，对工艺要求较高。\n1.预制架空板(不建议)：\n这种方式弊端明显，首先水泥预制板基本上是工人现场制作，水泥的配比，厚度都取决\n于工人的经验，其中钢筋的多少直接关系到其承重性能，有很多师傅就随 便放两根钢\n筋，没有横竖交叉，也没有细铁丝捆扎，其次水泥预制板之间的缝隙，与墙体之间的缝\n隙，这些不认真处理，后期都会成为漏水的隐患。浴室柜、马桶区域和其它区域的承重\n不同。两块相邻的水泥预制板，中间没有钢筋连接，仅仅是做了填缝 处理，承重大的\n水泥预制板发生沉降位移，然后缝隙开裂。\n2.现浇架空板：\n瓷砖反扣在支柱上，作为混凝土模板，把缝隙处用水泥做好密封，然后放钢筋，倒入混\n凝土。等其干了以后就是整体一块的混凝土现浇楼板。不存在预制板那样的缝隙，哪怕\n局部承重不一样，也不会因为沉降开裂，在用砖块砌墙的时候有一道工序，叫做“植筋\n”。这样后期楼板做好以后，新旧墙体连接得更紧密。并且新楼板的重量就从下面的支\n撑柱转移到四周墙体上，承重性能更好。\n30\n2 卫生间防水\n1.第一步： 卫生间开发商的旧防水需要铲除；\n2.第二步： 地面洒水润湿，阴阳角清理干净；\n3.第三步： 门口做挡水坝，倒入堵漏王填平管根处（漏水的地方一般是阴阳角，管道\n口），墙地面阴角处也需要填满堵漏王；\n4.第四步： 等堵漏王干了以后，用1：3水泥砂浆做卫生间坡度冲平工艺，打磨收 光，\n用25水管压沟对准二次排水（二次排水是让渗透到瓷砖下面水泥砂浆层的水再次排\n走）；\n5.第五步： 卫生间墙面在刷防水前一定在墙面刷墙固（界面剂），固化墙面基层浮灰\n（墙面的浮灰会减弱防水对墙面的渗透），半小时后，摸着不粘手再刷刚性防水，让防\n水乳液和墙固乳液同时凝固，避免分层。然后地面刷柔性防水（刷2遍），墙根上翻\n30-50公分，门套内外两侧涂刷防水，等防水完全凝固后做48小时闭水试验 。\n注意：墙面刷刚性防水，地面刷柔性防水，且需要满刷1.8米高。\n6第六步：墙面刷过刚性防水以后，必须用专用的拉毛剂，拉毛剂凝固以后再用瓷砖胶\n贴砖。\n3 卫生间入口防水\n1.卫生间的门槛石要比卫生间地面高1-2公分，避免卫生间的水外流；\n2.门槛石前做止水带；\n3.门口外翻刷防水，包括门框侧面及外面；\n4 闭水试验\n1.要做48小时的闭水试验，闭水深度2.5公分以上；\n2.瓦工贴砖之前地面的防水一定要做好保护，以免后期不小心被破坏掉。\n31\n5 贴墙砖\n1.墙面防水要做拉毛处理，增加瓷砖与墙面的摩擦力、附着力。\n2.买瓷砖胶不看牌子，看性能标准，根据砖的规格选择不同标准的瓷砖胶；\n3.贴全瓷砖用瓷砖胶，不要加瓷砖背胶，加了还有反作用导致更容易脱落。\n6 瓷砖如何选购\n不看：产地(洗澡砖)，不看品牌（高溢价），不看特价（贴牌砖）;\n要看：\n1.外包装：①优等品; ②同一型号、色号、日期; ③3C认证；\n2.普通分辨：①用水测吸水率；②用金属敲击测密度；③两块砖叠在一起测平整度；\n3.看检测报告：重点注意瓷砖吸水率、耐磨性、摩擦系数、抗釉裂性等。\n4.选规格：建议80X80cm够了，后期弄缝隙消失的美缝，效果一样；预算足选\n75X150cm的大气，但是贴砖人工和砖都要贵很多，入住后，地上有沙发、茶几、地\n毯，也看不出地砖多大，感觉浪费了钱，所以根据自身情况选择。\n7 瓷砖做真通铺\n不做假通铺\n1.能不用门槛石的地方就不用门槛石； \n2.砖缝颜色跟砖同色； \n3.尽量选大砖，砖的纹理弱一点；\n4.客厅卧室砖缝对齐。\n32\n8 贴砖前要规划好\n做好排版\n1.买瓷砖时和商家沟通好，让商家给出排版图，合理充分利用瓷砖，降低损耗，把碎砖\n隐藏在家具下方更美观；\n2.瓷砖与木地板交接处用极窄收口条收口。\n9 墙地对缝\n1.墙地砖对缝更美观；\n2.如果墙地砖规格不一样的需要加工，或者墙砖竖向铺贴。\n墙地砖没对缝 墙砖竖贴 墙砖横贴\n10 瓷砖铺贴墙压地\n不要地压墙\n1.墙压地：\n优点：1.美观，好看；2.有助于防水；3.有利于地面流水；\n缺点：1.施工难度大；2.施工周期长；3.施工费用高；\n2.地压墙：\n优点：1.施工简单；2.施工周期短；3.施工费用低；\n缺点：1.不美观；2.缝隙大较明显；3.渗水久，留异味；\n• 墙压地会好一些，但是这个只有在你美缝没有做好的情况下才会体现出它的价值;\n• 如果瓦工师傅愿意不额外收费的情况下，给你做墙压地是可以做，如果要多花钱才能\n做，那还不如把省下来的钱花在好好做美缝上，会更划算。\n33\n10 瓷砖铺贴墙压地\n不要地压墙\n11 海棠角工艺\n1.传统的阳角条难看，且时间久了可能会开裂；\n2.阳角做海棠角更美观；\n• 需提前让工厂加工好瓷砖，一般5块钱一米，如果让工人现场加工，要50块一米，这\n样更贵而且还没工厂加工美观。\n12 厨房贴砖\n省钱做法\n橱柜挡住的地方用废砖，可以找商家要一些库存的砖，中间露出来的部分用大砖，整块\n砖更美观、好搞卫生。\n34\n13 瓷砖美缝\n美缝剂的主要材料是环氧树脂和固化剂，为了降低成本，便宜的美缝剂根本不会用好的\n环氧树脂和固化剂，会添加大量的壬基酚，大量添加任基酚会使美缝剂快速固化，壬基\n酚的危害比甲醛还严重，不仅致癌，还会影响生育。质量不合格的美缝剂含有大量的甲\n醛、苯、二甲苯V0C，甲醛是一类致癌物，苯是一类致癌物，V0C会导致婴儿畸形和致\n癌。\n如何避免:\n①:GB18583-2008是国家强制执行标准，外包装如没有，一定不要购买标准里对甲醛\n、苯、二甲苯V0C、壬基酚有明确要求。\n②:看检测报告，检测报告里的型号要与你购买的型号一致，检测报告只看甲醛、苯、\n二甲苯、V0C这四项就可以。\n注意：\n1.无论选哪一种，都不要让工人包工包料，如果包工包料的话，可能工人为了省材料，\n给你做美缝时会打薄薄的一层，偷工减料，刚开始看不出来，后期容易脱落；\n2.砖缝留 1.5mm-2mm才能美缝，美缝剂颜色要选择和瓷砖无限接近的颜色；\n3.清理砖缝要及时，瓦工铺完砖就把缝处理干净，后期再来清理就比较难清理干净；\n4.最佳的美缝时间是硬装施工全部结束，全屋定制安装之前是最佳做美缝时间。\n颜色不搭，美缝的颜色选择\n跟瓷砖的颜色相同比较美观\n勾缝剂:填缝剂的主要原料是\n白水泥，目前用的很少了，\n价格低廉，但强度不行，用\n久了是一定会开裂、掉粉以\n及发黑的。勾缝剂是填缝剂\n的改良款，原料还是水泥，\n加入了一定的石英粉，增加\n了一定的强度，不容易开裂\n和掉粉，用久了仍然还是会\n发霉发黑。\n美缝剂:勾缝剂的完全升级\n版，原料不再是水泥，而是\n树脂，颜色的可选性大，有\n一定的光泽度，强度、硬度\n也很高。\n35\n13 瓷砖美缝\n真瓷胶:它是双组分的，分别\n是环氧树脂和固化剂，凝固\n后不会收缩塌陷而且非常的\n饱满坚硬，真瓷胶的防水防\n霉性能特别好，很适合用在\n卫生间表面弄脏了，湿抹布\n擦一下基本上就干净了。\n环氧彩砂:和真瓷胶最大的区\n别就是加入了一定的石英\n砂，在强度和硬度上再次升\n级，而且颜色可以根据砖的\n颜色定制，就目前来说，它\n的综合性能是最强的了，光\n泽偏哑光，适合搭配哑光砖\n聚脲：\n优点：硬度高，20年耐黄\n变，耐用性比较好，可定制\n一砖一色；\n缺点：价格较高，施工较\n难，需要找熟练的师傅施\n工；\n适用于全屋。\n14 无主灯如何选砖\n柔光砖：摸起来顺滑如肌肤，光源发散汇片，光感细腻润泽，质感柔和。\n哑光砖：摸着有磨砂感，没有柔光砖好打理，被很多人误认为是柔光砖。\n亮光砖：摸镜子摸玻璃的感觉，好打理，容易有光污染。\n柔抛砖：摸起来感觉有油，有低光泽度，看起来表面非常顺滑，但是使用时间久了，表\n面会突现轻微刮痕，且模糊感较强。\n15 烟道贴砖防开裂\n烟道壁薄，中午和晚上做饭的时候温度高，热胀冷缩长期下去，瓷砖容易开裂脱落，所\n以烟道贴瓷砖之前最后先用红砖包裹后再贴瓷砖，如果想要省空间，可以刮水泥挂钢\n丝，水泥刮厚一点也可以。\n16 烟道止逆阀\n防返烟\n1.在泥工贴砖前确认好油烟 机需要用多大的尺寸再去购 买，瓦工贴砖时根据止逆阀的 \n尺寸开好孔，在厨房吊顶前安 装好\n2.装止逆阀的位置贴一块瓷砖，这样止逆阀与瓷砖才能紧密贴合，防止漏烟。\n36\n16 烟道止逆阀\n防返烟\n17 马桶防反臭\n1.马桶排污管管口须高出瓷砖面2-3公分，四周再刷堵漏王，否则后期返臭；\n2.选择质量好的法兰圈，密封性耐用性都比较好。\n18 下水管包隔音棉防\n噪音\n包立管更要包横管，用隔音棉+阻尼片，隔音效果更好，尤其是卫生间噪音大，阳台可\n以不加阻尼片。\n37\n木工\n序号 项目 注意事项\n1 材料工艺\n1.主龙骨间距80-120公分，副龙骨间距60公分，吊筋间距90-120公分， 同时转角龙骨要 斜拉， 龙骨\n固定一定要用铆钉固定， 每个连接件不少于 2个钉， 铆钉不能用自攻螺钉代替。\n2.除了看材料用什么品牌，还要看用什么型号；\n3.在天花封板之前去现场验收，防止工人偷工减料。\n2 轻钢龙骨\n木龙骨\n1.有复杂吊顶才用木龙骨，否则用轻钢龙骨更稳定；\n2.轻钢龙骨厚度达到0.5mm才算合格； 轻钢龙骨质量轻，防潮，稳定性好；\n3.石膏板不容易开裂，木龙骨容易受潮， 后期容易变形，造成石膏板开裂。\n3 防开裂工艺\n1.石膏板吊顶转角处“7字型”工艺：石膏板开裂都是接缝处开裂，一定要采用7字口处理方法，转角整\n张石膏板没有接缝，最大程度避免后期开裂；\n2.石膏板接缝处“八字缝”工艺：石膏板接缝处倒八字伸缩槽；有利于嵌缝石膏的填补，有效防止缝隙\n后期由于热胀冷缩而导致开裂的可能；\n3.石膏板与墙面的阴角， 留半公分伸缩缝填石膏；\n4.底板要托着侧板， 减少开裂；\n5.横向石膏板与纵向石膏板交接处一定错开拼缝，减少开裂的可能；\n38\n4 石膏板吊顶\n分单层和双层\n吊顶双层石膏板，每一层石膏板之间的缝隙错位，结构稳定，后期不易开裂。\n缺点：施工成本高，影响层高。\n5 厨卫吊顶选择\n1.铝扣板，性价比高，后期维修也方便；蜂窝大板，简单好看，适合的厨卫吊顶，但是价格偏高，后期\n维修也比较麻烦；\n2.常见的铝扣板有30x30cm和30x60cm尺寸，推荐30x60的，相比30x30接缝少也更美观。最好不要用\n非标尺寸，后期安装浴霸之类的需要切割，容易损坏。\n3.常见的铝扣板厚度一般有0.6mm、0.7mm、0.8mm等，一定要选国标0.6以上的；推荐选纯白，\n纯色不局限于白色，也可以带有一些纹理的，但是安装之后基本看不出来；\n4.铝扣板选极窄边框，不选黑框、无边框或者大边框；\n5.石膏板也是可以用的，更美观，不用担心受潮问题，选用防水石膏板+耐水腻子+防水乳胶漆即可。\n6 窗帘盒做法\n1.牢固：窗帘盒需要承受窗帘的重量，因此安装必须牢固，所以需要用欧松板打底， 再贴石膏板；\n2.处理好拼接处：石膏板与欧松板的拼接处要处理平整，避免出现裂缝；\n3.窗帘盒上下高度150-200mm，前后深度 (双轨) 200-250mm， 单轨预留150-200mm。\n39\n7 无主灯吊顶形式\n1.注意层高要有2.8m以上才考虑做，因为无主灯设计会压低层高至少10公分；\n2.无主灯设计增加了吊顶、电线和灯具，造价较高，做好预算；\n3.根据个人的预算和房高来选择哪种形式的无主灯设计。\n8 石膏板双眼皮\n1.注意石膏板双眼皮尺寸，尺寸过大不美观；\n2.做石膏板双眼皮，可以连接窗帘盒、衣柜顶，这样更美观、造价低。\n9 吊顶包梁\n石膏板吊顶不要平梁，否则接缝后期容易开裂，一定要包住梁。\n10 空调风口\n空调风口可以做加长，这样更美观，有极简效果。\n40\n11 门\n室内门，不看品牌，就看这三点:①高度、②材质、③造型。\n①高度:\n高度尽量通顶做，标准门洞2米1高，看着是挺高，但这是毛坯房，等铺完地砖，高度降低7公分左右，\n要是再铺了地暖，门洞也就是1米多了，想出效果就尽量往高做，如果原始结构不允许砸墙提高门洞高\n度，也可以把门头做通顶了，也一样大气；\n②材质: 实木复合门、实木门、原木门；\n③造型:\n门套、门扇不同色的门很难搭配风格和颜色，慎选。镶嵌金属线条的门，别管镶一圈还是两圈，都是网\n红产物，不建议跟风，时间一长金属条还会崩开。还有各种花里胡哨的造型的门，装修再好的家，装上\n这种门以后会显得很突兀，不建议使用。\n购买秘籍：\n考虑预算的的话，购买时品牌对于木门的参考意义不大，如何买到性价比高的木门：\n①去想要的品牌找一款自己喜欢的门样子，木门的样子所有品牌都是通用的，无论品牌大小，生产流程\n基本都一样；\n②:找一个性价比高的二、三线或是当地的门厂，把样子给商家，然后约定好材质即可。\n实木复合门:\n跟实木不沾边，上下两层密度\n板，里面夹的蜂窝纸、桥洞力学\n板或是用木条填充。与其搭配的\n门套线、地脚线默认的都是密度\n板，这都是甲醛。实木复合门价\n格便宜，但密度板占比大，潜在\n的环保隐患很大，不建议。\n原木门:\n从里到外都是纯实木，环保级别\n高，但价格也是很高，极易开裂变\n形，这都是与生俱来的天赋，除了\n忍着没法解决，不差钱有时间打理\n的，原木门肯定是首选，除非土\n豪，否则不推荐。\n实木门:\n拥有和原木门一样的环保级别、\n工艺质感、造型，与原木最大的\n区别是，工艺好的实木门里面有\n抗变形、防开裂的结构，正常使\n用基本不会变形开裂。\n41\n油工\n序号 项目 注意事项\n1 油漆工的具体\n施工流程步骤\n1.铲墙皮：无论旧房改造，还是新房自带，全部铲除；\n2.刷墙固：渗透基层，硬化墙体，封闭粉尘，增加腻子粘合性，提高墙面附着力 ；\n3.防锈处理：吊顶完成后，使用防锈漆，填补木工钉眼；\n铲墙皮 刷墙固 防锈处理\n4.石膏嵌缝：石膏填平开槽处、不平处及接缝处；\n5.挂网+胶带：水电开槽、墙体交界处、吊顶石膏板之间缝隙，都需要挂网＋胶带，防\n开裂；\n6.墙角找垂直：阴阳角找直墙角， 加护角条保护墙角；\n石膏嵌缝 挂网+胶带 墙角找垂直\n7.石膏找平：全屋石膏找平，柜体室内门的墙体垂平，其他墙体顺平；\n8.批刮两遍腻子：石膏干透后披刮腻子，第一遍腻子干透后才能进行下一遍，一般间隔\n彐天；\n9.墙面打磨：腻子干透后对墙面进行打磨（晚上用强光手电筒验收）；\n42\n1 油漆工的具体\n施工流程步骤\n石膏找平 批刮两遍腻子 墙面打磨\n10.全屋保护：清理打磨留下的灰尘后，开始全屋柜体的保护，防止刷漆时粘上漆；\n11.涂刷底漆：底漆封闭基层，抗碱防霉，提高乳胶漆的附着力（可以喷也可以涂）；\n12.两遍面漆：乳胶漆涂刷两遍，中间最好间隔8小时，完工后关窗3天；\n全屋保护 涂刷底漆 两遍面漆\n2 没有找平\n会出现什么问题\n1.常规装修不需要全屋沖筋找平，费用高，只需关键地方可以做局部冲筋找平即可，比\n如衣柜侧面墙，贴踢脚线处，门套墙；\n2.若未做找平，后期缝隙只能打胶处理，不美观；\n3.若做极简风格，预算充足，建议全屋冲筋找平，因为比如做极窄门框，对于垂直方向\n要求很高。\n墙面凹凸不平 踢脚线缝隙大小不一 衣柜缝隙大小不一\n3 顺平\n冲筋找平\n1.墙面垂直度误差小于2.5公分的做顺平，误差大于2.5公分可以做冲筋找平;\n2.什么情况下需要做冲筋找平：\n极简设计，对墙面平整度要求高，有内凹踢脚线、窄边窗台石等；一门到顶木作安装要\n求较高的；灯光有洗墙设计要求的；做艺术漆，对墙面平整度要求高的；\n3.冲筋找平费用比顺平高几倍，常规装修可局部区域做冲筋找平，其他区域做顺平。\n43\n4 全屋挂网\n挂网刮腻子可以降低开裂风险，全屋挂网造价高，可以不用全屋挂网，但以下情况一定\n要挂网：\n1.新旧墙体交接处需要挂网； \n2.水电开槽处；\n3.轻体墙与承重墙交界处；\n4.粉刷石膏找平过厚时；\n5.吊顶连接处。\n5 墙固\n1.墙固也叫界面剂，具有优异的渗透性，能充分浸润墙体基层材料表面，提高界面附着\n力，提高灰浆或腻子和墙体表面的粘接强度；\n2.墙固最好在油漆工进场再刷，因为前面工种施工会产生很多粉尘、木屑， 粘到墙\n上，效果变差；\n3.按照1:1加水稀释使用，重点一定要刷两遍。\n6 腻子粉\n腻子的成分是重质碳酸钙加上滑石粉，再加上一部分助剂，助剂主要就是胶粉，因为滑\n石粉跟重质碳酸钙是没有粘性的，腻子粉刮到墙上要有粘性，有强度，主要是因为有胶\n。注意，市面上百分之八九十的，当地产的腻子粉，有的甚至连国标最低要求的十环认\n证都没有，用的胶都是聚乙烯醇，加上羧甲基纤维素。聚乙烯醇在2017年10月份已经\n被世界卫生组织明确的列为致癌物质。一个一百平方的房子，就需要几百斤，那么你家\n的环保可想而知。\n腻子粉要批2两遍以上，每一遍间隔48小时，下雨天间隔72小时；\n1.看执行标准：JG/T 298-2010 普通 Y 型 耐水 N 型 柔韧 R 型\n2.看环保标准：GB 18582-2020 \n3.看认证：国内十环、国际A+认证、德国EC1认证\n•环保等级高的腻子粉用的胶粉是植物淀粉，不存在聚乙烯醇的问题，可放心使用。推\n荐选择万华化学腻子粉。\n44\n6 腻子粉\n7 乳胶漆\n1.小面积滚涂即可，大面积可以喷涂， 也可以选择顶面喷涂，墙面滚涂，如果墙面也\n喷涂，后期用毛刷或滚筒修补有明显的不一样痕迹；\n2.机器调色颜色更均匀， 与色卡还原度高， 但只能整桶，且后期不可改色。现场人工\n调色，颜色漆的量可自由控制，深浅可以调节，颜色浅了加色浆，但搅拌不好会色彩不\n均匀;\n3.如何选购：\n• 性能标准：GB/T 9756-2018 \n只有三个等级：合格品、一等品、优等品\n合格品：耐洗刷>300次；一等品：耐洗刷>1500次；优等品：耐洗刷>6000次；\n• 环保标准：GB18582-2020\n4.选购时重点要看检测报告，和筒身后面有没有标注它的 voc 含量；\n5.性能标准只要达到优等品，环保标准达到全项未检出的普通漆是很好的漆，就可以购\n买；\n6.儿童漆：儿童漆跟普通漆物理性能上是一样的，环保性能上要求更高，普通漆VOC含\n量小于80g/L，儿童漆VOC含量要求小于10g/L，且不能检测出含有石棉成分；\n7.不想买到假漆，就去正规渠道买，买的是国产漆，就去品牌官网输入产品的二维码查\n询真伪，买进口漆要看原产地证明，报关单。\n45\n厨房橱柜\n1.购买要点\n主要考虑板材的材质及厚度，柜体一般大品牌只做实木颗粒板，便于\n批量生产。\n① 板材\n主要分为颗粒板和多层板2种\n颗粒板\n优点 ：\n环保性高，性价比高，不易变形；\n适合做柜门。\n缺点 ：\n防水防潮性差。\n多层板\n优点 ：\n防水防潮性好，承重性好；适合\n做柜体，不适合做柜门。\n缺点 ：\n做柜门易变形。\n46\n② 厚度\n建议柜体≥18mm，背板≥5mm，台面≥15mm，厚的比薄的好。\n③ 台面\n价格：石英石＜大理石＜岩板\n造型：石英石＜大理石＜岩板\n耐磨耐高温：石英石＜大理石＜岩板\n● 推荐：\n仿大理石纹路的石英石，颜值价格都好。石英石要选择含砂量>93%\n的。\n石英石\n不易渗色、抗腐蚀、坚固耐用。\n缺点 ：\n有交接缝。\n优点 ：\n颜值高。\n缺点 ：\n硬度低、渗色、造价高。\n优点 ：\n不易渗色、抗腐蚀。\n缺点 ：\n造价高。\n岩板\n大理石\n优点：\n47\n④ 柜门\n价格：肤感＜亚克力＜烤漆＜吸塑板\n造型：肤感＜亚克力＜烤漆＜吸塑板\n耐磨耐高温：肤感≈吸塑＜烤漆＜亚克力\n耐脏耐磨耐刮花：吸塑＜烤漆＜亚克力≈肤感\n● 推荐：\n烤漆和肤感（不做造型），根据价位决定。\n肤感\n烤漆\n 吸塑板\n亚克力\n48\n2.价格\n① 辅料询价\n板材：板材种类（可选范围）、见光板、台面材料（可选范围）。\n其他：拉篮、高低台面、洗菜盆、五金。\n② 计价方式\n01：全包一口价。\n02：按地柜、台面、吊柜，分别计价。\n3.配套要点\n① 挡水条\n前挡水条可不要，后挡水条要\n49\n② 油烟灶\n需要提前确认尺寸\n③ 防水措施\n水槽柜换不锈钢柜，原柜贴防潮铝箔。\n50\n④ 洗菜盆\n优点 ：安装方便。\n缺点 ：接缝不易打理。\n优点 ：美观大方。\n缺点 ：安装需严丝合缝。\n优点 ：易打理。\n缺点 ：安装要求高。\n⑤ 其他\n洗碗机、烤箱类电器需要提前确认尺寸。\n51\n4.细节要点\n① 橱柜背板\n橱柜的背板可以让橱柜内部更加干净，不容易受潮受霉,但是如果\n商 家用的是单面板，不仅容易受潮发霉，还会释放甲醛，影响橱\n柜寿 命,所以一定要检查橱柜背板，并且确认是双面板。\n② 油烟机的安装高度\n虽然油烟机不是橱柜的一部分，但是安装的高度却能决定炒菜区的好\n用度，因为高了会影响吸油烟的力度，低了可能会碰到头，如果是侧 吸\n油烟机高度在35-45cm即可，顶式油烟机高度在60-75cm最好。\n③ 厨房根据动线来布局\n厨房橱柜的设计，要根据自己的习惯和合理的动线来布局，而不是单\n纯的美观，正常来说，U型厨房按照：取-洗-切-炒-盛， 一个完整的\n动线，这样做起饭来更顺手。\n④ 橱柜材质\n实木多层板是由多块实木板拼接压缩而来的，因此他的抗压性，稳定\n性都特别好，它也是当下最热门的橱柜材料，其防潮性以及强度都要\n高于大部分材质。\n⑤ 柜体板的厚度\n目前市场上有16mm、18mm等厚度规格的板材，厚度不同成本相差\n很大，仅此一项，18mm厚的比16mm厚的板材成本高出7%，18mm 厚\n的板材做出的橱柜使用寿命能延长一倍以上，保证门板不变型，保 护\n台面不开裂。\n52\n⑥ 是否独立柜体\n整组连装的橱柜会影响牢度，因此消费者在选购整体橱柜的时候要问\n清楚，二者使用寿命和稳定性相差2-3倍，成本相差5%，消费者可以 通\n过包装和装好的柜体来鉴别，如果独立柜体单柜组装的话，每个柜子\n都应该有一个独立的包装，可以从安装好的柜体来看。\n⑦ 水槽用台下盆\n厨房水槽用台下盆，清洁台面的时候，只要一块抹布就把水全擦\n进去，无死角，清理更方便。\n⑧ 橱柜安装打孔\n橱柜安装过程中需要打孔的地方很多，建议在打孔后用塑塞对于孔进\n行封闭处理，以免甲醛的散发，而且看起来较为美观。\n⑨ 橱柜五金\n看完板材，看五金，检查抽屉、门扇等活动部件，开关要灵活、无噪\n音、有防撞、自闭或阻尼功能。可检查出产品所用的五金配件是否达\n标，一定要选择知名品牌。\n⑩ 橱柜尺寸\n最常用的物品摆放高度：70cm-185cm\n吊柜距地面高度：150cm-160cm\n操作台下方内缩：3cm-6cm\n灶台距离墙面：40cm\n台面尺寸：高度：80cm-90cm，宽度：50cm-60cm\n工作台面与吊柜底的高度：65cm-75cm\n吊柜深度范围：30cm-40cm\n53\n全屋定制\n54\n全屋定制\n55\n全屋定制\n56\n全屋定制\n衣柜一般按展开面积和投影面积计算\n投影面积只需要长×高就可以，计算比较简单，抽屉、裤架这些功能一般需要额外计算，\n做全屋定制的时候要注意，投影面积问一下铰链、导轨、拉手、挂衣杆、裤架包不包括\n在内，什么品牌的，需要问清楚，小心商家在这上面玩猫腻。\n展开面积计算的话相当于把衣柜每个部分拆分开来计算，板材、五金等每一项加起来计\n算，容易出现增项，只要加东西、价格就会重新计算，而且容易出错，个人不建议这种\n方式计算，算不明白。\n整体套餐的模式 这种计算比较简单，但会受到尺寸的限制。\n全屋定制的安装极其关键，在某种程度上，甚至直接决定效果的呈现，好的板材只是基\n本，好的安装才是关键，安装验收注意以下几点：\n01.首先看外观，柜子最好是能做到与墙面、顶面严丝合缝，缝隙太大不但容易积灰，\n蟑螂小虫还会到处跑。\n57\n全屋定制\n02.整体没有色差，门缝要笔直均匀，长柜门至少要三个铰链，五金要 安装牢固，一定\n要检查螺丝有没有少拧的情况，这个最容易忽视。\n03.检查封边是否严密，有无脱胶现象，以及安装的钉眼一定要用美纹贴修饰，否则不\n但不能很好的抑制甲醛的挥发，时间长了还会受潮发霉。\n04.检查板材的厚度，是否是前期承诺的厚度，一般柜体板18毫米，背板9毫米，台面\n板25毫米。\n家里的柜体，有两种解决方案， 全屋定制、木工现场制作。\n1：找木工\n01：设计对比\n木工定制款式单一门板还要另外定制，灯光搭配更是不要想了，自己需要耗费大量时间\n精力，如果沟通不到位，非常容易翻车。\n02：工艺对比\n木工打柜子手动封边，时间久了容易脱胶，并且封边工艺才是板材是 否环保的根本。\n03：价格对比\n木工打柜子钱一半买材料，一半支付人工。\n04：服务对比\n木工打柜子要自己去市场买板材辅料，自己设计，但售后难以保障。\n58\n全屋定制\n2：找定制\n01：设计对比\n全屋定制有专业的设计师能够根据客户不同需求进行DIY定制，能很 高的对整体风格\n把控及色彩搭配，使空间最大合理化。\n02：工艺对比\n全屋定制有机器化工厂>人工，采用PUR封边，三合一工艺使钉子不外露，板材颜色丰\n富。\n03：价格对比\n全屋定制不同品牌价格差距巨大，容易产生品牌溢价。\n04：服务对比\n全屋定制省时省力，从设计、生产、安装都有工作人员跟踪对接，售 后相对有保障。\n这个要根据个人喜好及财力水平，如果钟情于大品牌，那就选 大品牌；如果追求性价\n比就选工厂。主要分以下几个方面做比较：\n1.板材：板材是最不需要说的，大品牌的板材都是标榜自己生产的，其实就是 购买素\n板找压贴厂压贴饰面并打上自己的logo，市场上只有他自己用 这个牌子，有定价权。\n工厂用的板材都是市场上流通的，品质都有保 障。\n2.做工主要指封边：封边主流是PUR封边，还有激光封边，有实力的工厂都可以做，做\n工 方面也都可圈可点，不比所谓的品牌差。\n3.价格：价格方面工厂比大品牌优势很大。\n4.售后：大品牌走的是加盟商路线，而加盟商有做的好的有做的差强人意的， 过不了\n几年可能又会更换加盟商，而加盟商一般都是后者不管前者的 帐，售后问题容易踢皮\n球后期是个麻烦；工厂存续时间很长，尤其是 有实力的工厂，售后服务比较有保障。\n全屋定制最省钱的办法就是直接找当地的加工厂，找到源头，不夸张的讲，你找的二三\n线品牌，80%都是当地加工厂代工。想省钱，一共六步:\n第一步:找到源头定制工厂\n①通过板材找到当地的授权商家，比如大亚爱格、万华禾香板，都可以从官网找到当地\n授权商，如果是工厂就可以去实地考察了。②可以去当地的老的建材城去找门店，通常\n工厂都会在当地有一些门店，只是门店不会开在红星美凯龙，居然之家这样的卖场。\n第二步:看封边\n找到工厂后，重点看他的封边机。如果他用的是国产的南兴、极东等一线封边机，还不\n错，如果他用的是德国豪迈，意大利比亚斯进口封边机那非常好。如果他用的是激光封\n边机那非常牛。\n第三步:看板材\n板材直接决定成品的环保，用大品牌的板材，大亚、露水河、千年舟、莫干山等等。\n第四步:看五金\n柜体容易坏的都是五金，认准大品牌:奥地利百隆五金、德国海蒂斯五金、或者国产DTC\n五金。\n第五步:选门板\n门板根据自己的喜好，让加工的厂家生产或是从外地发货。\n第六步:找图纸参考\n然后自己费点心，从网上找一些柜体内部结构图，根据自己需求调整一下，那么，你的\n全屋定制跟大品牌比可能就差那么一点细节。但是你至少要省百分之三十以上的钱。\n59\n全屋定制\n1.柜门用什么板材？\n01.不推荐密度板，多层实木跟生态板不要选；\n02.可使用 MDI 胶的颗粒板，或 E0 级的欧松板，最好用 MDI 胶的欧松板；\n03. 目前国产欧松板和进口的爱格板都可以做到一门到顶，不需要拉直器；\n04.不要到店就问，你家板材环保吗？你这样问没有意义，反而让商家觉得你是什么都\n不懂的小白，不如直接问你家板材是什么环保等级，ENF，F4 星，还是 E0 级的，用什\n么胶水、脲醛树脂胶还是 MDI 胶？\n2.柜门表面是什么材质？\n01.追求性价比可选双饰面；\n02.有条件可选 PET；\n03.厨房选亮光的，客餐厅卧室选肤感膜。\n3.柜体用什么板材？\n01.北方推荐颗粒板或欧松板做柜体；\n02.问清楚用什么胶水，推荐 MDI 胶，目前国内只有用 MDI 胶的板材才能达到 ENF 级环保；\n03.柜体厚度 一般选择1.8cm以上，选择1.6cm厚度会比 1.8cm的成本少7% - 10%。\n4.背板用什么板材？\n01.问清楚背板用什么材质，如果不问，很多商家会给你用最次的密度板，建议使用和\n柜 体一样的板材；\n02.问清楚背板厚度，如果不问，可能给你用 5mm 厚的，建议用9mm 厚以上的。\n03.选择多层板双饰面，单饰面容易受潮，安装方式要选择插槽式安装方式，留出与墙\n壁 间的空袭，那样防潮性更好。\n5.柜子侧面的见光板多少钱？\n01.见光板就是柜子侧面露出来的板材，如果不使用见光板，柜子侧板露在外面就不好\n看，很多商家不会跟你确定这个东西，等到最后算总价再和你说，到时候你再加就加钱，\n要么就只好露侧板；\n02.问清楚如何收费，一般按平米。\n6.用哪种封边？\n01.封边等级从高到低依次是，激光封边、PUR 封边、EVA 封边；\n02.预算允许选 PUR 封边，追求性价比，可柜体 EVA 封边，柜门PUR 封边；\n03.不建议选激光封边，价格高。目前国内真正能做激光封边的工厂很少，很多说可以\n做， 实际是给你做 PUR 封边，而你也很难分辨。\n7.五金用什么品牌？\n01.五金是关键，一定要问清楚用什么品牌。好的五金件寿命可以到达10万次，用20\n年一点问题都没有。\n8.门板拉手费用怎么算？\n01.问清楚门板拉手是按米算还是按根算；\n02.这是是商家赚钱的项目，尽量砍价。\n9.抽屉怎么算？\n01.一般都是几平方内送一个抽屉，多出来要额外加钱；\n02.进口抽屉 400 左右一个，国产的 200 左右一个。\n60\n全屋定制\n2021年10月1日起板材的甲醛释放量分级上已经采用新国标，新国标有E1级、E0级、\nENF级。E1级<E0级<ENF级,ENF级最好，E1级是最基本的，也是底线。E0级是用的比\n较多的，而且现在大部分家庭都会选择E0级或以上。\n61\n全屋定制\n名称 品 牌 产地 环保级别\n颗粒板\n欧松板\n爱格 奥地利 F4\n可丽芙 意大利 F4\n博纳克 巴西 F4\n芬萨 西班牙 F4\n住友 日本 F4\n克诺斯邦 德国/国 F4\n福人 国产 ENF\n水性科天 国产 ENF\n大亚 国产 ENF\n千山 国产 ENF\n兔宝宝 国产 ENF\n康荃板 国产 ENF\n禾香板 国产 ENF\n千年舟 国产 ENF\n奥斯博恩 国产 ENF\n鲁丽 国产 ENF\n康纯 国产 ENF\n宁丰 国产 ENF\n红棉花 国产 ENF\n大王椰 国产 E0\n莫干山 国产 E0\n福湘 国产 E0\n62\n全屋定制\n名称 品 牌 环保级别\n生态板\n莫干山 ENF\n兔宝宝 ENF\n鹏鸿 ENF\n腾飞 ENF\n雪宝 ENF\n千山 ENF\n福湘 E0\n大王椰 E0\n福庆 E0\n千年舟 E0\n伟业 E0\n多层板\n千山 ENF\n兔宝宝 E0\n莫干山 E0\n千年舟 E0\n密度板\n万华 ENF\n宁丰 ENF\n63\n全屋定制\n64\n装修环保\n衣柜\n柜子\nE1 这个等级有点低，卧室最好不要选择，尤其是儿童房\nE0 家里没有老人小孩可以考虑，且通风3-6个月后，做环保检测再入住\nF☆☆☆☆ 国外板材的标准，检测比较严格，环保程度与ENF级别接近\nENF 2021年10月份新增的标准，比E0级别高一倍，适合有小孩的家庭\nMDI胶 目前属于天花板级别，比较热门，代表板材有禾香板、欧松板、芦芯板\n品牌定制有欧派的爱芯板、索菲亚的康纯板等等，添加的都是MDI胶\n房门\n门芯材\n蜂窝纸门不能选，质量不好，隔音效果不好，环保也不行\n建议选择木方填充的、桥洞力学门、原木力学门等\n面板 免漆或烤漆都可以，尽量少用密度板做的\n乳胶漆\n价格 5-18/L一桶的建议400-800元就行\n环保 环保要看VOC(挥发性有机化合物),≤10g/L为儿童漆，50-80g/L为普通漆\n耐擦洗 合格品、 一等品、优等品，优等品最好，桶身的白色标签上可以看到\n腻子粉\n价格 价格建议选择20-40左右就行，因为里面有胶水，不能图便宜\n执行标准 要认准2个国家标准，性能标准JG/T298-2010,环保标准GB18582-2020\n木地板\n强化地板 原材料为高密度板，多数环保等级低，选品牌的较好，儿童房不建议用\n九层 有实木脚感，环保等级中，一定选EO以上环保级别\n新三层 强化地板的升级板，环保等级中；基材多为松木，材质偏软，不能受潮，\n受潮了会起皮翘边现象\n三层 环保等级高；表面有3-4毫米的实木层，脚感好，建议选择\n纯实木 环保等级高；有加枫、桦木、红橡、亚花梨、铁苏木、柚木、胡桃木、\n鸡翅木、紫心木、印茄、香二翅豆等等；价格贵，跟着预算选择\n玻璃胶\n防霉型 主要用在厨房、卫生间；品牌有瓦克、西卡、立邦、百得\n美容胶 主要用在地脚线、门窗套、衣柜边等\n墙布 糯米胶\n墙布要用胶粘的，是否环保跟胶有关，主要用桶装基膜、糯米胶或马铃薯\n胶；糯米胶相对环保，但目前线下店大部分糯米胶都是假的，建议去网上\n的官方旗舰店购买。\n品牌：嘉力丰、绿松林、壁虎\n窗帘 添加剂 窗帘为防止洗涤后起皱和收缩，会添加甲醛添加剂来保持窗帘光滑，加上\n染色过程中也会有大量甲醛，建议用洗衣机洗过再悬挂\n床垫\n家具\n硬棕垫 一定要选松散的，很硬的肯定有胶水，用脲醛胶粘合的，它甲醛超标多倍\n密度板家具 密度板越少越好，但烤漆的很多都是密度板，购买的时候一定要看\n其他 软装饰品等 包括床品、小孩玩具等等，不能图便宜，关注环保问题\n65\n胶类\n增塑剂:增塑剂一般指的是塑化剂，对人体的危害是比较大的。首先，塑化剂可能会影响人体生殖\n机能，进而可导致子宫内膜增生、睾丸损害，甚至导致不育等。尤其对于还处于发育期的儿童，\n比较容易对其身体导致严重伤害，不利于其生长发育。以下胶类可能会存在增塑剂。\n①玻璃胶:玻璃胶的基\n材主要为有机硅、环氧\n树脂、聚氨酯等，便宜\n的玻璃胶以及大牌子的\n低端款，会掺杂大量的\n增塑剂，添加增塑剂会\n增加玻璃胶的柔韧性以\n及使用寿命。\n如何避免:\n认准DB11/1983-2022、\nGB/T14683-2017、GB/T \n1741-2020国家强制执\n行标准，以及外包装如\n没有明确标注“不含增\n塑剂”。\n②发泡胶:主要成分为\n聚氨酯、硬化剂,而聚\n氨酯材料本身无毒,有\n一些不法商家会加入一\n定剂量的增塑剂来调节\n发泡胶的流动性和黏度\n如何避免:\n认准JC936-2004、\nDB11/1983-2022国家强\n制执行标准的产品，且\n发泡胶的级别分为A5、\nA4、A3、A2、A1五个级\n别，选择A1最高环保级\n别，固化后不含任何有\n毒害物质。\n③结构胶:结构胶通常\n是一种高分子材料，如\n聚氨酯、环氧树脂、丙\n烯酸酯等，添加增塑剂\n用于调节胶的固化速度\n和稳定性。\n如何避免:\n认准DB11/1983-2022、\nGB/T14683-2017国家强\n制执行标准的产品，以\n及外包装如没有明确标\n注“不含增塑剂”的，\n一定不要购买。\n66\n全屋水电点位布置\n分区 类别 功能 安装位置\n下沿位置 购买配置 灯安装\n方式 数量\n是否\n带独\n立开\n关\n外漏\nor隐\n藏\n玄关\n插座（灯线电源） 鞋柜中空处灯带照明 1 N 隐藏\n插座 鞋柜备用电源插座 鞋柜上侧台面，1500-1600 5孔 1 N 外漏\n线头 玄关区照明，筒灯*1 玄关上方 嵌入 1\n线头 入户对讲机 进门左手边墙壁 1\n开关 灯开关，控制玄关灯，餐厅吊灯，餐厅射\n灯，客厅沙发侧筒灯 入户门进门右手边，鞋柜侧\n1开双控（客厅）+\n三开单控（玄关+\n餐厅吊灯+餐厅射\n灯）\n1 外漏\n餐厅\n插座 电热水壶 餐边柜中空处，根据餐边柜造型设计 5孔-带开关 1 Y 外漏\n插座 面包机 餐边柜中空处，根据餐边柜造型设计 5孔 1 N 外漏\n插座 预留（手机充电） 餐边柜中空处，根据餐边柜造型设计 5孔-带USB 1 N 外漏\n插座 日常使用*2 餐厅西边墙，离地300 5孔 2 N 外漏\nAP面板 wifi 网线接口 餐边柜中空处，根据餐边柜造型设计\n线头 餐厅吊灯*2 餐桌上方（餐桌长1300-1400） 吊灯 2\n线头 餐厅轨道灯（一轨两灯） 离餐厅西边墙700，轨道1300，线头留边上 轨道 1轨两\n灯\n开关 灯开关，控制厨房内射灯 餐边柜对面西边墙，靠近厨房移门处 单开单控 1 外漏\n开关 灯开关，控制厨房内水池上吊灯 餐边柜对面西边墙，靠近厨房移门处 单开双控 1 外漏\n客厅\n插座 光猫，路由器 电视墙居中处 5孔 1 N 隐藏\n插座 落地灯 沙发与阳台之间的东边墙上 ，与墙暖距离\n150左右,离地300 5孔 1 N 隐藏\n插座 预留（手机充电） 沙发靠近阳台一侧，离地700，与沙发扶手\n等高 5孔-带USB 1 N 隐藏\n插座 预留（手机充电） 沙发靠近餐厅一侧，离地700，与沙发扶手\n等高 5孔-带USB 1 N 外漏\n插座 弱电箱 弱电箱里 1 N 隐藏\n插座 预留 弱电箱南边100mm处，离地300 5孔 1 N 外漏\n插座 电视 电视墙居中处，预埋50管 5孔-带开关 1 Y 隐藏\n插座 机顶盒 电视墙居中处 5孔 1 N 隐藏\n插座 预留*2 电视墙居中处 5孔 2 N 隐藏\n插座 夜灯 电视柜靠近过道侧 5孔 1 N 外漏\n插座 挂壁空调 电视墙靠近阳台侧，离地2200 专用正3孔插座带\n开关 1 Y 隐藏\n网线面板 接电视盒子 电视墙居中\n线头 客厅照明\n筒灯*4 客厅吊顶嵌入，沙发侧4盏 嵌入 4\n线头 客厅照明\n筒灯*4 客厅吊顶嵌入，电视侧4盏 嵌入 4\n线头 客厅照明\n轨道灯（一轨四灯）3000色温\n沙发侧，离客厅东边墙800，轨道2400，\n线头留边上 轨道 一轨\n四灯\n线头 客厅照明\n灯带 客厅吊顶嵌入灯带 嵌入 灯带\n线头 过道照明\n筒灯*1 储物间外侧过道上方 筒灯明\n装 1\n开关\n灯开关，控制客厅电视墙侧筒灯 ，客厅沙发\n侧筒灯，客厅射灯，过道灯（储物间前过\n道）\n沙发侧墙面拐角处\n1开双控（客厅沙发\n侧筒灯）+三开单\n控（客厅电视墙侧\n筒灯+客厅射灯+过\n道灯）\n1 外漏\n储物间\n插座 预留*2\n熨烫机/扫地机器人 储物间南面墙上，离地300 5孔 2 N 外漏\n线头 储物间照明\n射灯*2 储物间正上方，两灯距离1000 明装 2\n开关 灯开关，控制储物间照明 储物间入门南面墙 单开单控 1 外漏\n主卧\n插座 手机充电 卧室靠外床头柜上方，离地700 5孔带USB， 1 N 外漏\n插座 台灯 卧室靠外床头柜上方，离地700 5孔 1 N 外漏\n插座 手机充电 卧室靠内床头柜上方，离地700 一个5孔带USB 1 N 外漏\n插座 加湿器 卧室靠内床头柜上方，离地700 5孔 1 N 外漏\n插座 衣柜灯带照明 1 N 隐藏\n插座 梳妆台留用*2 梳妆台上方，离地900 一个5孔带USB，一\n个5孔 2 N 外漏\n67\n主卧\n插座 电视 主卧电视墙居中处，电视柜上方 一个5孔带开关 1 Y 隐藏\n插座 机顶盒 主卧电视墙居中处，电视柜上方 5孔 1 N 隐藏\n插座 留用 主卧电视墙居中处，电视柜上方 5孔 1 N 隐藏\n插座 留用*2 主卧电视墙靠南侧 5孔 2 N 外漏\n插座 挂壁空调 电视墙靠南侧，离地2200 专用正3孔插座带\n开关 1 Y 隐藏\nAP面板 wifi 主卧电视墙居中处，电视柜上方\n线头 床头照明\n吊灯*1 卧室靠外床头柜上方 吊灯 1\n线头 主卧照明\n吸顶灯/吊灯 主卧中间 明装 1\n开关 灯开关，控制主卧吸顶灯和吊灯 卧室进门左手边 双开双控 1 外漏\n开关 灯开关，控制主卧吸顶灯和吊灯 卧室靠外床头柜上方，离地900 双开双控 1 外漏\n南次卧\n插座 手机充电 卧室靠外床头柜上方，离地700 5孔带USB， 1 N 外漏\n插座 台灯 卧室靠外床头柜上方，离地700 5孔 1 N 外漏\n插座 手机充电 卧室靠内床头柜上方，离地700 5孔带USB 1 N 外漏\n插座 加湿器 卧室靠内床头柜上方，离地700 5孔 1 N 外漏\n插座 电视 卧室电视墙居中处，电视柜上方 一个5孔带开关 1 Y 隐藏\n插座 机顶盒 卧室电视墙居中处，电视柜上方 5孔 1 N 隐藏\n插座 留用 卧室电视墙居中处，电视柜上方 5孔 1 N 隐藏\n插座 书桌留用*1 窗户下方偏西点，离地300 5孔 1 N 隐藏\n插座 书桌留用*2 窗户侧墙体偏西点，离地900 一个5孔带USB，一\n个5孔 2 N 外漏\n插座 预留衣柜灯带照明 1 N 隐藏\n插座 挂壁空调 电视墙靠南侧，离地2200 专用正3孔插座带\n开关 1 Y 隐藏\n线头 卧室照明\n-吸顶灯或吊灯 卧室中间 明装 1\n开关 灯开关 卧室入门右手边 单开双控 1 外漏\n开关 灯开关 靠外侧床头柜上方，离地900 单开双控 1 外漏\n北次卧\n插座 手机充电 卧室靠外床头柜上方，离地700 5孔带USB， 1 N 外漏\n插座 加湿器 卧室靠外床头柜上方，离地700 5孔 1 N 外漏\n插座 手机充电 床头北边墙上，离地700 5孔带USB 1 N 外漏\n插座 电视 卧室床对面，电视柜上方 一个5孔带开关 1 Y 隐藏\n插座 机顶盒 卧室床对面，电视柜上方 5孔 1 N 隐藏\n插座 留用 卧室床对面，电视柜上方 5孔 1 N 隐藏\n插座 书桌留用*1 东边窗户下方，离地300 5孔 1 N 隐藏\n插座 书桌留用*3（台灯/电脑/手机） 东边窗户靠南，离地900，两个开关布置位\n置稍远，给一转三留位置\n一个5孔带USB，两\n个5孔 3 N 外漏\n插座 预留衣柜灯带照明 1 N 隐藏\n插座 挂壁空调 东边墙，暖气片上方 专用正3孔插座带\n开关，16A 1 Y 隐藏\n线头 卧室照明\n-筒灯*4\n卧室东边两盏明装筒灯 ，西边两盏明装筒\n灯 明装 4\n开关 灯开关 卧室入门右手边 单开双控 1 外漏\n开关 灯开关 靠外侧床头柜上方，离地900 单开双控 1 外漏\n南阳台\n插座 书桌留用*3（台灯/电脑/手机） 东边窗户，离地900，其中一个开关布置位\n置稍远一些\n一个5孔带USB，两\n个5孔 3 N 外漏\n线头 阳台照明\n吸顶灯 阳台中间 明装 1\n开关 灯开关 阳台东侧墙面 单开单控 1 外漏\n水管 预留水管，预留阀门 阳台西侧墙面\n厨房\n插座 冰箱 冰箱后面 一个5孔带开关 1 Y 隐藏\n插座 烤箱 冰箱旁边墙面，离地950 一个5孔带开关 1 Y 外漏\n插座 榨汁机 冰箱旁边墙面，离地950 5孔 1 N 外漏\n插座 电饭煲 冰箱旁边墙面，离地950 5孔 1 N 外漏\n插座 置物架小电器 冰箱旁边墙面，离地950 5孔 1 N 外漏\n插座 增压泵 厨房入水口处 5孔 1 N 隐藏\n插座 留用*2（小厨宝/垃圾处理器） 水槽地柜，距离分开些 一个5孔带开关 2 Y 隐藏\n插座 洗碗机 水槽地柜靠近洗碗机 一个5孔带开关 1 Y 隐藏\n插座 灶台 灶台后侧 5孔 1 N 隐藏\n插座 油烟机脱排电源 吊顶内部 5孔 1 N 隐藏\n插座 微波炉 切配区墙上 5孔 1 N 外漏\n插座 台面小电器 切配区墙上 5孔 1 N 隐藏\n68\n厨房\n插座 台面小电器 灶台左手边墙上 5孔 1 N 隐藏\n插座 台面小电器 水槽右手边墙上 5孔 1 N 隐藏\n插座 台面小电器*2 水槽左手边墙上 5孔 2 N 隐藏\n线头 橱柜灯带照明 柜底灯 1 N 隐藏\n线头 厨房主要照明\n射灯*3 厨房吊灯嵌入三颗射灯 嵌入 3\n线头 水槽照明\n-吊灯*1 水槽上方 明装 1\n线头 凉霸 吊顶靠近炒菜区\n开关 灯开关，控制厨房内水池上吊灯 水池右手边 单开双控 1 外漏\n水管 水槽龙头 进水热/进水冷/下水\n水管 洗碗机 进水冷/下水\n北阳台\n插座 煤气热水器 北阳台进门左手边。热水器旁 5孔 1 N 隐藏\n插座 烘衣机 北阳台靠墙，偏北 一个5孔带开关 1 Y 隐藏\n插座 留用*2 北阳台靠墙，偏北，距离分开些 一个5孔带开关 2 Y 隐藏\n线头 北阳台照明\n吊灯 北阳台正上方 明装 1\n开关 灯开关 阳台东侧墙面 单开单控 1 外漏\n水管 煤气热水器 墙暖供应商负责\n水管 拖把池 烘衣机旁边\n卫生间\n插座 电动牙刷*2 干区进门右手边墙面，离地950 5孔 2 N 外漏\n插座 吹风机 干区进门右手边墙面，离地951 5孔 1 N 外漏\n插座 留用 洗手台左边台面墙上 5孔 1 N 外漏\n插座 洗衣机 洗衣机后面，干区 一个5孔带开关 1 Y 隐藏\n插座 手机充电 马桶左手边 5孔带USB， 1 N 外漏\n插座 智能马桶 马桶右后方墙面 5孔 1 Y 隐藏\n插座 留用 马桶左后方墙面 5孔 1 N 外漏\n插座 镜柜灯带照明 1\n线头 镜前灯 镜柜上沿留线，离地2000 镜前灯 1\n线头 干区照明\n吸顶灯 干区上方 嵌入 1\n线头 湿区照明\n吸顶灯 湿区上方 嵌入 1\n线头 暖风机 马桶上方\n开关 灯开关（干区照明、湿区照明、镜前灯） 进门左手边墙壁 三开单控\n水管 洗手台 进水热/进水冷/下水\n水管 洗衣机 进水冷/下水\n水管 马桶 进水冷/下水\n水管 淋浴\n总计\n69\n开关插座位置\n总控开关、多控开关 \n距地：135cm\n备用插座距地：30cm\n电视柜插座距地：35cm\n沙发上方插座距地：100cm\n普通插座距地：35cm\n壁挂洗衣机、滚筒洗衣机插座 \n距地：45cm\n玄关入口 电视背景\n沙发背景 阳台\n70\n入门开关距地：130cm\n床头开关插座距地：80cm\n梳妆台插座距地：110cm\n床尾插座距地：35cm\n空调插座距顶：50cm\n飘窗插座距地：30cm\n学习桌插座距地：35cm\n床头开关插座距地：80cm\n电动窗帘距顶：50cm \n吊灯距墙30cm\n卧室 卧室\n卧室 卧室\n71\n热水器插座距地：140cm\n净水器洗碗机、插座距地：50cm\n油烟机插座距地：180cm\n台面插座距地：130cm\n 门口开关插座 距地：140cm\n 花洒开关 距地110cm\n 冷热水水管间距 15cm\n厨房 厨房\n卫生间\n72\n空间收纳与搭配设计要点\n 空间收纳要点：\n玄关\n玄关柜≠鞋柜!!它的核心是收纳外出用品，物品进出的中转站\n1.要有开放格随手放东西；\n2.预留抽屉整理零碎物品；\n3.鞋柜层板要可调，深度结合物品尺寸定，预留排气孔，避免闷臭；\n4.座位区可不要，但设置挂衣区/加深的柜有必要；\n5.一定要设计抽屉，出门相关的小物件特别多，抽屉能帮助我们在使用过程中快速定位物品；\n6.预留备用空间(整理临时物品)。\n客厅\n一般电视柜可以划分为五大功能区：\n▪️杂物收纳：小物件归位，随取随用，像垃圾袋、各类生活琐碎用品等；\n▪️生活必需：日用品集中，清洁护理更高效；\n▪️工具专区：清洁工具隐形藏，上方放置清洁用品；\n▪️零食天堂：高柜拉篮，零食分类存；\n▪️展示空间：电视柜侧边空间做成了盲盒收纳。\n73\n客厅\n卧室\n1.男女分区：男士放男士，女士放女士，自己的空间自己做主，互不干扰。男士衣物少一些，划了一部分\n作为共同生活区；\n2.按季收纳：我觉得衣物按照季节收纳比按照长短收纳方便很多，每一个格间就是一个季节，一目了然，\n也不用做换季收纳；\n3.能挂不叠：衣物全都挂起来，家属也容易整理，不需要定期维持；\n4.好拿好放：中间高频区采用收纳抽屉装内衣袜子等，底端装了裤架，抽出来很方便，特意设置了一个家\n居服收纳区，轻松抬抬手就能拿取，天气说冷就冷，不想搭梯子去高区拿；\n入户区还设置了一个挂衣区，冬天开地暖回家挂挂外套，冬季的衣物也不常洗，次净外套都放那里，过完\n冬季，洗净后冬外套都挂那里；\n主卫也设置了次净衣区，给生活更多方便和可能！\n卫浴\n1.镜柜:放轻+小物件，12-15厚层板可调，预留USB充电口；\n2.台下盆选一体成型的+可抽拉升降龙头；\n3.墙壁只挂必要的牙刷杯子等过多的壁挂收纳会显乱\n74\n卫浴\n儿童房\n1.分类收纳：将玩具、书籍和文具进行分类，使用透明收纳箱，方便孩子自主寻找和归类；\n2.高低结合：利用墙面空间，安装开放式书架和挂钩，将常用物品放在孩子容易拿到的高度，提升空间利\n用率；\n3.多功能家具：选择具有储物功能的家具，比如储物床或沙发，既节省空间，又能有效收纳。\n75\n厨房\n1.动线原则：拿-洗-切-炒-端；\n2.食材要放显眼的地方!(看不见=忘记吃→过期丢)；\n3.高频的、滴水的东西才挂墙收纳，其余的放抽屉(避免油污)；\n4.冰箱尽量选大容量，冷藏冷冻区空间可切换；\n5地柜可预留位置放手推车或大容量的滚轮垃圾桶\n6.利用抽屉式地柜：比平开式地柜更方便拿取物品，可以分类存放餐具、厨具等。\n7.安装转角拉篮：充分利用厨房转角空间，存放锅具等大件物品。\n8.吊柜内使用分层置物架：增加吊柜的收纳空间，分类存放调料瓶、干货等；\n9.利用缝隙空间：例如在冰箱和橱柜之间的缝隙放置窄型收纳架；\n10.橱柜抽屉不用定制，DIY或网购拉篮自己装；\n餐厅\n1.餐边柜划分为多个区域，比如零食区，家用 品区，杂物区、杯子收纳区等等。每个区域都对应着不同\n的物品，这样找东西的时候就方便多；\n2.上层放轻物，下层放重物，适当做些活动层板，可以调整高度适应不同大小的物品；\n3.选择合适的收纳盒、篮子等收纳工具，可以让物品分类存放，更加整齐有序,将餐边柜的每一寸空间都能\n发挥出最大效用！收纳盒要统一色调，让餐边柜看起来会更加整洁美观.\n76\n餐厅\n书房\n1.书桌、书架等选择合理的尺寸，可减少空间的浪费书架进深要充足，避免大的书籍无法收纳；\n2.带门的书柜能防尘防潮，避免很多麻烦；\n3.定期清理不需要的书籍期刊等，随手整理防止桌面凌乱。\n阳台\n1⃣结合家里的物品及使用频率去分布每个区域的布局；\n2⃣柜体深度做45-55cm，可以放下行李箱等大物件；\n3⃣做可调节的活动隔板，放卫生纸/清洁用/杂物等小物件可以按需调整高度；\n4⃣ 做留一面做洞洞板收纳，可以灵活放下更多的小工具；\n5⃣家里有扫地机器人的，可以根据扫地机器人尺寸预留一定空间，以方便扫地机器人进出。\n77\n阳台\n 搭配设计要点：\n家居设计\n配色原则\n风格搭配\n78\n风格搭配\n乳胶漆的\n颜色搭配\n79\n门的搭配\n瓷砖搭配\n80\n柜子搭配\n沙发搭配\n81\n窗帘搭配\n灯光设计\n82\n挂画搭配\n绿植搭配\n83\n装修签合同注意事项\n1、项目明细:重点审核每个房间的项目避免漏项，看看每个房间的项目是否都是自己需要的\n，若报价单有漏项，后期必然增加预算。合同加一句话“在施工过程中确保全程增项额度不\n超过合同金额的5%，超出范围甲方概不负责”。\n2、合同解除:黑心装修公司解除合同需要支付25%的违约金。建议一点要降到10%以内。\n3、施工日期:写清楚装修工期为多少天，超出工期违约金多少(每天千分之二),常规家装\n45-60天，别墅复式楼看施工项目来定。\n4、免责声明:合同上加一句“工人在施工过程当中产生的安全事故，由乙方负责”。\n5、付款方式:对款项支付的约定，找装修公司一般建议3331模式。(签合同当天30%，水电防\n水完工30%、瓦工木工完工30%，装修完工10%)。装修一定要按工程进度来支付，否则就没约\n束力，常规模式50,45,5%。\n6、材料品牌系列明细表:在合同中必须注明使用的装饰材料的具体品牌、规格及型号，不管\n是主材还是辅材一定要写清楚，材料进场之前业主必须去检查，对每项材料做到认真检查，\n以防以次充好。不能笼统地用“##名牌”，要具体到系列款式。\n7、报价面积:有的设计师为了签单压低总价，前期会先把面积给减去一部分，后期会按实际\n发生量结算，重点看铺砖、刷漆的总面积。\n8、施工工艺介绍:报价单要注明每一项工种的施工工艺介绍，避免开工后扯皮。\n9、施工图纸:要有详细施工图纸，包括平面图、立面图、天花图、水电图、节点大样图等等，\n建议业主开工时候现场核对尺寸，避免返工。\n10、质保时间年限: 在正常使用条件下，住宅室内装饰装修保修期限为2 年，隐蔽工程一\n般是5年，水路高端品牌厂家质保50年。\n11、考察工地:签合同之前先参观装修单位在建的工地，看看现场的施工情况，以此来判断\n装修公司的施工是否规范。卫生：体现管理水平；材料：保证质量；师傅手艺：决定装修效\n果；\n12、查看营业执照:合同加盖公章，上网搜索该公司司法事件是否过多。\n84\n水电工程验收表\n电\n气\n工\n程\n1、大功率家电设备是否独立配线安装插座 口是口否\n2、排管穿线是否按横平竖直的原则用开槽机整齐开槽 口是口否\n3、PVC..阻然型电线套管是否用管卡固定 口是口否\n4、所有导线在 PVC管子里是否无接头 口是口否\n5、空调、浴霸、电热水器是否单独分路布线 口是口否\n6、同一回路电线是否穿入同一根管内 口是口否\n7、穿入管内总电线总截面积是否未超过管内截面积的 40% 口是口否\n8、线盒内导线应留有余量,长度是否有 150 mm的长度 口是口否\n9、同一住宅相线（L）、零线（N）、地线（PE）的颜色是否统一和分色 口是口否\n10..厨房中安装的插座距燃气管道是否≥150mm 口是口否\n11..强电插座与弱电插座的水平间距及平行间距是否≥150mm 口是口否\n12 电线与暖气、热水、煤气管之间的平行距离是否≥300 ㎜ 口是口否\n13.电线与暖气、热水、煤气管之间的交叉距离是否≥100 ㎜ 口是口否\n14..穿入配管导线的接头应设在分线盒内，接头搭接应牢固 口是口否\n15..安装电源插座时，面向插座应左零右相中间上方接保护地线 口是口否\n16 同一室内的开关插座应在同一水平标高上，高差应小于 2 ㎜ 口是口否\n17 同一室内相邻的开关或插座应小于 0.5mm 口是口否\n18 电源插座底边距地宜为 300 ㎜左右，平开关板底边距地宜为 1300㎜左右 口是口否\n19 强电与弱电的放线是否分管，严禁穿入同一根线管 口是口否\n水\n管\n工\n程\n1、管道铺设应横平竖直，暗敷管道须用切割机按弹线位置开槽 口是口否\n2、同一直线段上的入槽管不得有接头 口是口否\n3、给水管安装不得靠近电源，避免因渗水造成漏电、短路 口是口否\n4、给水管与燃气管间距不得小于 50㎜ 口是口否\n5、给、排水管均不得穿越卧室、储藏室及烟道、风道 口是口否\n6、给水管安装应左热右冷，平行间距应不小于 200 ㎜ 口是口否\n7、管道在转角、水表、水龙头或角阀至管道终端 100 ㎜处均须设置管卡，安装牢固 口是口否\n水管打压试验\n冷水管实验压力为 0.6MPa（6 公斤）,热水管加压试验压力为 1MPa(10 公斤)。恒压 10min压力\n下降不应大于 0.02MPa，恒压 1h0.05MPa。\n1、冷水管打压压力： Mpa，打压时间：\n2、热水管打压压力： Mpa，打压时间：\n备注：此表格应在相应工作完成时及时填写，不得一次填写多张表格。\n客户签字： 项目经理： 监理：\n年 月\n85\n泥水工砌粉工程验收表\n客户姓名 工程地址\n验收项目 验收结果\n1、新砌砖墙应先根据图纸地面、顶面弹线，并预留门洞位置。 是 □ 否 □\n2、灰缝应横平竖直，厚度一般控制在 8-10mm。 是 □ 否 □\n3、新砌墙体与原有墙体连接处粉刷应先在基层上铺订金属网，并绷紧\n牢固，金属网与各基体的搭接宽度不小于 100mm。\n是 □ 否 □\n4、新砌墙体与原有墙体连接处必须有拉结措施，拉结筋采用φ6 或φ8。\n拉接筋伸入原墙体不少于 200mm。\n是 □ 否 □\n5、烟道必须铺订金属网，并绷紧牢固，金属网与各基体的搭接宽度不\n小于 100mm。\n是 □ 否 □\n6、下水管保护工艺，铺设好下水管之后需用红砖砌体包围后用水泥河\n沙抹灰找平，外观美观大方。\n是 □ 否 □\n不合格情况说明（整改合格后才可通知客户再次进行验收）：\n限期整改日期： 年 月 日 时 分\n检验开始时间： 年 月 日 时 分\n检验结束时间： 年 月 日 时 分\n验收时间： 年 月 日 时 分\n客户意见：合格 □ 不合格 □\n施工工人评价 ：□施工技术 优秀 □施工技术 一般\n□服务态度热情 □服务态度一般\n备注：此表格应在相应工作完成时及时填写，不得一次填写多张表格。\n客户签字： 项目经理： 监理：\n年 月 日\n86\n防水工程验收表\n客户姓名 工程地址\n验收项目 验收结果\n1、卫生间（或厨房）地面防水应延伸涂刷至门洞口向外及两侧各 100mm。\n墙面采用刚性防水，地面一层刚性防水两层柔性防水。\n是 □ 否 □\n2、涂膜层均匀，厚度必须满足产品规定要求，不露底，表面无损伤。 是 □ 否 □\n3、搭接收头必须符合施工要求、接缝严密、无空鼓。 是 □ 否 □\n4、厨房防水涂料满涂，无遗漏，与基层粘结牢固，无气泡、裂纹、脱\n层，表面平整，卷起部位涂刷高度应一致，向墙面上返 800mm。淋浴区\n墙面上返 2400mm.\n是 □ 否 □\n5、蓄水时间不少于 24 小时，底层居室顶板无渗漏现象。 是 □ 否 □\n5、卫生间采用二次地漏排水工艺。 是 □ 否 □\n不合格情况说明（整改合格后才可通知客户再次进行验收）：\n限期整改日期： 年 月 日 时 分\n检验开始时间： 年 月 日 时 分\n检验结束时间： 年 月 日 时 分\n验收时间： 年 月 日 时 分\n客户意见：合格 □ 不合格 □\n施工工人评价 ：□施工技术 优秀 □施工技术 一般\n□服务态度热情 □服务态度一般\n备注：此表格应在相应工作完成时及时填写，不得一次填写多张表格。\n客户签字： 项目经理： 监理：\n年 月 日\n87\n抹灰工程（墙、地面）验收表\n客户姓名 工程地址\n验收项目 验收结果\n1、地面找平表面平整度误差应≤5mm。 是 □ 否 □\n2、地面找平表面是否光滑、密实、无起砂、蜂窝等缺陷。 是 □ 否 □\n3、地面找平表面是否有裂缝（但遇有管线铺设处或正常收缩时，开裂\n属于正常现象）。 是 □ 否 □\n4、墙体找平与原墙体结合是否牢固。 是 □ 否 □\n5、墙体找平是否有空鼓。 是 □ 否 □\n6、墙体找平里面垂直度误差应≤2mm。 是 □ 否 □\n7、墙体找平平整度误差应≤2mm。阴阳角误差≤2mm。 是 □ 否 □\n8、墙体找平是否有爆灰、等缺陷。 是 □ 否 □\n9. 墙面找平不允许收光。 是 □ 否 □\n不合格情况说明（整改合格后才可通知客户再次进行验收，验收合格后方可签字）：\n限期整改日期： 年 月 日 时 分\n客户意见：认可 □ 不认可 □\n施工工人评价 ：□施工技术 优秀 □施工技术 一般\n□服务态度热情 □服务态度一般\n备注：此表格应在相应工作完成时及时填写，不得一次填写多张表格。\n客户签字： 项目经理： 监理：\n年 月 日\n88\n瓦工铺贴工程验收表\n客户姓名 工程地址\n验收项目 验收结果\n1、瓷砖铺贴颜色一致，勾缝均匀，是否对缝一致。 是 □ 否 □\n2、表面平整，排砖合理。地砖粘贴后不得有整体空鼓现象，墙体边缘\n空鼓率控制在 5%之内。 是 □ 否 □\n3、砖体套割工艺规范、边缘整齐，砖面平直、无缺角无划痕、无爆瓷。 是 □ 否 □\n4、阴阳角方正，阴阳角线垂直，阳角碰角切割准确，管件及线盒套割\n美观。 是 □ 否 □\n5、地漏、排水地面坡度满足排水要求，无返水、积水现象，有地漏房\n间做排水试验。 是 □ 否 □\n6、砖的平整度、垂直度、缝隙顺直符合要求。 是 □ 否 □\n不合格情况说明（整改合格后才可通知客户再次进行验收，验收合格方可签字）：\n限期整改日期： 年 月 日 时 分\n客户意见：认可 □ 不认可 □\n施工工人评价 ：□施工技术 优秀 □施工技术 一般\n□服务态度热情 □服务态度一般\n备注：此表格应在相应工作完成时及时填写，不得一次填写多张表格。\n客户签字： 项目经理： 监理：\n年 月 日\n89\n木工工程验收表\n客户姓名 工程地址\n吊\n顶\n及\n隔\n墙\n验收项目 验收结果\n1、龙骨固定螺栓使用应符合沿边沿地龙骨固定间距不大于\n600mm，\n隔墙竖龙骨间距为 600mm。\n是 □ 否 □\n2、龙骨间距应符合主龙骨间距≤1000mm，次龙骨间距≤400mm。 是 □ 否 □\n3、吊顶龙骨保持水平一致，石膏板螺丝≤20mm。 是 □ 否 □\n4、石膏板隔墙垂直度允许偏差≤3mm。 是 □ 否 □\n6、木龙骨是否无死结、虫眼、戗茬。 是 □ 否 □\n7、吊杆间距应不大于 1100mm，吊杆必须用≥Φ6 的膨胀螺栓固\n定。\n是 □ 否 □\n细\n木\n制\n品\n1、饰面板平整度误差应≤2mm。 是 □ 否 □\n2、饰面板接缝是否符合要求。 是 □ 否 □\n3、饰面板是否有划痕。 是 □ 否 □\n4、木制作收口线条收缩是否合格。 是 □ 否 □\n5、饰面板拼接是否合理。 是 □ 否 □\n6、饰面板是否有起层、起鼓。 是 □ 否 □\n不合格情况说明（整改合格后才可通知客户再次进行验收，验收合格后方可签字）：\n限期整改日期： 年 月 日 时 分\n客户意见：认可 □ 不认可 □\n施工工人评价 ：□施工技术 优秀 □施工技术 一般\n□服务态度热情 □服务态度一般\n备注：此表格应在相应工作完成时及时填写，不得一次填写多张表格。\n客户签字： 项目经理： 监理：\n年 月 日\n90\n客户签字： 项目经理： 监理：\n年 月 日\n油漆工工程验收表\n客户姓名 工程地址\n验收项目 验收结果\n1、腻子与基层结合牢固，无起皮、粉化。 是 □ 否 □\n2、乳胶漆是否有流坠、透底。 是 □ 否 □\n3、乳胶漆是否有砂眼、刷纹、砂纸痕、麻点。 是 □ 否 □\n4、木制作油漆是否有流坠、皱皮。 是 □ 否 □\n5、木制作油漆是否有透底、漏刷。 是 □ 否 □\n6、木制作油漆表面是否洁净、无污染。 是 □ 否 □\n7 墙面平整度在≤2mm 是 □ 否 □\n不合格情况说明（整改合格后才可通知客户再次进行验收，验收合格方可签字）：\n限期整改日期： 年 月 日 时 分\n客户意见：认可 □ 不认可 □\n施工工人评价 ：□施工技术 优秀 □施工技术 一般\n□服务态度热情 □服务态度一般\n备注：此表格应在相应工作完成时及时填写，不得一次填写多张表格。\n91";
-
-/* ============================================================
-   排行榜：8 个空间 × 3 个类别 的「必须覆盖清单」
-   ------------------------------------------------------------
-   这是「不漏项」的唯一保证。不写它，AI 一定会漏掉一半。
-   AI 生成时会把这份清单原样塞进 prompt，要求逐条覆盖。
-   ============================================================ */
-const RANK_COVERAGE = {
-  kitchen: {
-    hidden:  ["给水管径与打压试验","排水坡度与存水弯","电气回路与线径","燃气管道与阀门","烟道与止逆阀","插座点位与高度","地面防水","墙面基层找平"],
-    surface: ["台面高度与材质","橱柜板材与五金","瓷砖防滑等级与美缝","吊顶与灯位","门槛石与挡水条","墙面漆或瓷砖"],
-    soft:    ["拉篮与调味架","垃圾处理器","净水器","照明灯具","收纳分隔件"]
-  },
-  bathroom: {
-    hidden:  ["防水与闭水试验","排水坡度","地漏选型与深水封","给水管径与间距","热水管保温","电气回路与线径","等电位联结","排风道止逆阀","隔音降噪","墙排与地排选择","检修口预留"],
-    surface: ["地砖防滑等级","墙地对缝与找平","美缝或环氧彩砂","吊顶材质","淋浴房玻璃安全","门槛石","窗台防水"],
-    soft:    ["镜柜","毛巾架","浴帘或浴屏","收纳","防滑垫","香薰与绿植"]
-  },
-  living: {
-    hidden:  ["电气回路与线径","插座点位与高度","弱电与网线预留","空调孔位与排水","新风管道","地面找平","墙面基层"],
-    surface: ["地面材质","墙面材质与颜色","吊顶与灯位","踢脚线","电视墙处理","窗帘盒"],
-    soft:    ["沙发尺寸与布局","茶几","电视或投影","窗帘","地毯","挂画与摆件","绿植"]
-  },
-  bedroom: {
-    hidden:  ["电气回路与双控","床头插座点位","隔音构造","空调孔位与排水","衣柜嵌入式线路"],
-    surface: ["地面材质与隔音垫","墙面材质与颜色","吊顶与灯位","窗帘盒","门与门套隔音"],
-    soft:    ["床与床垫尺寸","衣柜容量与开门方式","床头柜","窗帘遮光","照明灯具","色彩氛围"]
-  },
-  dining: {
-    hidden:  ["电气回路与插座点位","弱电预留","地面找平"],
-    surface: ["地面材质","墙面装饰","吊顶与吊灯位","踢脚线"],
-    soft:    ["餐桌尺寸与形状","餐椅数量与材质","餐边柜","吊灯高度","挂画与配色"]
-  },
-  study: {
-    hidden:  ["电气回路与插座点位","网线预留","隔音构造","空调孔位"],
-    surface: ["地面材质","墙面材质与颜色","吊顶与灯位","窗帘盒"],
-    soft:    ["书桌尺寸与高度","椅子人体工学","书柜容量与布局","台灯与防眩光","设备走线"]
-  },
-  entry: {
-    hidden:  ["电气回路与插座点位","感应灯线路","地面找平与防水"],
-    surface: ["地面材质耐脏防滑","墙面材质","吊顶与灯位","门套与门槛石"],
-    soft:    ["鞋柜容量与深度","换鞋凳","挂衣区","镜子","感应灯","收纳盒"]
-  },
-  balcony: {
-    hidden:  ["给排水与地漏","防水与闭水","电气回路与防水插座","洗衣机专用回路","封窗结构与安全"],
-    surface: ["地面材质防滑","墙面材质","吊顶材质","门槛石"],
-    soft:    ["洗衣机与烘干机","晾衣杆或隐形晾衣","收纳柜","绿植与休闲家具","照明"]
-  }
-};
-
-/* 五个维度权重：切预设只本地重算，不重新请求 API */
-const RANK_WEIGHTS = {
-  balanced: { rework:.30, safety:.30, replace:.20, frequency:.10, feel:.10 },
-  family:   { rework:.25, safety:.45, replace:.15, frequency:.08, feel:.07 },
-  budget:   { rework:.42, safety:.25, replace:.23, frequency:.05, feel:.05 },
-  quality:  { rework:.20, safety:.22, replace:.15, frequency:.15, feel:.28 }
-};
-const RANK_PRESETS = [
-  { key:"balanced", label:"均衡（默认）" },
-  { key:"family",   label:"家有老人小孩" },
-  { key:"budget",   label:"预算紧" },
-  { key:"quality",  label:"追求品质" }
-];
-const RANK_TABS = [
-  { key:"hidden",  label:"硬装 · 隐藏" },
-  { key:"surface", label:"硬装 · 表面" },
-  { key:"soft",    label:"软装" }
-];
-const RANK_TIER_META = {
-  S: { label:"S 级 · 做错要砸掉重来", hint:"藏在里面、返工代价极高、涉及安全" },
-  A: { label:"A 级 · 重点花钱",       hint:"每天都用，好坏差别直接能感觉到" },
-  B: { label:"B 级 · 够用就行",       hint:"达标即可，多花钱买不到体验" },
-  C: { label:"C 级 · 可以后补",       hint:"随时能换、能加、能扔" }
-};
 const BUDGET_OPTIONS = ["不限", "经济型（1 万以内）", "中档（1-3 万）", "品质型（3-8 万）", "高端（8 万以上）"];
 
 /* 补充条件：都不填也能问，填了答案更准。
@@ -1968,16 +2114,12 @@ const state = {
   /* ---- 排行榜 ---- */
   rankTab: "hidden",       /* hidden | surface | soft */
   rankPreset: "balanced",  /* balanced | family | budget | quality */
-  rankData: null,          /* 当前空间已生成的榜单 { space, generatedAt, tabs:{...} } */
-  rankLoading: false,
-  rankError: "",
+  rankWeb: { open:false, space:"", name:"", keywords:"", busy:false },   /* 联网搜别人案例的窗口状态 */
+
   lastJsonError: "",       /* 最近一次 JSON 请求失败的具体原因（排行榜 / 整理成表共用） */
   lastJsonChannelFail: false,  /* 上面那次失败是不是「通道级」（连不上 / 被拒 / 拿不到流），只有这种才值得回退重试 */
-  lastJsonDebug: "",       /* 最近一次联网请求的诊断摘要（请求 / 响应片段），失败时给用户复制 */
-  hbQuery: "",             /* 手册页的搜索词 */
-  hbLines: null,           /* 手册正文按行切好的缓存（49K 字符，别每次重切） */
-  rankSelfTest: "",        /* 联网自检结果（给「到底哪一步不行」当探针用） */
-  rankSelfTestBusy: false,
+
+
   controller: null,
   histExpanded: false,
   histQuery: "",
@@ -2225,7 +2367,6 @@ function doRender() {
   if (state.view === "home")       view.innerHTML = viewHome();
   else if (state.view === "space") view.innerHTML = viewSpace();
   else if (state.view === "rank")  view.innerHTML = viewRank();
-  else if (state.view === "handbook") view.innerHTML = viewHandbook();
   else                             view.innerHTML = viewChat();
 
   afterRender();
@@ -2416,8 +2557,6 @@ function updateControls() {
 
 function appbarTitle() {
   if (state.view === "home") return "室内设计助手";
-  /* 手册页不依赖空间，必须放在「空间是否存在」的判断之前 */
-  if (state.view === "handbook") return "装修避坑手册";
   const sp = DATA[state.space];
   if (!sp) return "室内设计助手";
   if (state.view === "space") return sp.name;
@@ -2558,7 +2697,6 @@ function showHelp() {
    ============================================================ */
 
 function goBack() {
-  if (state.view === "handbook") { goHome(); return true; }
   if (state.view === "rank") { goSpace(state.space); return true; }
   if (state.view === "chat") {
     if (state.fromHistory) goHome(); else goSpace(state.space);
@@ -2653,8 +2791,6 @@ function renderCrumb() {
   let html = `<button type="button" class="link" data-act="home">首页</button>`;
   if (state.view === "space") {
     html += `<span class="sep">›</span><span>${esc(sp.name)}</span>`;
-  } else if (state.view === "handbook") {
-    html += `<span class="sep">›</span><span>装修避坑手册</span>`;
   } else if (state.view === "rank") {
     html += `<span class="sep">›</span><button type="button" class="link" data-act="open-space" data-key="${escAttr(state.space)}">${esc(sp.name)}</button>`;
     html += `<span class="sep">›</span><span>最需要先解决</span>`;
@@ -2696,8 +2832,7 @@ function viewHome() {
   }
 
   return `
-    <div class="hb-entry"><button type="button" class="tbtn" data-act="open-handbook">📖 装修避坑手册（2025）</button></div>
-    <div class="sec-title">选一个空间，或者直接点常见问题开问</div>
+        <div class="sec-title">选一个空间，或者直接点常见问题开问</div>
     <div class="grid">${cards}</div>
     <div id="histBlock">${histBlockHtml()}</div>
     <p class="tip center">
@@ -2853,8 +2988,7 @@ function viewSpace() {
     </div>`;
 
   return `
-    <div class="hb-entry"><button type="button" class="tbtn" data-act="open-handbook">📖 装修避坑手册（2025）</button></div>
-    <div class="sec-title">最需要先解决的</div>
+        <div class="sec-title">最需要先解决的</div>
     <div class="grid">${rankEntry}</div>
     <div class="sec-title">聊一个具体的东西</div>
     <div class="grid">${objs}</div>
@@ -4341,127 +4475,66 @@ function extractTextBlocks(data) {
   try { return data.choices[0].message.content || ""; } catch (_) { return ""; }
 }
 
-/* 带联网检索的 JSON 请求：**走流式**，与聊天页那套完全同形。
-   为什么非流式不行：DeepSeek 的 anthropic 兼容端点上，`stream:false` + `tools`
-   这条组合不可靠；而聊天页一直用的是 `stream:true` + ANTHROPIC SSE，
-   那条路是验证过能用的 —— 所以这里照它来，只把「边流边渲染」换成「收全文再解析」。 */
-async function jsonRequestWeb(prompt, maxTokens, noTools) {
+/* 联网搜索：走聊天页那条验证过的流式通道，返回**整段文本**（不是 JSON）。
+   排行榜条目里的「联网搜索」用它去找别人家的真实案例。 */
+async function webSearchText(prompt, maxTokens) {
   const key = store.get(LS_APIKEY);
   if (!key) { openModal(); return null; }
 
-  /* 字段逐项对齐聊天页那条能用的路径：
-     · system 放宽 —— 之前写成「你只输出 JSON」，很可能把模型的联网工具憋住了
-       （它不敢先搜索就直接编），现在只要求「最后给 JSON」
-     · temperature 与聊天页一致；max_tokens 给足 —— 联网会先检索再输出，额度小了会被截断 */
   const payload = {
     model: WEB_SEARCH_MODEL,
-    max_tokens: maxTokens || 6000,
-    system: "你是资深室内设计施工顾问。需要核实的地方先联网检索，然后按用户要求输出结果。"
-          + "最终回复只包含一个 JSON 对象，不要解释、不要 Markdown 代码块。",
+    max_tokens: maxTokens || 2000,
+    system: "用中文回答，简洁具体，不要客套话，不要 Markdown 表格。",
     messages: [{ role: "user", content: prompt }],
     stream: true,
-    temperature: settings.temperature
+    temperature: settings.temperature,
+    tools: [WEB_SEARCH_TOOL]
   };
-  /* noTools=true 时去掉联网工具：用来判断「是不是工具这条路本身有问题」 */
-  if (!noTools) payload.tools = [WEB_SEARCH_TOOL];
-
-  let dbg = "构建 " + BUILD_TAG + " · POST " + WEB_SEARCH_URL
-          + "\nmax_tokens=" + (maxTokens || 6000) + " · stream=true · tools=" + (noTools ? "关闭" : "web_search")
-          + "\nmodel=" + WEB_SEARCH_MODEL + " · temperature=" + settings.temperature;
-  const setDbg = function (extra) { state.lastJsonDebug = (dbg + "\n" + extra).slice(0, 1200); };
 
   const ctrl = new AbortController();
-  const timer = setTimeout(function () { ctrl.abort(); }, 240000);   /* 联网慢，给 4 分钟 */
-  state.controller = ctrl;                                          /* 挂上去，切换页面/返回时能中断 */
-  state.lastJsonError = "";
-  state.lastJsonChannelFail = false;
+  const timer = setTimeout(function () { ctrl.abort(); }, 180000);
+  state.controller = ctrl;
   try {
     const res = await fetch(WEB_SEARCH_URL, {
-      method: "POST",
-      headers: buildHeaders(key, true),
-      signal: ctrl.signal,
-      body: JSON.stringify(payload)
+      method: "POST", headers: buildHeaders(key, true),
+      signal: ctrl.signal, body: JSON.stringify(payload)
     });
     if (!res.ok) {
-      let m = "HTTP " + res.status, raw = "";
-      try {
-        raw = await res.text();
-        try { const e = JSON.parse(raw); if (e && e.error && e.error.message) m = e.error.message; else if (e && e.message) m = e.message; }
-        catch (_) { if (raw) m = String(raw).slice(0, 160); }
-      } catch (_) {}
-      state.lastJsonError = "联网请求被拒：" + m;
-      state.lastJsonChannelFail = true;
-      setDbg("HTTP " + res.status + " · " + m + (raw ? "\n原始响应：" + String(raw).slice(0, 400) : ""));
+      let m = "HTTP " + res.status;
+      try { const e = await res.json(); if (e && e.error && e.error.message) m = e.error.message; } catch (_) {}
+      toast("搜索失败：" + truncateWidth(m, 40));
       return null;
     }
-    if (!res.body || typeof res.body.getReader !== "function") {
-      state.lastJsonError = "这个浏览器拿不到流式响应";
-      state.lastJsonChannelFail = true;
-      return null;
-    }
+    if (!res.body || typeof res.body.getReader !== "function") { toast("这个浏览器拿不到流式响应"); return null; }
 
-    /* 事件名与聊天页的 handleAnthropicEvent 完全一致：
-       只累积 text_delta；server_tool_use / web_search_tool_result 直接跳过 */
-    const reader = res.body.getReader();
-    const dec = new TextDecoder();
-    let buf = "", text = "", sawTool = false, stopReason = "";
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "", text = "";
     while (true) {
-      const step = await reader.read();
-      if (step.done) break;
-      buf += dec.decode(step.value, { stream: true });
+      const st = await reader.read();
+      if (st.done) break;
+      buf += dec.decode(st.value, { stream: true });
       const lines = buf.split("\n");
       buf = lines.pop();
       for (const line of lines) {
         if (line.indexOf("data:") !== 0) continue;
-        const raw = line.slice(5).trim();
-        if (!raw || raw === "[DONE]") continue;
-        let ev = null;
-        try { ev = JSON.parse(raw); } catch (_) { continue; }
-        const t = ev && ev.type;
-        if (t === "content_block_delta") {
-          const d = ev.delta;
-          if (d && d.type === "text_delta" && typeof d.text === "string") text += d.text;
-        } else if (t === "content_block_start") {
-          const cb = ev.content_block;
-          if (cb && cb.type === "server_tool_use") sawTool = true;
-        } else if (t === "message_delta") {
-          if (ev.delta && ev.delta.stop_reason) stopReason = String(ev.delta.stop_reason);
-          if (ev.usage) { try { recordUsage(ev.usage, WEB_SEARCH_MODEL); } catch (_) {} }
-        } else if (t === "message_start") {
-          const u = ev.message && ev.message.usage;
-          if (u) { try { recordUsage(u, WEB_SEARCH_MODEL); } catch (_) {} }
-        }
+        const raw2 = line.slice(5).trim();
+        if (!raw2 || raw2 === "[DONE]") continue;
+        let ev = null; try { ev = JSON.parse(raw2); } catch (_) { continue; }
+        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") text += ev.delta.text;
+        else if (ev.type === "message_delta" && ev.usage) { try { recordUsage(ev.usage, WEB_SEARCH_MODEL); } catch (_) {} }
+        else if (ev.type === "message_start" && ev.message && ev.message.usage) { try { recordUsage(ev.message.usage, WEB_SEARCH_MODEL); } catch (_) {} }
       }
     }
-
-    if (!text.trim()) {
-      state.lastJsonError = sawTool ? "联网检索完成了，但没返回正文内容" : "返回里没有文本内容";
-      setDbg("HTTP " + res.status + " · 收到 0 字文本 · sawTool=" + sawTool + " · stop_reason=" + (stopReason || "—"));
-      return null;
-    }
-    if (stopReason === "max_tokens") {
-      state.lastJsonError = "输出被 max_tokens 截断了";
-      setDbg("HTTP " + res.status + " · 收到 " + text.length + " 字 · stop_reason=max_tokens"
-           + "\n开头：" + text.slice(0, 240) + "\n结尾：" + text.slice(-120));
-      return null;
-    }
-    const parsed = parseJsonLoose(text);
-    if (!parsed) {
-      state.lastJsonError = "返回值不是合法 JSON（可能被截断）—— 开头是：" + truncateWidth(text.trim(), 40);
-      setDbg("HTTP " + res.status + " · 收到 " + text.length + " 字 · stop_reason=" + (stopReason || "—")
-           + "\nsawTool=" + sawTool + "\n开头：" + text.slice(0, 260) + "\n结尾：" + text.slice(-140));
-    }
-    return parsed;
+    return text.trim() || null;
   } catch (e) {
-    state.lastJsonError = (e && e.name === "AbortError") ? "超时或已取消" : String((e && e.message) || e);
-    state.lastJsonChannelFail = true;       /* 抛异常 = 通道级问题 */
-    setDbg("抛出异常：" + state.lastJsonError);
+    toast((e && e.name === "AbortError") ? "搜索已取消" : "搜索失败：" + truncateWidth(String((e && e.message) || e), 30));
     return null;
   } finally {
     clearTimeout(timer);
     if (state.controller === ctrl) state.controller = null;
   }
 }
+
 /* 模型有时会包一层 ```json，或者先说一句「我查到了…」再给 JSON，这里宽容地剥掉 */
 function parseJsonLoose(text) {
   let s = String(text || "").trim();
@@ -4776,159 +4849,8 @@ function buildContext(meta) {
    排行榜：数据层 + 渲染
    ============================================================ */
 
-/* ============================================================
-   装修避坑手册（2025）：全文已内置，断网也能查
-   ============================================================ */
-
-function handbookLines() {
-  if (!state.hbLines) {
-    state.hbLines = String(HANDBOOK_RAW || "").split("\n").map(function (s) { return s.trim(); });
-  }
-  return state.hbLines;
-}
-
-/* 按空间 + 工程类别，从手册里挑出最相关的段落（带上下文），拼成给模型看的摘录 */
-function handbookExcerpt(spaceKey, tab, maxChars) {
-  const lines = handbookLines();
-  const terms = [];
-  const sp = DATA[spaceKey];
-  if (sp && sp.name) terms.push(sp.name);
-  ((RANK_COVERAGE[spaceKey] || {})[tab] || []).forEach(function (k) {
-    String(k).split(/[与和及、\/]/).forEach(function (w) {
-      w = w.trim();
-      if (w.length >= 2) terms.push(w);
-    });
-  });
-  if (!terms.length) return "";
-
-  const scored = [];
-  for (let i = 0; i < lines.length; i++) {
-    const ln = lines[i];
-    if (ln.length < 4) continue;
-    let sc = 0;
-    for (const t of terms) if (ln.indexOf(t) >= 0) sc += t.length + 1;
-    if (sc > 0) scored.push({ i: i, sc: sc });
-  }
-  if (!scored.length) return "";
-  scored.sort(function (a, b) { return b.sc - a.sc; });
-
-  /* 取得分最高的若干行，连前后各一行一起带上，再按原顺序拼回去 */
-  const pick = {};
-  const top = Math.min(scored.length, 40);
-  for (let k = 0; k < top; k++) {
-    const i = scored[k].i;
-    for (let j = Math.max(0, i - 1); j <= Math.min(lines.length - 1, i + 1); j++) {
-      if (lines[j]) pick[j] = true;
-    }
-  }
-  const idxs = Object.keys(pick).map(Number).sort(function (a, b) { return a - b; });
-  let out = "", prev = -99;
-  const cap = maxChars || 3200;
-  for (const i of idxs) {
-    if (prev >= 0 && i > prev + 1) out += "\n…\n";
-    out += lines[i] + "\n";
-    prev = i;
-    if (out.length >= cap) break;
-  }
-  return out.trim();
-}
-
-function viewHandbook() {
-  const q = String(state.hbQuery || "").trim();
-  const lines = handbookLines();
-  let html = '<div class="sec-title">装修避坑手册（2025）</div>'
-    + '<p class="tip">正文已内置在本页里，断网也能查。生成排行榜时会自动按空间'
-    + '检索这里的相关段落，作为第一依据（依据标成「手册」）。</p>'
-    + '<div class="hist-search"><input type="text" id="hbQuery" value="' + escAttr(q)
-    + '" placeholder="搜索手册（如：防水 / 打压试验 / 验收 / 橱柜）" aria-label="搜索手册"></div>';
-
-  html += '<div id="hbResult">' + hbResultHtml() + '</div>';
-  return html;
-}
-
-/* 手册结果区单独渲染：搜索时只换这一块，输入框不会丢焦点 */
-function hbResultHtml() {
-  const q = String(state.hbQuery || "").trim();
-  const lines = handbookLines();
-  if (!q) {
-    return '<p class="tip">全文共 <b>' + lines.length + '</b> 行。用上面的搜索框按关键词找，'
-         + '或者直接往下翻（内容较长，看着累就用搜索）。</p>'
-         + '<div class="hb-pre">' + esc(lines.join("\n")) + '</div>';
-  }
-  const hit = [];
-  lines.forEach(function (ln) { if (ln && ln.indexOf(q) >= 0) hit.push(ln); });
-  let html = '<p class="tip">命中 <b>' + hit.length + '</b> 行'
-           + (hit.length > 120 ? '（只显示前 120 行，再具体一点会更准）' : '') + '</p>';
-  if (!hit.length) {
-    return html + '<div class="empty"><div class="et">没找到「' + esc(q) + '」</div>'
-         + '<div class="es">换个词试试，比如「防水」「闭水」「线径」「验收」。</div></div>';
-  }
-  return html + '<div class="hb-list">' + hit.slice(0, 120).map(function (ln) {
-    return '<div class="hb-line">' + esc(ln) + '</div>';
-  }).join("") + '</div>';
-}
-
-function rankStorageKey(spaceKey) { return "design_rank_v1_" + spaceKey; }
 
 /* ---- 校验层：AI 返回的 JSON 不能直接进渲染 ---- */
-function sanitizeRank(raw, spaceKey, minTotal) {
-  if (!raw || typeof raw !== "object" || !raw.tabs) return null;
-  const out = { space: spaceKey, generatedAt: Number(raw.generatedAt) || Date.now(), tabs: {} };
-  let total = 0;
-  RANK_TABS.forEach(function (t) {
-    const src = (raw.tabs[t.key] && Array.isArray(raw.tabs[t.key].items)) ? raw.tabs[t.key].items : [];
-    const items = [];
-    src.forEach(function (it) {
-      if (!it || !it.name) return;
-      const sc = it.scores || {};
-      const num = function (v) {
-        const n = Math.round(Number(v));
-        return isFinite(n) ? Math.max(0, Math.min(10, n)) : 0;
-      };
-      let cost = null;
-      if (Array.isArray(it.cost) && it.cost.length === 2) {
-        const a = Number(it.cost[0]), b = Number(it.cost[1]);
-        if (isFinite(a) && isFinite(b) && a >= 0 && b >= a) cost = [Math.round(a), Math.round(b)];
-      }
-      let basis = ["手册", "规范", "经验", "建议"].indexOf(it.basis) >= 0 ? it.basis : "经验";
-      const standard = String(it.standard || "").slice(0, 30);
-      if (basis === "规范" && !standard) basis = "经验";   /* 说规范却没给标准号 → 降级 */
-      items.push({
-        name: String(it.name).slice(0, 40),
-        why: String(it.why || "").slice(0, 140),
-        how: String(it.how || "").slice(0, 200),
-        key: String(it.key || "").slice(0, 140),
-        basis: basis,
-        standard: standard,
-        fail: String(it.fail || "").slice(0, 180),
-        cost: cost,
-        costUnit: String(it.costUnit || "元").slice(0, 12),
-        check: String(it.check || "").slice(0, 140),
-        ask: String(it.ask || "").slice(0, 90),
-        scores: {
-          rework: num(sc.rework), safety: num(sc.safety),
-          replace: num(sc.replace), frequency: num(sc.frequency), feel: num(sc.feel)
-        }
-      });
-    });
-    out.tabs[t.key] = { items: items };
-    total += items.length;
-  });
-  if (total < (minTotal || 6)) return null;
-  return out;
-}
-
-function loadRank(spaceKey) {
-  try {
-    const raw = store.get(rankStorageKey(spaceKey));
-    if (!raw) return null;
-    return sanitizeRank(JSON.parse(raw), spaceKey, 3);
-  } catch (_) { return null; }
-}
-function saveRank(spaceKey, data) {
-  try { store.set(rankStorageKey(spaceKey), JSON.stringify(data)); } catch (_) {}
-}
-
 /* ---- 算分与切档：切预设只本地重排，不发请求 ---- */
 function rankScore(item, preset) {
   const w = RANK_WEIGHTS[preset] || RANK_WEIGHTS.balanced;
@@ -4957,10 +4879,10 @@ function rankTier(score) {
   return "C";
 }
 function rankItems(spaceKey, tab, preset) {
-  const d = state.rankData;
-  if (!d || !d.tabs || !d.tabs[tab]) return [];
+  const tabs = RANK_DATA[spaceKey] || {};
+  const list = tabs[tab] || [];
   const p = preset || state.rankPreset;
-  return d.tabs[tab].items.map(function (it) {
+  return list.map(function (it) {
     const sc = rankScore(it, p);
     return Object.assign({}, it, { score: sc, tier: rankTier(sc) });
   }).sort(function (a, b) { return b.score - a.score; });
@@ -4973,230 +4895,8 @@ function openRank(spaceKey) {
   state.view = "rank";
   state.space = spaceKey;
   state.rankTab = "hidden";
-  state.rankError = "";
-  state.rankLoading = false;
-  state.rankData = loadRank(spaceKey);
   render();
 }
-
-/* ---- 生成：按 tab 拆三次请求，先出第一张 ---- */
-const RANK_PROMPT_HEAD = `你是资深室内设计施工顾问。请为下面这个空间的一个工程类别生成「最需要先解决的排行榜」数据。
-
-第一步：先用联网检索核对 —— 涉及国标 / 行业规范的地方，查证标准号与关键数值；
-常见尺寸、验收做法、造价区间，也顺手核一下当前行情。这一步必须做。
-凡是有《装修避坑手册（2025）》这类行业手册说法的，优先按手册口径写；手册没覆盖的，
-再按经验补，并把 basis 标成 "经验"。
-
-第二步：检索完成后，最终回复只输出一个 JSON 对象 ——
-不要解释、不要复述搜索结果、不要 Markdown 代码块、不要在 JSON 前后加任何文字。
-
-严格规则：
-1. 必须覆盖我给出的全部子类，一条都不能漏。
-2. 每条给 5 个维度打分（0~10 整数）：
-   - rework    返工代价：0=随时能换，10=要拆墙撬地工期翻倍
-   - safety    安全影响：0=纯观感，10=漏水/漏电/燃气/滑倒/坠落
-   - replace   替换难度：0=拧螺丝就换，10=封起来完全动不了
-   - frequency 使用频率：0=一年碰一次，10=每天几十次
-   - feel      感知强度：0=好坏察觉不到，10=一眼看出差别
-3. 说人话，不许写谜语：不许出现「适当」「合理」「注意」这类没信息量的词，
-   也不许只给数字（比如「返工代价 8」）。每条都要让一个完全不懂装修的人看懂六件事：
-     · 这件事是什么        → name
-     · 为什么必须先解决    → why（一句话说清代价）
-     · 正确做法 / 标准      → how（怎么做、做到什么程度）
-     · 做错了会怎样        → fail（写具体后果，不要抽象）
-     · 怎么验收            → check（可操作的验证方法，如「闭水 48 小时」）
-     · 大概花多少钱        → cost 区间 + costUnit
-4. basis 只能填这四个值，优先用靠前的：
-   · "手册" = 上面摘录里确实有这个说法（最优先，standard 填对应小节名）
-   · "规范" = 有标准号的国标 / 行标，必须写出标准号
-   · "经验" = 手册与规范都没覆盖，靠经验判断
-   · "建议" = 纯建议，没有硬依据
-5. 禁止编造标准号 —— 查不到的就填 "经验"。
-6. 涉及承重墙、燃气、电气改造的，safety 必须 ≥ 8。
-7. cost 写 [下限, 上限] 两个整数（元），估不出就填 null。
-8. 每个子类至少 1 条，条目总数 6~9 条（宁少勿多，写短写准；输出被截断就全废了）。
-9. 文字要短：why ≤ 30 字，how ≤ 45 字，key ≤ 18 字，fail ≤ 30 字，check ≤ 30 字，ask ≤ 18 字。
-
-JSON 格式：{"space":"...","tabs":{"<tab>":{"items":[...]}}}
-每条字段：name / why / how / key / basis / standard / fail / cost / costUnit / check / ask / scores
-`;
-
-async function generateRankTab(spaceKey, tab) {
-  const sp = DATA[spaceKey];
-  const cov = (RANK_COVERAGE[spaceKey] || {})[tab] || [];
-  const label = (RANK_TABS.find(function (t) { return t.key === tab; }) || {}).label || tab;
-  const hb = handbookExcerpt(spaceKey, tab, 3200);
-  const prompt = RANK_PROMPT_HEAD
-    + "\n空间：" + sp.name + "（" + sp.desc + "）\n"
-    + "工程类别：" + label + "\n"
-    + "必须覆盖的子类：" + cov.join("、") + "\n"
-    + (hb
-        ? "\n【《装修避坑手册（2025）》里相关的原文摘录】\n"
-          + "（这是第一依据：手册里有的说法就照它写，basis 填 \"手册\"，standard 填对应的小节名；"
-          + "手册没覆盖的才用经验补，basis 填 \"经验\"。不要照抄整段，读懂后用短句写。）\n"
-          + hb + "\n"
-        : "")
-    + "本次只生成 " + tab + " 这一个 tab，JSON 里 tabs 只包含 " + tab + " 一个键。";
-  /* 先走联网（更准、能核规范）；联网通道不通就回退普通请求，
-     保证「至少能生成」，不会因为一个通道有问题就彻底用不了。 */
-  /* 三级降级，一级不行就退下一级 —— 目标是「先保证能用」，再谈好不好：
-       ① 联网 + 流式（最准，能核规范）
-       ② 不带联网工具的流式（排除「工具这条路本身有问题」）
-       ③ 普通非流式 + response_format（聊天页之外的老路）
-     只有「通道级」失败才降级；内容级问题（被截断、不是 JSON）降级也白搭，
-     还会盖掉真实原因，所以直接返回 null 把原因留给用户。 */
-  const d = await jsonRequestWeb(prompt, 6000, false);
-  if (d) return d;
-  if (state.lastJsonError === "超时或已取消") return null;   /* 用户主动停的，不偷偷重试 */
-  if (!state.lastJsonChannelFail) return null;
-
-  const keep = state.lastJsonError;
-  state.lastJsonError = "";
-  const d2 = await jsonRequestWeb(prompt, 6000, true);
-  if (d2) return d2;
-  if (!state.lastJsonChannelFail) return d2;
-
-  state.lastJsonError = "";
-  const d3 = await jsonRequest(prompt, 5000);
-  if (d3) return d3;
-  if (!state.lastJsonError) state.lastJsonError = keep;
-  return null;
-}
-
-async function doGenerateRank() {
-  if (state.rankLoading) return;
-  if (!store.get(LS_APIKEY)) { openModal(); return; }
-  const spaceKey = state.space;
-  const tab = state.rankTab;
-  state.rankLoading = true;
-  state.rankError = "";
-  renderKeepingScroll();
-  try {
-    const d = await generateRankTab(spaceKey, tab);
-    if (!d) {
-      state.rankError = "没拿到有效数据" + (state.lastJsonError ? "：" + state.lastJsonError : "")
-        + "　〔构建 " + BUILD_TAG + "〕可以点「重新生成」再试一次。";
-      return;
-    }
-    const clean = sanitizeRank(d, spaceKey, 3);
-    if (!clean) { state.rankError = "返回的数据不完整（条目太少或字段缺失），请重试。"; return; }
-
-    const base = state.rankData || {
-      space: spaceKey, generatedAt: Date.now(),
-      tabs: { hidden:{items:[]}, surface:{items:[]}, soft:{items:[]} }
-    };
-    RANK_TABS.forEach(function (t) {
-      if (clean.tabs[t.key] && clean.tabs[t.key].items.length) base.tabs[t.key] = clean.tabs[t.key];
-    });
-    base.generatedAt = Date.now();
-    state.rankData = base;
-    saveRank(spaceKey, base);
-  } catch (e) {
-    state.rankError = String((e && e.message) || e);
-  } finally {
-    state.rankLoading = false;
-    renderKeepingScroll();
-  }
-}
-
-/* 联网自检：跑两条极小的请求，把「通道 / 工具 / 输出」三层问题分开看清楚。
-   只回答「哪儿不行」，不写任何业务数据。 */
-async function selfTestOnce(noTools) {
-  const key = store.get(LS_APIKEY);
-  const payload = {
-    model: WEB_SEARCH_MODEL,
-    max_tokens: 300,
-    system: "回答要短，一两句话就行。",
-    messages: [{ role: "user", content: noTools
-      ? "用一句话说出厨房水电改造的正确顺序。"
-      : "搜一下「厨房防水高度一般做多少」，用一句话总结。" }],
-    stream: true,
-    temperature: 0.3
-  };
-  if (!noTools) payload.tools = [WEB_SEARCH_TOOL];
-  const ctrl = new AbortController();
-  const timer = setTimeout(function () { ctrl.abort(); }, 90000);
-  try {
-    const res = await fetch(WEB_SEARCH_URL, {
-      method: "POST", headers: buildHeaders(key, true),
-      signal: ctrl.signal, body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-      let raw = "";
-      try { raw = await res.text(); } catch (_) {}
-      return "  ❌ HTTP " + res.status + " · " + String(raw).slice(0, 220);
-    }
-    if (!res.body || typeof res.body.getReader !== "function") return "  ❌ 这个浏览器拿不到流式响应";
-    const reader = res.body.getReader(), dec = new TextDecoder();
-    let buf = "", text = "", nTool = 0, nRes = 0, stop = "", err = "";
-    while (true) {
-      const st = await reader.read();
-      if (st.done) break;
-      buf += dec.decode(st.value, { stream: true });
-      const ls = buf.split("\n"); buf = ls.pop();
-      for (const line of ls) {
-        if (line.indexOf("data:") !== 0) continue;
-        const raw2 = line.slice(5).trim();
-        if (!raw2 || raw2 === "[DONE]") continue;
-        let e2 = null; try { e2 = JSON.parse(raw2); } catch (_) { continue; }
-        if (e2.type === "content_block_delta" && e2.delta && e2.delta.type === "text_delta") text += e2.delta.text;
-        else if (e2.type === "content_block_start" && e2.content_block) {
-          if (e2.content_block.type === "server_tool_use") nTool++;
-          if (e2.content_block.type === "web_search_tool_result") nRes++;
-        } else if (e2.type === "message_delta" && e2.delta && e2.delta.stop_reason) stop = String(e2.delta.stop_reason);
-        else if (e2.type === "error") err = JSON.stringify(e2.error || e2).slice(0, 200);
-      }
-    }
-    return "  ✔ HTTP 200 · 正文 " + text.length + " 字 · 工具调用 " + nTool + " 次 · 搜索结果 " + nRes + " 块"
-         + " · stop_reason=" + (stop || "—")
-         + (err ? "\n  服务端报错：" + err : "")
-         + (text ? "\n  正文开头：" + text.slice(0, 120) : "\n  ⚠ 没有正文内容");
-  } catch (e) {
-    return "  ❌ " + ((e && e.name === "AbortError") ? "超时（90 秒）" : String((e && e.message) || e));
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function rankSelfTest() {
-  if (state.rankSelfTestBusy) return;
-  state.rankSelfTestBusy = true;
-  state.rankSelfTest = "正在自检，约 20~60 秒…";
-  renderKeepingScroll();
-  const L = [];
-  L.push("【联网自检】构建 " + BUILD_TAG + " · 端点 " + WEB_SEARCH_URL);
-  L.push("Key：" + (store.get(LS_APIKEY) ? "已填" : "❌ 未填（设置 ⚙ 里填）"));
-  if (store.get(LS_APIKEY)) {
-    L.push("");
-    L.push("① 流式 + 联网工具：");
-    L.push(await selfTestOnce(false));
-    L.push("② 流式、不带工具：");
-    L.push(await selfTestOnce(true));
-    L.push("");
-    L.push("怎么看：");
-    L.push("  ①✔ ②✔ → 通道没问题，问题出在「输出太大被截断 / JSON 不合法」");
-    L.push("  ①✘ ②✔ → 联网工具这条路有问题（工具层），②那条已经能生成");
-    L.push("  ①✘ ②✘ → 密钥 / 网络 / 端点的问题，看上面的 HTTP 与报错");
-  }
-  state.rankSelfTest = L.join("\n");
-  state.rankSelfTestBusy = false;
-  renderKeepingScroll();
-}
-
-/* 把上次失败的全套上下文拼成一段，方便用户直接发出来定位 */
-function copyRankDebug() {
-  const s = [
-    "【排行榜诊断】",
-    "构建：" + BUILD_TAG + " · 版本：" + APP_VERSION,
-    "空间 / 榜：" + String(state.space) + " / " + String(state.rankTab),
-    "错误：" + (state.rankError || "—"),
-    "浏览器：" + String((window.navigator && window.navigator.userAgent) || "").slice(0, 120),
-    "",
-    state.lastJsonDebug || "（没有更多信息）"
-  ].join("\n");
-  copyText(s, "诊断信息已复制，直接发出来即可");
-}
-
 /* ---- 从榜单直接跳去问 AI ---- */
 function askRankItem(idx) {
   const items = rankItems(state.space, state.rankTab);
@@ -5222,6 +4922,154 @@ function copyRankItem(idx) {
   copyText(s, "已复制这一条");
 }
 
+/* ---------------- 联网搜别人的案例 ---------------- */
+
+function rankWebOpen() { return !!(state.rankWeb && state.rankWeb.open); }
+
+function rankWebKey(spaceKey, name) {
+  return "design_rank_web_v1_" + spaceKey + "_" + String(name || "").slice(0, 30);
+}
+
+/* 缓存索引：记下每个空间存过哪些条目，超过 30 条就丢最早的 */
+const RANK_WEB_INDEX = "design_rank_web_index_v1";
+function rankWebIndex() {
+  try { return JSON.parse(store.get(RANK_WEB_INDEX) || "{}") || {}; } catch (_) { return {}; }
+}
+function rankWebRemember(spaceKey, name) {
+  try {
+    const idx = rankWebIndex();
+    const list = Array.isArray(idx[spaceKey]) ? idx[spaceKey] : [];
+    const next = list.filter(function (n) { return n !== name; });
+    next.push(name);
+    while (next.length > 30) {                       /* 单空间最多留 30 条 */
+      const drop = next.shift();
+      store.remove(rankWebKey(spaceKey, drop));
+    }
+    idx[spaceKey] = next;
+    store.set(RANK_WEB_INDEX, JSON.stringify(idx));
+  } catch (_) {}
+}
+
+function loadRankWeb(spaceKey, name) {
+  try {
+    const raw = store.get(rankWebKey(spaceKey, name));
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    return (o && Array.isArray(o.results) && o.results.length) ? o : null;
+  } catch (_) { return null; }
+}
+function saveRankWeb(spaceKey, name, query, results) {
+  try {
+    const o = { space: spaceKey, name: name, query: query, results: results, searchedAt: Date.now() };
+    let json = JSON.stringify(o);
+    if (json.length > 8000) json = JSON.stringify(Object.assign({}, o, { results: results.slice(0, 2) }));  /* 单条封顶 */
+    store.set(rankWebKey(spaceKey, name), json.slice(0, 8000));
+    rankWebRemember(spaceKey, name);
+  } catch (_) {}
+}
+
+function hostOf(u) {
+  try { return String(u).replace(/^https?:\/\//i, "").split("/")[0]; } catch (_) { return String(u); }
+}
+
+/* 把模型返回的自然语言拆成「案例」：按空行分段，段里的第一个链接当来源 */
+function parseWebCases(text) {
+  const out = [];
+  String(text || "").split(/\n{2,}/).forEach(function (block) {
+    const t = block.trim();
+    if (!t) return;
+    const m = t.match(/https?:\/\/[^\s)）】>"']+/);
+    const url = m ? m[0].replace(/[.,。，；;]$/, "") : "";
+    let body = t.replace(/https?:\/\/[^\s)）】>"']+/g, "").replace(/来源[:：]\s*/g, "").replace(/\s*\n\s*/g, " ").trim();
+    if (body.length < 8) return;
+    out.push({ body: body.slice(0, 320), url: url });
+  });
+  return out.slice(0, 5);
+}
+
+function rankWebCasesHtml(res) {
+  if (!res || !res.results || !res.results.length) {
+    return '<p class="tip">这次没搜到可用的案例。可以点「重新搜」，或者换个说法再试。</p>';
+  }
+  return res.results.map(function (c, i) {
+    return '<div class="rank-web-case">'
+      + '<div class="rank-web-case-title">案例 ' + (i + 1) + '</div>'
+      + '<div class="rank-web-case-body">' + esc(c.body) + '</div>'
+      + (c.url ? '<a class="src" href="' + escAttr(c.url) + '" target="_blank" rel="noopener noreferrer">来源：' + esc(hostOf(c.url)) + '</a>' : '')
+      + '</div>';
+  }).join("");
+}
+
+function openRankWeb(idx) {
+  const items = rankItems(state.space, state.rankTab);
+  const it = items[idx];
+  if (!it) return;
+  const sp = DATA[state.space];
+  state.rankWeb = {
+    open: true,
+    space: state.space,
+    name: String(it.name || ""),
+    keywords: ((sp ? sp.name : "") + " " + (it.name || "")).trim(),
+    busy: false
+  };
+  $("rankWebName").textContent = state.rankWeb.name;
+  $("rankWebKeywords").textContent = state.rankWeb.keywords;
+  $("rankWebInput").value = "";
+  $("rankWebReseach").classList.add("hidden");
+  $("rankWebGo").disabled = false;
+  $("rankWebGo").textContent = "开始搜索";
+  const cached = loadRankWeb(state.rankWeb.space, state.rankWeb.name);
+  $("rankWebResult").innerHTML = cached
+    ? rankWebCasesHtml(cached) + '<p class="tip">（这是上次搜到的结果，点「重新搜」可以再找一批）</p>'
+    : "";
+  if (cached) $("rankWebReseach").classList.remove("hidden");
+  $("rankWebMask").classList.remove("hidden");
+}
+
+function closeRankWeb() {
+  state.rankWeb = { open:false, space:"", name:"", keywords:"", busy:false };
+  const mask = $("rankWebMask");
+  if (mask) mask.classList.add("hidden");
+  const inp = $("rankWebInput"); if (inp) inp.value = "";
+  const box = $("rankWebResult"); if (box) box.innerHTML = "";
+}
+
+async function doRankWebSearch(force) {
+  const w = state.rankWeb;
+  if (!w || !w.open || w.busy) return;
+  if (!store.get(LS_APIKEY)) { toast("先在设置里填 DeepSeek API Key"); openModal(); return; }
+  if (!force) {
+    const cached = loadRankWeb(w.space, w.name);
+    if (cached) { $("rankWebResult").innerHTML = rankWebCasesHtml(cached); return; }
+  }
+  w.busy = true;
+  $("rankWebGo").disabled = true;
+  $("rankWebGo").textContent = "搜索中…";
+  $("rankWebResult").innerHTML = '<div class="panel"><div class="dots"><span></span><span></span><span></span></div>'
+    + '<div class="thinking">正在联网找别人家的真实案例，约 20~40 秒…</div></div>';
+  $("rankWebReseach").classList.remove("hidden");
+
+  const extra = String($("rankWebInput").value || "").trim();
+  const prompt = "请联网搜索「" + w.keywords + "」相关的 **真实案例、论坛帖子、装修日记、知乎回答**。\n"
+    + "不要找规范条文，要找 **别人家实际怎么做的**。\n"
+    + "返回 3~5 条，每条包括：一段摘要（2~3 句话，说清楚这一家是怎么做的）+ 来源链接。\n"
+    + "格式：每条单独一段，摘要在前、链接在后，段与段之间空一行；不要用表格。\n"
+    + (extra ? "\n另外请一并回答这位业主的具体问题：" + extra : "");
+
+  const text = await webSearchText(prompt, 2200);
+  const cases = text ? parseWebCases(text) : [];
+  if (cases.length) {
+    saveRankWeb(w.space, w.name, w.keywords, cases);
+    $("rankWebResult").innerHTML = rankWebCasesHtml({ results: cases });
+  } else {
+    $("rankWebResult").innerHTML = '<p class="tip">这次没搜到可用的案例（可能网络、Key 或返回格式的问题）。'
+      + '可以点「重新搜」再试一次。</p>';
+  }
+  w.busy = false;
+  $("rankWebGo").disabled = false;
+  $("rankWebGo").textContent = "开始搜索";
+}
+
 /* ---- 渲染 ---- */
 function viewRank() {
   const sp = DATA[state.space];
@@ -5236,89 +5084,42 @@ function viewRank() {
       '" data-act="rank-preset" data-preset="' + p.key + '">' + esc(p.label) + '</button>';
   }).join("");
 
+  const items = rankItems(state.space, state.rankTab);
+
   let body = "";
-  if (state.rankLoading) {
-    body = '<div class="panel"><div class="dots"><span></span><span></span><span></span></div>'
-         + '<div class="thinking">正在联网核对规范并生成「' + esc(sp.name) + '」的榜单，约 20~40 秒…</div></div>';
-  } else if (state.rankError) {
-    body = '<div class="sys-note err"><b>生成失败</b>' + esc(state.rankError)
-         + '<div class="sb-acts">'
-         + '<button type="button" class="tbtn" data-act="rank-regen">重新生成</button>'
-         + (state.lastJsonDebug ? '<button type="button" class="tbtn" data-act="rank-copydebug">复制诊断信息</button>' : '')
-         + '</div>'
-         + (state.lastJsonDebug
-             ? '<details class="sql-box"><summary>诊断信息（点开看一眼，或点上面复制）</summary><pre>'
-               + esc(state.lastJsonDebug) + '</pre></details>'
-             : '')
-         + '<div class="sb-acts"><button type="button" class="tbtn" data-act="rank-selftest">'
-         + (state.rankSelfTestBusy ? "自检中…" : "联网自检") + '</button>'
-         + (state.rankSelfTest ? '<button type="button" class="tbtn" data-act="rank-copyselftest">复制自检结果</button>' : '')
-         + '</div>'
-         + (state.rankSelfTest
-             ? '<details class="sql-box" open><summary>自检结果（复制给对方即可）</summary><pre>'
-               + esc(state.rankSelfTest) + '</pre></details>'
-             : '')
-         + '</div>';
-  } else if (!state.rankData) {
-    body = '<div class="empty"><div class="et">这个空间还没有榜单</div>'
-         + '<div class="es">让 AI 按「返工代价 / 安全影响 / 替换难度 / 使用频率 / 感知强度」五个维度打分，'
-         + '再按 S / A / B / C 梯队排出来。生成后永久缓存，切预设不会重新请求。</div>'
-         + '<button type="button" class="btn" data-act="rank-regen">生成排行榜</button>'
-         + '<div class="sb-acts"><button type="button" class="tbtn" data-act="rank-selftest">'
-         + (state.rankSelfTestBusy ? "自检中…" : "联网自检") + '</button></div>'
-         + (state.rankSelfTest
-             ? '<details class="sql-box" open><summary>自检结果（复制给对方即可）</summary><pre>'
-               + esc(state.rankSelfTest) + '</pre></details>'
-             : '')
-         + '</div>';
+  if (!items.length) {
+    body = '<div class="empty"><div class="et">这个类别还没有榜单内容</div>'
+         + '<div class="es">内容来自《装修避坑手册（2025）》，后续会按手册持续补充。</div></div>';
   } else {
-    body = rankListHtml();
+    const groups = { S: [], A: [], B: [], C: [] };
+    items.forEach(function (it) { groups[it.tier].push(it); });
+    ["S", "A", "B", "C"].forEach(function (tier) {
+      const list = groups[tier];
+      if (!list.length) return;
+      const meta = RANK_TIER_META[tier];
+      body += '<div class="sec-title">' + esc(meta.label) + '</div>';
+      body += '<p class="rank-tier-hint">' + esc(meta.hint) + '</p>';
+      list.forEach(function (it, i) { body += rankItemHtml(it, i); });
+    });
   }
 
-  const hasData = !!state.rankData;
   return '<div class="sec-title">' + esc(sp.name) + ' · 最需要先解决的排行榜</div>'
        + '<div class="rank-tabs">' + tabBar + '</div>'
-       + (hasData ? '<div class="rank-presets">' + presetBar + '</div>' : "")
+       + '<div class="rank-presets">' + presetBar + '</div>'
        + body
-       + (hasData ? '<p class="tip">想更细问某一条，点条目里的「问设计师」—— 会带着这一条进对话；'
-                  + '在对话里打开输入框上方的 🌐 联网，还能继续查最新的做法与行情。</p>' : "");
+       + '<p class="tip">内容依据《装修避坑手册（2025）》整理，不需要联网、不再调用 AI 生成。'
+       + '想更细问某一条，点条目里的「问设计师」或「联网搜索」。</p>';
 }
 
-function rankListHtml() {
-  const items = rankItems(state.space, state.rankTab);
-  if (!items.length) {
-    return '<div class="empty"><div class="et">这个类别还没有条目</div>'
-         + '<div class="es">点下面的按钮单独生成这一张榜。</div>'
-         + '<button type="button" class="btn" data-act="rank-regen">生成「'
-         + esc((RANK_TABS.find(function (t) { return t.key === state.rankTab; }) || {}).label || "")
-         + '」榜</button></div>';
-  }
-  const groups = { S: [], A: [], B: [], C: [] };
-  items.forEach(function (it) { groups[it.tier].push(it); });
-
-  let html = "";
-  ["S", "A", "B", "C"].forEach(function (tier) {
-    const list = groups[tier];
-    if (!list.length) return;
-    const meta = RANK_TIER_META[tier];
-    html += '<div class="sec-title">' + esc(meta.label) + '</div>';
-    html += '<p class="rank-tier-hint">' + esc(meta.hint) + '</p>';
-    list.forEach(function (it, i) { html += rankItemHtml(it, i); });
-  });
-  return html;
-}
 
 /* 一条排行榜条目：摘要给「是什么 + 为什么排前面」，展开给六件事（说人话） */
 function rankItemHtml(it, i) {
-  const costText = it.cost ? (it.cost[0] + "~" + it.cost[1] + " " + esc(it.costUnit)) : "";
-  const basisTag = it.basis === "规范" && it.standard
-    ? '<span class="rank-basis">规范 · ' + esc(it.standard) + '</span>'
-    : '<span class="rank-basis">' + esc(it.basis) + '</span>';
-
+  const costText = it.cost ? ("¥" + it.cost[0] + "~" + it.cost[1] + " " + esc(it.costUnit)) : "";
   return '<details class="rank-item">'
     + '<summary>'
     +   '<div class="rank-head">'
-    +     '<b>' + esc(it.name) + '</b>' + basisTag
+    +     '<b>' + esc(it.name) + '</b>'
+    +     '<span class="rank-basis">依据 · 装修避坑手册（2025）</span>'
     +     '<span class="grow"></span>'
     +   '</div>'
     +   (it.why ? '<div class="rank-why">' + esc(it.why) + '</div>' : "")
@@ -5329,16 +5130,15 @@ function rankItemHtml(it, i) {
     +   (it.how ? '<div class="rank-check"><b>正确做法：</b>' + esc(it.how) + '</div>' : "")
     +   (it.fail ? '<div class="rank-fail"><b>做错了会怎样：</b>' + esc(it.fail) + '</div>' : "")
     +   (it.check ? '<div class="rank-check"><b>怎么验收：</b>' + esc(it.check) + '</div>' : "")
-    +   '<div class="rank-cost">参考花费：' + (costText ? "¥" + costText : "暂估不出") + '</div>'
-    +   '<div class="rank-dims">依据：' + esc(it.basis) + (it.standard ? '（' + esc(it.standard) + '）' : '')
-    +     '　·　排在前面是因为：' + esc(rankDimText(it.scores)) + '</div>'
+    +   '<div class="rank-cost">参考花费：' + (costText || "暂估不出") + '</div>'
     +   '<div class="sb-acts">'
     +     (it.ask ? '<button type="button" class="tbtn" data-act="rank-ask" data-idx="' + i + '">问设计师</button>' : "")
-    +     '<button type="button" class="tbtn" data-act="rank-copy" data-idx="' + i + '">复制这一条</button>'
+    +     '<button type="button" class="tbtn" data-act="rank-web" data-idx="' + i + '">联网搜索</button>'
     +   '</div>'
     + '</div>'
     + '</details>';
 }
+
 
 /* ============================================================
    八、事件委托
@@ -5347,6 +5147,7 @@ function rankItemHtml(it, i) {
 document.addEventListener("click", e => {
   if (e.target === $("modalMask")) { closeModal(true); return; }
   if (e.target === $("askMask")) { closeAsk({ ok: false }); return; }
+  if (e.target === $("rankWebMask")) { closeRankWeb(); return; }
 
   /* 点缩略图看大图 */
   const imgEl = e.target;
@@ -5381,16 +5182,15 @@ document.addEventListener("click", e => {
     case "close-settings": closeModal(true); break;
     case "save-settings":  saveSettings(); break;
     case "clear-key":      clearKey(); break;
-    case "open-handbook": state.view = "handbook"; state.hbQuery = ""; render(); break;
     case "open-rank":    openRank(node.dataset.key); break;
     case "rank-tab":     state.rankTab = node.dataset.tab; renderKeepingScroll(); break;
     case "rank-preset":  state.rankPreset = node.dataset.preset; renderKeepingScroll(); break;
-    case "rank-regen":   doGenerateRank(); break;
     case "rank-ask":     askRankItem(Number(node.dataset.idx)); break;
+    case "rank-web":     openRankWeb(Number(node.dataset.idx)); break;
+    case "close-rank-web": closeRankWeb(); break;
+    case "rank-web-go":  doRankWebSearch(false); break;
+    case "rank-web-research": doRankWebSearch(true); break;
     case "rank-copy":    copyRankItem(Number(node.dataset.idx)); break;
-    case "rank-copydebug": copyRankDebug(); break;
-    case "rank-selftest":  rankSelfTest(); break;
-    case "rank-copyselftest": copyText(state.rankSelfTest, "自检结果已复制"); break;
     case "open-space":     goSpace(node.dataset.key); break;
     case "open-object":    goObject(node.dataset.id); break;
     case "ask":            askFaq(node.dataset.key, Number(node.dataset.idx)); break;
@@ -5462,20 +5262,10 @@ document.addEventListener("click", e => {
 });
 
 let webHintTimer = 0;
-let hbTimer = 0;
 
 document.addEventListener("input", e => {
   const t = e.target;
   if (!t) return;
-  if (t.id === "hbQuery") {
-    state.hbQuery = t.value;
-    clearTimeout(hbTimer);
-    hbTimer = setTimeout(function () {
-      const box = document.getElementById("hbResult");
-      if (box) box.innerHTML = hbResultHtml();
-    }, 250);
-    return;
-  }
   if (t.id === "composerInput") {
     state.draft = t.value;
     autoGrow(t);
@@ -5508,6 +5298,7 @@ document.addEventListener("keydown", e => {
   if (authOpen() && e.key === "Tab") { trapFocus(e, "authBox"); return; }
   if (e.key === "Escape") {
     if (askOpen()) closeAsk({ ok: false });
+    else if (rankWebOpen()) closeRankWeb();
     else if (authOpen()) closeAuth();
     else if ($("lightbox") && !$("lightbox").classList.contains("hidden")) closeLightbox();
     else if (modalOpen()) closeModal(true);
