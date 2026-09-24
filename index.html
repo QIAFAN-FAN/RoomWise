@@ -619,6 +619,18 @@
   .ab-btn.on { color:var(--accent); }
   .label-static { font-size:0.8125rem; color:var(--text-3); }
   .label-2 { margin-top:10px; }
+  /* 密码框右侧那个「显示 / 隐藏」小眼睛 */
+  .pw-wrap { position:relative; display:flex; flex-direction:column; }
+  .pw-wrap input { padding-right:50px; }
+  .pw-wrap .pw-toggle {
+    position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center;
+    border:none; background:none; border-radius:9px; cursor:pointer;
+    font-size:1.0625rem; line-height:1; font-family:inherit; color:var(--text-3);
+    transition:color .18s, background .18s;
+  }
+  .pw-wrap .pw-toggle:hover { color:var(--accent); background:var(--surface-2); }
+  .pw-wrap .pw-toggle:active { opacity:.82; }
   .sb-acts { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
   /* 首页历史区那行「未登录 / 云端状态」提示 */
   .hist-note { display:flex; flex-wrap:wrap; align-items:center; gap:10px;
@@ -1036,7 +1048,11 @@
       </div>
       <div class="set-row">
         <label for="authPassword">密码</label>
-        <input type="password" id="authPassword" placeholder="至少 6 位" autocomplete="current-password">
+        <div class="pw-wrap">
+          <input type="password" id="authPassword" placeholder="至少 6 位" autocomplete="current-password">
+          <button type="button" class="pw-toggle" id="authPwToggle" data-act="toggle-pw" data-target="authPassword"
+                  aria-label="显示密码" title="显示密码">👁</button>
+        </div>
       </div>
       <div class="auth-state hidden" id="authState"></div>
       <div class="set-hint">
@@ -1570,7 +1586,7 @@
    ============================================================ */
 
 const APP_VERSION  = "0.1.4";
-const BUILD_TAG    = "b4";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
+const BUILD_TAG    = "b5";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
 const BASE_TITLE   = "室内设计助手 0.1.4 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
@@ -5132,6 +5148,7 @@ document.addEventListener("click", e => {
 
   switch (act) {
     case "open-auth":      openAuth(); break;
+    case "toggle-pw":      togglePassword(node); break;
     case "close-auth":     closeAuth(); break;
     case "auth-signin":    doSignIn(); break;
     case "auth-signup":    doSignUp(); break;
@@ -5690,10 +5707,30 @@ function renderAuthButton() {
   if (out) out.classList.toggle("hidden", !isLoggedIn());
 }
 
+/* 密码框的显示 / 隐藏。每次打开登录框都会强制回到「隐藏」，
+   免得上次看过明文、这次一打开就是明文挂在屏幕上。 */
+function setPwVisible(show) {
+  const box = $("authPassword"), btn = $("authPwToggle");
+  if (box) box.type = show ? "text" : "password";
+  if (btn) {
+    btn.textContent = show ? "🙈" : "👁";
+    btn.setAttribute("aria-label", show ? "隐藏密码" : "显示密码");
+    btn.title = show ? "隐藏密码" : "显示密码";
+  }
+}
+
+function togglePassword(btn) {
+  const id = (btn && btn.dataset && btn.dataset.target) || "authPassword";
+  const box = $(id);
+  if (!box) return;
+  setPwVisible(box.type === "password");
+}
+
 function openAuth() {
   renderAuthBox();
   authState("");
   $("authMask").classList.remove("hidden");
+  setPwVisible(false);                 /* 每次打开都先隐藏，不残留明文 */
   if (!isLoggedIn()) setTimeout(function () { const e = $("authEmail"); if (e && e.focus) e.focus({ preventScroll: true }); }, 30);
 }
 
