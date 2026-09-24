@@ -1570,6 +1570,7 @@
    ============================================================ */
 
 const APP_VERSION  = "0.1.4";
+const BUILD_TAG    = "b2";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
 const BASE_TITLE   = "室内设计助手 0.1.4 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
@@ -1896,6 +1897,7 @@ const state = {
   rankLoading: false,
   rankError: "",
   lastJsonError: "",       /* 最近一次 JSON 请求失败的具体原因（排行榜 / 整理成表共用） */
+  lastJsonChannelFail: false,  /* 上面那次失败是不是「通道级」（连不上 / 被拒 / 拿不到流），只有这种才值得回退重试 */
   controller: null,
   histExpanded: false,
   histQuery: "",
@@ -2595,7 +2597,7 @@ function viewHome() {
     <div class="grid">${cards}</div>
     <div id="histBlock">${histBlockHtml()}</div>
     <p class="tip center">
-      v${APP_VERSION} · 思维链横条 · 联网检索状态条 · 继续说完 · 快捷键 · 图片大图<br>
+      v${APP_VERSION} (${BUILD_TAG}) · 思维链横条 · 联网检索状态条 · 继续说完 · 快捷键 · 图片大图<br>
       V4.1 Flash（原生多模态）· 整理成表 · 本地示意图 · 用量统计 · 可选产品推荐 · 账号与云端历史<br>
       登录后对话记录保存在 Supabase（${esc(sbDomainText())}）；没登录时只在这次页面里，关掉就没有。<br>
       API Key 只发给 DeepSeek 官方接口（api.deepseek.com），不会发给任何第三方，也不会进云端。
@@ -4212,6 +4214,7 @@ async function jsonRequest(prompt, maxTokens) {
     return parseJsonLoose(txt);
   } catch (e) {
     state.lastJsonError = (e && e.name === "AbortError") ? "超时或已取消" : String((e && e.message) || e);
+    state.lastJsonChannelFail = true;       /* 抛异常 = 通道级问题 */
     toast("请求失败：" + truncateWidth(String((e && e.message) || e), 40));
     return null;
   } finally {
@@ -4233,9 +4236,10 @@ function extractTextBlocks(data) {
   try { return data.choices[0].message.content || ""; } catch (_) { return ""; }
 }
 
-/* 带联网检索的 JSON 请求：走 Anthropic Messages + web_search 工具，**非流式**。
-   排行榜要求「先查规范、再给结论」，所以它必须联网；而它要的是一整块 JSON，
-   非流式一次拿回来比边流边拼更省事，也不怕「先说明、后 JSON」的形态。 */
+/* 带联网检索的 JSON 请求：**走流式**，与聊天页那套完全同形。
+   为什么非流式不行：DeepSeek 的 anthropic 兼容端点上，`stream:false` + `tools`
+   这条组合不可靠；而聊天页一直用的是 `stream:true` + ANTHROPIC SSE，
+   那条路是验证过能用的 —— 所以这里照它来，只把「边流边渲染」换成「收全文再解析」。 */
 async function jsonRequestWeb(prompt, maxTokens) {
   const key = store.get(LS_APIKEY);
   if (!key) { openModal(); return null; }
@@ -4246,13 +4250,14 @@ async function jsonRequestWeb(prompt, maxTokens) {
     system: "你只输出一个合法的 JSON 对象，不要输出解释、不要 Markdown 代码块或任何额外文字。",
     messages: [{ role: "user", content: prompt }],
     tools: [WEB_SEARCH_TOOL],
-    stream: false
+    stream: true
   };
 
   const ctrl = new AbortController();
-  const timer = setTimeout(function () { ctrl.abort(); }, 180000);   /* 联网慢，给 3 分钟 */
-  state.controller = ctrl;                                          /* 挂上去，「停止」才真的能停 */
+  const timer = setTimeout(function () { ctrl.abort(); }, 240000);   /* 联网慢，给 4 分钟 */
+  state.controller = ctrl;                                          /* 挂上去，切换页面/返回时能中断 */
   state.lastJsonError = "";
+  state.lastJsonChannelFail = false;
   try {
     const res = await fetch(WEB_SEARCH_URL, {
       method: "POST",
@@ -4264,25 +4269,71 @@ async function jsonRequestWeb(prompt, maxTokens) {
       let m = "HTTP " + res.status;
       try { const e = await res.json(); if (e && e.error && e.error.message) m = e.error.message; } catch (_) {}
       state.lastJsonError = "联网请求被拒：" + m;
-      toast("联网请求失败：" + truncateWidth(m, 40));
+      state.lastJsonChannelFail = true;
       return null;
     }
-    const data = await res.json();
-    if (data && data.usage) recordUsage(data.usage, WEB_SEARCH_MODEL);
-    const text = extractTextBlocks(data);
-    if (!text.trim()) { state.lastJsonError = "返回里没有文本内容"; return null; }
+    if (!res.body || typeof res.body.getReader !== "function") {
+      state.lastJsonError = "这个浏览器拿不到流式响应";
+      state.lastJsonChannelFail = true;
+      return null;
+    }
+
+    /* 事件名与聊天页的 handleAnthropicEvent 完全一致：
+       只累积 text_delta；server_tool_use / web_search_tool_result 直接跳过 */
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "", text = "", sawTool = false, stopReason = "";
+    while (true) {
+      const step = await reader.read();
+      if (step.done) break;
+      buf += dec.decode(step.value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) {
+        if (line.indexOf("data:") !== 0) continue;
+        const raw = line.slice(5).trim();
+        if (!raw || raw === "[DONE]") continue;
+        let ev = null;
+        try { ev = JSON.parse(raw); } catch (_) { continue; }
+        const t = ev && ev.type;
+        if (t === "content_block_delta") {
+          const d = ev.delta;
+          if (d && d.type === "text_delta" && typeof d.text === "string") text += d.text;
+        } else if (t === "content_block_start") {
+          const cb = ev.content_block;
+          if (cb && cb.type === "server_tool_use") sawTool = true;
+        } else if (t === "message_delta") {
+          if (ev.delta && ev.delta.stop_reason) stopReason = String(ev.delta.stop_reason);
+          if (ev.usage) { try { recordUsage(ev.usage, WEB_SEARCH_MODEL); } catch (_) {} }
+        } else if (t === "message_start") {
+          const u = ev.message && ev.message.usage;
+          if (u) { try { recordUsage(u, WEB_SEARCH_MODEL); } catch (_) {} }
+        }
+      }
+    }
+
+    if (!text.trim()) {
+      state.lastJsonError = sawTool ? "联网检索完成了，但没返回正文内容" : "返回里没有文本内容";
+      return null;
+    }
+    if (stopReason === "max_tokens") {
+      state.lastJsonError = "输出被 max_tokens 截断了";
+      return null;
+    }
     const parsed = parseJsonLoose(text);
-    if (!parsed) state.lastJsonError = "返回值不是合法 JSON（多半是被 max_tokens 截断了）";
+    if (!parsed) {
+      state.lastJsonError = "返回值不是合法 JSON（可能被截断）—— 开头是：" + truncateWidth(text.trim(), 40);
+    }
     return parsed;
   } catch (e) {
     state.lastJsonError = (e && e.name === "AbortError") ? "超时或已取消" : String((e && e.message) || e);
+    state.lastJsonChannelFail = true;       /* 抛异常 = 通道级问题 */
     return null;
   } finally {
     clearTimeout(timer);
     if (state.controller === ctrl) state.controller = null;
   }
 }
-
 /* 模型有时会包一层 ```json，或者先说一句「我查到了…」再给 JSON，这里宽容地剥掉 */
 function parseJsonLoose(text) {
   let s = String(text || "").trim();
@@ -4731,8 +4782,14 @@ async function generateRankTab(spaceKey, tab) {
      保证「至少能生成」，不会因为一个通道有问题就彻底用不了。 */
   const d = await jsonRequestWeb(prompt, 4000);
   if (d) return d;
+  /* 只有「通道级」失败才值得回退重试（连不上 / 被拒 / 拿不到流）。
+     若是内容级问题（被截断、返回的不是 JSON），回退只会再花一次钱、还会把
+     真正的原因盖掉 —— 那种情况直接把原因留给用户看。 */
+  if (!state.lastJsonChannelFail) return null;
   if (state.lastJsonError === "超时或已取消") return null;   /* 用户主动停的，不偷偷重试 */
-  return await jsonRequest(prompt, 4500);
+  state.lastJsonError = "";
+  const plain = await jsonRequest(prompt, 4500);
+  return plain;
 }
 
 async function doGenerateRank() {
@@ -4747,7 +4804,7 @@ async function doGenerateRank() {
     const d = await generateRankTab(spaceKey, tab);
     if (!d) {
       state.rankError = "没拿到有效数据" + (state.lastJsonError ? "：" + state.lastJsonError : "")
-        + "。可以点「重新生成」再试一次。";
+        + "　〔构建 " + BUILD_TAG + "〕可以点「重新生成」再试一次。";
       return;
     }
     const clean = sanitizeRank(d, spaceKey, 3);
