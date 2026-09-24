@@ -1570,7 +1570,7 @@
    ============================================================ */
 
 const APP_VERSION  = "0.1.4";
-const BUILD_TAG    = "b2";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
+const BUILD_TAG    = "b3";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
 const BASE_TITLE   = "室内设计助手 0.1.4 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
@@ -1898,6 +1898,7 @@ const state = {
   rankError: "",
   lastJsonError: "",       /* 最近一次 JSON 请求失败的具体原因（排行榜 / 整理成表共用） */
   lastJsonChannelFail: false,  /* 上面那次失败是不是「通道级」（连不上 / 被拒 / 拿不到流），只有这种才值得回退重试 */
+  lastJsonDebug: "",       /* 最近一次联网请求的诊断摘要（请求 / 响应片段），失败时给用户复制 */
   controller: null,
   histExpanded: false,
   histQuery: "",
@@ -4244,14 +4245,25 @@ async function jsonRequestWeb(prompt, maxTokens) {
   const key = store.get(LS_APIKEY);
   if (!key) { openModal(); return null; }
 
+  /* 字段逐项对齐聊天页那条能用的路径：
+     · system 放宽 —— 之前写成「你只输出 JSON」，很可能把模型的联网工具憋住了
+       （它不敢先搜索就直接编），现在只要求「最后给 JSON」
+     · temperature 与聊天页一致；max_tokens 给足 —— 联网会先检索再输出，额度小了会被截断 */
   const payload = {
     model: WEB_SEARCH_MODEL,
-    max_tokens: maxTokens || 4000,
-    system: "你只输出一个合法的 JSON 对象，不要输出解释、不要 Markdown 代码块或任何额外文字。",
+    max_tokens: maxTokens || 6000,
+    system: "你是资深室内设计施工顾问。需要核实的地方先联网检索，然后按用户要求输出结果。"
+          + "最终回复只包含一个 JSON 对象，不要解释、不要 Markdown 代码块。",
     messages: [{ role: "user", content: prompt }],
-    tools: [WEB_SEARCH_TOOL],
-    stream: true
+    stream: true,
+    temperature: settings.temperature,
+    tools: [WEB_SEARCH_TOOL]
   };
+
+  let dbg = "构建 " + BUILD_TAG + " · POST " + WEB_SEARCH_URL
+          + "\nmax_tokens=" + (maxTokens || 6000) + " · stream=true · tools=web_search"
+          + "\nmodel=" + WEB_SEARCH_MODEL + " · temperature=" + settings.temperature;
+  const setDbg = function (extra) { state.lastJsonDebug = (dbg + "\n" + extra).slice(0, 1200); };
 
   const ctrl = new AbortController();
   const timer = setTimeout(function () { ctrl.abort(); }, 240000);   /* 联网慢，给 4 分钟 */
@@ -4270,6 +4282,7 @@ async function jsonRequestWeb(prompt, maxTokens) {
       try { const e = await res.json(); if (e && e.error && e.error.message) m = e.error.message; } catch (_) {}
       state.lastJsonError = "联网请求被拒：" + m;
       state.lastJsonChannelFail = true;
+      setDbg("HTTP " + res.status + " · " + m);
       return null;
     }
     if (!res.body || typeof res.body.getReader !== "function") {
@@ -4314,20 +4327,26 @@ async function jsonRequestWeb(prompt, maxTokens) {
 
     if (!text.trim()) {
       state.lastJsonError = sawTool ? "联网检索完成了，但没返回正文内容" : "返回里没有文本内容";
+      setDbg("HTTP " + res.status + " · 收到 0 字文本 · sawTool=" + sawTool + " · stop_reason=" + (stopReason || "—"));
       return null;
     }
     if (stopReason === "max_tokens") {
       state.lastJsonError = "输出被 max_tokens 截断了";
+      setDbg("HTTP " + res.status + " · 收到 " + text.length + " 字 · stop_reason=max_tokens"
+           + "\n开头：" + text.slice(0, 240) + "\n结尾：" + text.slice(-120));
       return null;
     }
     const parsed = parseJsonLoose(text);
     if (!parsed) {
       state.lastJsonError = "返回值不是合法 JSON（可能被截断）—— 开头是：" + truncateWidth(text.trim(), 40);
+      setDbg("HTTP " + res.status + " · 收到 " + text.length + " 字 · stop_reason=" + (stopReason || "—")
+           + "\nsawTool=" + sawTool + "\n开头：" + text.slice(0, 260) + "\n结尾：" + text.slice(-140));
     }
     return parsed;
   } catch (e) {
     state.lastJsonError = (e && e.name === "AbortError") ? "超时或已取消" : String((e && e.message) || e);
     state.lastJsonChannelFail = true;       /* 抛异常 = 通道级问题 */
+    setDbg("抛出异常：" + state.lastJsonError);
     return null;
   } finally {
     clearTimeout(timer);
@@ -4780,7 +4799,7 @@ async function generateRankTab(spaceKey, tab) {
     + "本次只生成 " + tab + " 这一个 tab，JSON 里 tabs 只包含 " + tab + " 一个键。";
   /* 先走联网（更准、能核规范）；联网通道不通就回退普通请求，
      保证「至少能生成」，不会因为一个通道有问题就彻底用不了。 */
-  const d = await jsonRequestWeb(prompt, 4000);
+  const d = await jsonRequestWeb(prompt, 6000);   /* 联网会先检索再输出，额度给足 */
   if (d) return d;
   /* 只有「通道级」失败才值得回退重试（连不上 / 被拒 / 拿不到流）。
      若是内容级问题（被截断、返回的不是 JSON），回退只会再花一次钱、还会把
@@ -4828,6 +4847,20 @@ async function doGenerateRank() {
   }
 }
 
+/* 把上次失败的全套上下文拼成一段，方便用户直接发出来定位 */
+function copyRankDebug() {
+  const s = [
+    "【排行榜诊断】",
+    "构建：" + BUILD_TAG + " · 版本：" + APP_VERSION,
+    "空间 / 榜：" + String(state.space) + " / " + String(state.rankTab),
+    "错误：" + (state.rankError || "—"),
+    "浏览器：" + String((window.navigator && window.navigator.userAgent) || "").slice(0, 120),
+    "",
+    state.lastJsonDebug || "（没有更多信息）"
+  ].join("\n");
+  copyText(s, "诊断信息已复制，直接发出来即可");
+}
+
 /* ---- 从榜单直接跳去问 AI ---- */
 function askRankItem(idx) {
   const items = rankItems(state.space, state.rankTab);
@@ -4870,7 +4903,15 @@ function viewRank() {
          + '<div class="thinking">正在联网核对规范并生成「' + esc(sp.name) + '」的榜单，约 20~40 秒…</div></div>';
   } else if (state.rankError) {
     body = '<div class="sys-note err"><b>生成失败</b>' + esc(state.rankError)
-         + '<button type="button" class="tbtn" data-act="rank-regen">重新生成</button></div>';
+         + '<div class="sb-acts">'
+         + '<button type="button" class="tbtn" data-act="rank-regen">重新生成</button>'
+         + (state.lastJsonDebug ? '<button type="button" class="tbtn" data-act="rank-copydebug">复制诊断信息</button>' : '')
+         + '</div>'
+         + (state.lastJsonDebug
+             ? '<details class="sql-box"><summary>诊断信息（点开看一眼，或点上面复制）</summary><pre>'
+               + esc(state.lastJsonDebug) + '</pre></details>'
+             : '')
+         + '</div>';
   } else if (!state.rankData) {
     body = '<div class="empty"><div class="et">这个空间还没有榜单</div>'
          + '<div class="es">让 AI 按「返工代价 / 安全影响 / 替换难度 / 使用频率 / 感知强度」五个维度打分，'
@@ -4989,6 +5030,7 @@ document.addEventListener("click", e => {
     case "rank-regen":   doGenerateRank(); break;
     case "rank-ask":     askRankItem(Number(node.dataset.idx)); break;
     case "rank-copy":    copyRankItem(Number(node.dataset.idx)); break;
+    case "rank-copydebug": copyRankDebug(); break;
     case "open-space":     goSpace(node.dataset.key); break;
     case "open-object":    goObject(node.dataset.id); break;
     case "ask":            askFaq(node.dataset.key, Number(node.dataset.idx)); break;
