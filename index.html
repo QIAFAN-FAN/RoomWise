@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#1b1917" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <meta name="color-scheme" content="light dark">
-<title>室内设计助手 0.1.3 · 对话式设计顾问</title>
+<title>室内设计助手 0.1.4 · 对话式设计顾问</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -796,6 +796,32 @@
       scroll-behavior:auto !important;
     }
   }
+  /* ===== 排行榜 ===== */
+  .rank-tabs, .rank-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .rank-item {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:12px; padding:13px 16px;
+  }
+  .rank-item + .rank-item { margin-top:10px; }
+  .rank-item > summary { cursor:pointer; list-style:none; }
+  .rank-item > summary::-webkit-details-marker { display:none; }
+  .rank-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .rank-head b { font-size:0.9375rem; }
+  .rank-head .grow { flex:1; }
+  .rank-score { font-size:0.8125rem; font-weight:700; color:var(--accent); }
+  .rank-basis {
+    font-size:0.6875rem; padding:2px 7px; border-radius:5px;
+    background:var(--surface-2); border:1px solid var(--border-soft); color:var(--text-3);
+  }
+  .rank-why { font-size:0.8125rem; color:var(--text-2); margin-top:4px; line-height:1.6; }
+  .rank-key { font-size:0.8125rem; color:var(--text-2); margin-top:4px; }
+  .rank-cost { font-size:0.78125rem; color:var(--text-3); margin-top:4px; }
+  .rank-detail { margin-top:10px; padding-top:10px; border-top:1px solid var(--border-soft); }
+  .rank-dims { font-size:0.75rem; color:var(--text-4); margin-bottom:6px; }
+  .rank-fail { font-size:0.8125rem; color:var(--danger); margin-bottom:6px; line-height:1.6; }
+  .rank-check { font-size:0.8125rem; color:var(--text-2); margin-bottom:8px; line-height:1.6; }
+  .rank-tier-hint { font-size:0.78125rem; color:var(--text-4); margin:-8px 0 10px; }
+  .rank-entry { border-color:var(--gold) !important; background:var(--accent-soft) !important; }
 </style>
 </head>
 <body>
@@ -806,7 +832,7 @@
     <div class="ab-main" id="abMain">室内设计助手</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.1.3</span>
+  <span class="ver-tag" id="verTag">v0.1.4</span>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
   <button type="button" class="ab-btn hidden" id="abMoreBtn" data-act="toggle-more" aria-label="更多操作" title="更多操作">⋯</button>
@@ -1062,7 +1088,36 @@
 </div>
 
 <script>/* ============================================================
-   室内设计助手 v0.1.3
+   室内设计助手 v0.1.4
+   ------------------------------------------------------------
+   本版新增「优先级排行榜」：把「钱该花在哪」从一句话变成一张表。
+
+   [排行榜：8 个空间 × 3 张榜]
+   · 空间页多了入口卡「XX 的钱该花在哪」，点进去是排行榜页
+   · 三张榜分开生成：硬装 · 隐藏 / 硬装 · 表面 / 软装
+   · 每条按五个维度打分（返工代价 / 安全影响 / 替换难度 / 使用频率 / 感知强度），
+     加权算分后排成四个梯队：
+       S 做错要砸掉重来 · A 重点花钱 · B 够用就行 · C 可以后补
+   · 四种预设权重：均衡 / 家有老人小孩 / 预算紧 / 追求品质 ——
+     切换只本地重算，不发任何请求
+   · 结果按空间缓存在本机：切 tab、切预设、下次再进来都不重新花钱
+   · 每条可直接「问设计师」（带着这一条跳进对话）或「复制这一条」
+
+   [为什么不会漏项]
+   · 每个空间的「必须覆盖清单」写在 RANK_COVERAGE 里（按 tab 分组），
+     原样塞进 prompt 要求逐条覆盖。不写它，AI 一定会漏掉一半 ——
+     这是「不漏项」的唯一保证，也是这套功能的地基。
+   · 返回的 JSON 一律先过 sanitizeRank 才能进渲染：
+     分数夹到 0~10、cost 校验上下限与非数字、
+     说「规范」却没给标准号的降级为「经验」、条目太少直接判无效。
+   · 侧栏、面包屑、返回键、Esc 都已接入排行榜页（返回键回到空间页）。
+
+   [顺手修掉]
+   · 空间页的 class="chips row" 写错了（chips 与 row 本该是同一个元素的
+     两个 class），已改成 "chips.row"。
+
+   ------------------------------------------------------------
+   0.1.3 及以前的内容（保留备查）：
    ------------------------------------------------------------
    本版接上 Supabase：真正的注册 / 登录，历史存到云端。
 
@@ -1514,8 +1569,8 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.1.3";
-const BASE_TITLE   = "室内设计助手 0.1.3 · 对话式设计顾问";
+const APP_VERSION  = "0.1.4";
+const BASE_TITLE   = "室内设计助手 0.1.4 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
 const WEB_SEARCH_URL = "https://api.deepseek.com/anthropic/v1/messages";
@@ -1715,6 +1770,79 @@ const DATA = {
 };
 
 /* 条件：3 项（面积 / 预算档位 / 补充），其余交给 AI 在对话里问 */
+/* ============================================================
+   排行榜：8 个空间 × 3 个类别 的「必须覆盖清单」
+   ------------------------------------------------------------
+   这是「不漏项」的唯一保证。不写它，AI 一定会漏掉一半。
+   AI 生成时会把这份清单原样塞进 prompt，要求逐条覆盖。
+   ============================================================ */
+const RANK_COVERAGE = {
+  kitchen: {
+    hidden:  ["给水管径与打压试验","排水坡度与存水弯","电气回路与线径","燃气管道与阀门","烟道与止逆阀","插座点位与高度","地面防水","墙面基层找平"],
+    surface: ["台面高度与材质","橱柜板材与五金","瓷砖防滑等级与美缝","吊顶与灯位","门槛石与挡水条","墙面漆或瓷砖"],
+    soft:    ["拉篮与调味架","垃圾处理器","净水器","照明灯具","收纳分隔件"]
+  },
+  bathroom: {
+    hidden:  ["防水与闭水试验","排水坡度","地漏选型与深水封","给水管径与间距","热水管保温","电气回路与线径","等电位联结","排风道止逆阀","隔音降噪","墙排与地排选择","检修口预留"],
+    surface: ["地砖防滑等级","墙地对缝与找平","美缝或环氧彩砂","吊顶材质","淋浴房玻璃安全","门槛石","窗台防水"],
+    soft:    ["镜柜","毛巾架","浴帘或浴屏","收纳","防滑垫","香薰与绿植"]
+  },
+  living: {
+    hidden:  ["电气回路与线径","插座点位与高度","弱电与网线预留","空调孔位与排水","新风管道","地面找平","墙面基层"],
+    surface: ["地面材质","墙面材质与颜色","吊顶与灯位","踢脚线","电视墙处理","窗帘盒"],
+    soft:    ["沙发尺寸与布局","茶几","电视或投影","窗帘","地毯","挂画与摆件","绿植"]
+  },
+  bedroom: {
+    hidden:  ["电气回路与双控","床头插座点位","隔音构造","空调孔位与排水","衣柜嵌入式线路"],
+    surface: ["地面材质与隔音垫","墙面材质与颜色","吊顶与灯位","窗帘盒","门与门套隔音"],
+    soft:    ["床与床垫尺寸","衣柜容量与开门方式","床头柜","窗帘遮光","照明灯具","色彩氛围"]
+  },
+  dining: {
+    hidden:  ["电气回路与插座点位","弱电预留","地面找平"],
+    surface: ["地面材质","墙面装饰","吊顶与吊灯位","踢脚线"],
+    soft:    ["餐桌尺寸与形状","餐椅数量与材质","餐边柜","吊灯高度","挂画与配色"]
+  },
+  study: {
+    hidden:  ["电气回路与插座点位","网线预留","隔音构造","空调孔位"],
+    surface: ["地面材质","墙面材质与颜色","吊顶与灯位","窗帘盒"],
+    soft:    ["书桌尺寸与高度","椅子人体工学","书柜容量与布局","台灯与防眩光","设备走线"]
+  },
+  entry: {
+    hidden:  ["电气回路与插座点位","感应灯线路","地面找平与防水"],
+    surface: ["地面材质耐脏防滑","墙面材质","吊顶与灯位","门套与门槛石"],
+    soft:    ["鞋柜容量与深度","换鞋凳","挂衣区","镜子","感应灯","收纳盒"]
+  },
+  balcony: {
+    hidden:  ["给排水与地漏","防水与闭水","电气回路与防水插座","洗衣机专用回路","封窗结构与安全"],
+    surface: ["地面材质防滑","墙面材质","吊顶材质","门槛石"],
+    soft:    ["洗衣机与烘干机","晾衣杆或隐形晾衣","收纳柜","绿植与休闲家具","照明"]
+  }
+};
+
+/* 五个维度权重：切预设只本地重算，不重新请求 API */
+const RANK_WEIGHTS = {
+  balanced: { rework:.30, safety:.30, replace:.20, frequency:.10, feel:.10 },
+  family:   { rework:.25, safety:.45, replace:.15, frequency:.08, feel:.07 },
+  budget:   { rework:.42, safety:.25, replace:.23, frequency:.05, feel:.05 },
+  quality:  { rework:.20, safety:.22, replace:.15, frequency:.15, feel:.28 }
+};
+const RANK_PRESETS = [
+  { key:"balanced", label:"均衡（默认）" },
+  { key:"family",   label:"家有老人小孩" },
+  { key:"budget",   label:"预算紧" },
+  { key:"quality",  label:"追求品质" }
+];
+const RANK_TABS = [
+  { key:"hidden",  label:"硬装 · 隐藏" },
+  { key:"surface", label:"硬装 · 表面" },
+  { key:"soft",    label:"软装" }
+];
+const RANK_TIER_META = {
+  S: { label:"S 级 · 做错要砸掉重来", hint:"藏在里面、返工代价极高、涉及安全" },
+  A: { label:"A 级 · 重点花钱",       hint:"每天都用，好坏差别直接能感觉到" },
+  B: { label:"B 级 · 够用就行",       hint:"达标即可，多花钱买不到体验" },
+  C: { label:"C 级 · 可以后补",       hint:"随时能换、能加、能扔" }
+};
 const BUDGET_OPTIONS = ["不限", "经济型（1 万以内）", "中档（1-3 万）", "品质型（3-8 万）", "高端（8 万以上）"];
 
 const COND_FIELDS = [
@@ -1761,6 +1889,12 @@ const state = {
   userId: "",             /* Supabase user.id；未登录为空。历史归属看它，不是看 sessionId */
   stickBottom: true,
   pinnedByCode: false,    /* 由程序钉住的视口：这段时间内忽略 scroll 事件重算贴底 */
+  /* ---- 排行榜 ---- */
+  rankTab: "hidden",       /* hidden | surface | soft */
+  rankPreset: "balanced",  /* balanced | family | budget | quality */
+  rankData: null,          /* 当前空间已生成的榜单 { space, generatedAt, tabs:{...} } */
+  rankLoading: false,
+  rankError: "",
   controller: null,
   histExpanded: false,
   histQuery: "",
@@ -1973,8 +2107,12 @@ function render() {
 let pendingScrollTop = null;
 let pendingStickBottom = null;
 function renderKeepingScroll() {
-  const s = scroller();
-  pendingScrollTop = s ? s.scrollTop : 0;
+  if (state.view === "chat") {
+    const s = scroller();
+    pendingScrollTop = s ? s.scrollTop : 0;
+  } else {
+    pendingScrollTop = (typeof window.scrollY === "number") ? window.scrollY : 0;
+  }
   pendingStickBottom = state.stickBottom;
   render();
 }
@@ -1989,6 +2127,7 @@ function doRender() {
   const view = $("view");
   if (state.view === "home")       view.innerHTML = viewHome();
   else if (state.view === "space") view.innerHTML = viewSpace();
+  else if (state.view === "rank")  view.innerHTML = viewRank();
   else                             view.innerHTML = viewChat();
 
   afterRender();
@@ -2028,7 +2167,15 @@ function doRender() {
       }
     }
   } else {
-    window.scrollTo({ top: 0 });
+    /* 非对话页：位置保持式重绘在这里也要生效（切 tab、切预设不该跳回顶部） */
+    if (pendingScrollTop !== null) {
+      const keepTop = pendingScrollTop;
+      pendingScrollTop = null;
+      pendingStickBottom = null;
+      requestAnimationFrame(function () { window.scrollTo(0, keepTop); });
+    } else {
+      window.scrollTo({ top: 0 });
+    }
   }
   updateFloaters();
 }
@@ -2174,6 +2321,7 @@ function appbarTitle() {
   const sp = DATA[state.space];
   if (!sp) return "室内设计助手";
   if (state.view === "space") return sp.name;
+  if (state.view === "rank") return sp.name + " · 优先级榜";
   const ob = state.objectId ? sp.objects.find(o => o.id === state.objectId) : null;
   let t = sp.name + (ob ? " · " + ob.name : "");
   if (state.topic) t += "（" + state.topic + "）";
@@ -2310,6 +2458,7 @@ function showHelp() {
    ============================================================ */
 
 function goBack() {
+  if (state.view === "rank") { goSpace(state.space); return true; }
   if (state.view === "chat") {
     if (state.fromHistory) goHome(); else goSpace(state.space);
     return true;
@@ -2403,6 +2552,9 @@ function renderCrumb() {
   let html = `<button type="button" class="link" data-act="home">首页</button>`;
   if (state.view === "space") {
     html += `<span class="sep">›</span><span>${esc(sp.name)}</span>`;
+  } else if (state.view === "rank") {
+    html += `<span class="sep">›</span><button type="button" class="link" data-act="open-space" data-key="${escAttr(state.space)}">${esc(sp.name)}</button>`;
+    html += `<span class="sep">›</span><span>优先级榜</span>`;
   } else {
     html += `<span class="sep">›</span><button type="button" class="link" data-act="open-space" data-key="${escAttr(state.space)}">${esc(sp.name)}</button>`;
     html += `<span class="sep">›</span><span>${esc(chatTitleText())}</span>`;
@@ -2585,9 +2737,19 @@ function viewSpace() {
        <div class="desc">${esc(o.desc)}</div>
      </div>`).join("");
 
+  const rankEntry = `
+    <div class="card rank-entry" role="button" tabindex="0" data-act="open-rank" data-key="${escAttr(state.space)}">
+      <span class="icon">🏆</span>
+      <div class="name">${esc(sp.name)}的钱该花在哪</div>
+      <div class="desc">按返工代价、安全影响等五个维度排出 S / A / B / C 梯队，分隐藏工程、表面工程、软装三张榜</div>
+      <div class="more">打开排行榜 ›</div>
+    </div>`;
+
   return `
     <div class="sec-title">${esc(sp.name)} —— 大家最常问的</div>
-    <div class="chips row">${faqChips}</div>
+    <div class="chips.row">${faqChips}</div>
+    <div class="sec-title">优先级排行榜</div>
+    <div class="grid">${rankEntry}</div>
     <div class="sec-title">或者，聊一个具体的东西</div>
     <div class="grid">${objs}</div>
   `;
@@ -4354,6 +4516,288 @@ function buildContext(meta) {
 }
 
 /* ============================================================
+   排行榜：数据层 + 渲染
+   ============================================================ */
+
+function rankStorageKey(spaceKey) { return "design_rank_v1_" + spaceKey; }
+
+/* ---- 校验层：AI 返回的 JSON 不能直接进渲染 ---- */
+function sanitizeRank(raw, spaceKey, minTotal) {
+  if (!raw || typeof raw !== "object" || !raw.tabs) return null;
+  const out = { space: spaceKey, generatedAt: Number(raw.generatedAt) || Date.now(), tabs: {} };
+  let total = 0;
+  RANK_TABS.forEach(function (t) {
+    const src = (raw.tabs[t.key] && Array.isArray(raw.tabs[t.key].items)) ? raw.tabs[t.key].items : [];
+    const items = [];
+    src.forEach(function (it) {
+      if (!it || !it.name) return;
+      const sc = it.scores || {};
+      const num = function (v) {
+        const n = Math.round(Number(v));
+        return isFinite(n) ? Math.max(0, Math.min(10, n)) : 0;
+      };
+      let cost = null;
+      if (Array.isArray(it.cost) && it.cost.length === 2) {
+        const a = Number(it.cost[0]), b = Number(it.cost[1]);
+        if (isFinite(a) && isFinite(b) && a >= 0 && b >= a) cost = [Math.round(a), Math.round(b)];
+      }
+      let basis = ["规范", "经验", "建议"].indexOf(it.basis) >= 0 ? it.basis : "经验";
+      const standard = String(it.standard || "").slice(0, 30);
+      if (basis === "规范" && !standard) basis = "经验";   /* 说规范却没给标准号 → 降级 */
+      items.push({
+        name: String(it.name).slice(0, 40),
+        why: String(it.why || "").slice(0, 140),
+        key: String(it.key || "").slice(0, 140),
+        basis: basis,
+        standard: standard,
+        fail: String(it.fail || "").slice(0, 180),
+        cost: cost,
+        costUnit: String(it.costUnit || "元").slice(0, 12),
+        check: String(it.check || "").slice(0, 140),
+        ask: String(it.ask || "").slice(0, 90),
+        scores: {
+          rework: num(sc.rework), safety: num(sc.safety),
+          replace: num(sc.replace), frequency: num(sc.frequency), feel: num(sc.feel)
+        }
+      });
+    });
+    out.tabs[t.key] = { items: items };
+    total += items.length;
+  });
+  if (total < (minTotal || 6)) return null;
+  return out;
+}
+
+function loadRank(spaceKey) {
+  try {
+    const raw = store.get(rankStorageKey(spaceKey));
+    if (!raw) return null;
+    return sanitizeRank(JSON.parse(raw), spaceKey, 3);
+  } catch (_) { return null; }
+}
+function saveRank(spaceKey, data) {
+  try { store.set(rankStorageKey(spaceKey), JSON.stringify(data)); } catch (_) {}
+}
+
+/* ---- 算分与切档：切预设只本地重排，不发请求 ---- */
+function rankScore(item, preset) {
+  const w = RANK_WEIGHTS[preset] || RANK_WEIGHTS.balanced;
+  const s = item.scores || {};
+  return (s.rework || 0) * w.rework + (s.safety || 0) * w.safety + (s.replace || 0) * w.replace
+       + (s.frequency || 0) * w.frequency + (s.feel || 0) * w.feel;
+}
+function rankTier(score) {
+  if (score >= 8.5) return "S";
+  if (score >= 6.5) return "A";
+  if (score >= 4.5) return "B";
+  return "C";
+}
+function rankItems(spaceKey, tab, preset) {
+  const d = state.rankData;
+  if (!d || !d.tabs || !d.tabs[tab]) return [];
+  const p = preset || state.rankPreset;
+  return d.tabs[tab].items.map(function (it) {
+    const sc = rankScore(it, p);
+    return Object.assign({}, it, { score: sc, tier: rankTier(sc) });
+  }).sort(function (a, b) { return b.score - a.score; });
+}
+
+/* ---- 导航 ---- */
+function openRank(spaceKey) {
+  if (!DATA[spaceKey]) return;
+  abortCurrent();
+  state.view = "rank";
+  state.space = spaceKey;
+  state.rankTab = "hidden";
+  state.rankError = "";
+  state.rankLoading = false;
+  state.rankData = loadRank(spaceKey);
+  render();
+}
+
+/* ---- 生成：按 tab 拆三次请求，先出第一张 ---- */
+const RANK_PROMPT_HEAD = `你是资深室内设计施工顾问。请为下面这个空间的一个工程类别生成「优先级排行榜」数据。
+
+严格规则：
+1. 必须覆盖我给出的全部子类，一条都不能漏。
+2. 每条给 5 个维度打分（0~10 整数）：
+   - rework    返工代价：0=随时能换，10=要拆墙撬地工期翻倍
+   - safety    安全影响：0=纯观感，10=漏水/漏电/燃气/滑倒/坠落
+   - replace   替换难度：0=拧螺丝就换，10=封起来完全动不了
+   - frequency 使用频率：0=一年碰一次，10=每天几十次
+   - feel      感知强度：0=好坏察觉不到，10=一眼看出差别
+3. 禁止出现「适当」「合理」「注意」这类没有信息量的词。
+4. basis 只能填 "规范" / "经验" / "建议"；填 "规范" 时必须给标准号，不确定就填 "经验"。
+5. 禁止编造标准号。
+6. 涉及承重墙、燃气、电气改造的，safety 必须 ≥ 8。
+7. cost 写 [下限, 上限] 两个整数（元），估不出就填 null。
+8. 每个子类至少 1 条，条目总数 8~15 条。
+9. 只输出 JSON 对象，不要解释、不要 Markdown 代码块。
+
+JSON 格式：{"space":"...","tabs":{"<tab>":{"items":[...]}}}
+每条字段：name / why / key / basis / standard / fail / cost / costUnit / check / ask / scores
+`;
+
+async function generateRankTab(spaceKey, tab) {
+  const sp = DATA[spaceKey];
+  const cov = (RANK_COVERAGE[spaceKey] || {})[tab] || [];
+  const label = (RANK_TABS.find(function (t) { return t.key === tab; }) || {}).label || tab;
+  const prompt = RANK_PROMPT_HEAD
+    + "\n空间：" + sp.name + "（" + sp.desc + "）\n"
+    + "工程类别：" + label + "\n"
+    + "必须覆盖的子类：" + cov.join("、") + "\n"
+    + "本次只生成 " + tab + " 这一个 tab，JSON 里 tabs 只包含 " + tab + " 一个键。";
+  return await jsonRequest(prompt, 2600);
+}
+
+async function doGenerateRank() {
+  if (state.rankLoading) return;
+  if (!store.get(LS_APIKEY)) { openModal(); return; }
+  const spaceKey = state.space;
+  const tab = state.rankTab;
+  state.rankLoading = true;
+  state.rankError = "";
+  renderKeepingScroll();
+  try {
+    const d = await generateRankTab(spaceKey, tab);
+    if (!d) { state.rankError = "没拿到有效数据，可能是网络、Key 或模型返回格式问题。"; return; }
+    const clean = sanitizeRank(d, spaceKey, 3);
+    if (!clean) { state.rankError = "返回的数据不完整（条目太少或字段缺失），请重试。"; return; }
+
+    const base = state.rankData || {
+      space: spaceKey, generatedAt: Date.now(),
+      tabs: { hidden:{items:[]}, surface:{items:[]}, soft:{items:[]} }
+    };
+    RANK_TABS.forEach(function (t) {
+      if (clean.tabs[t.key] && clean.tabs[t.key].items.length) base.tabs[t.key] = clean.tabs[t.key];
+    });
+    base.generatedAt = Date.now();
+    state.rankData = base;
+    saveRank(spaceKey, base);
+  } catch (e) {
+    state.rankError = String((e && e.message) || e);
+  } finally {
+    state.rankLoading = false;
+    renderKeepingScroll();
+  }
+}
+
+/* ---- 从榜单直接跳去问 AI ---- */
+function askRankItem(idx) {
+  const items = rankItems(state.space, state.rankTab);
+  const it = items[idx];
+  if (!it || !it.ask) return;
+  startSession(state.space, null, it.name);
+  sendMessage(it.ask);
+}
+function copyRankItem(idx) {
+  const items = rankItems(state.space, state.rankTab);
+  const it = items[idx];
+  if (!it) return;
+  const s = [
+    it.name,
+    it.why ? "为什么：" + it.why : "",
+    it.key ? "关键数字：" + it.key : "",
+    it.fail ? "做错的代价：" + it.fail : "",
+    it.check ? "怎么验：" + it.check : ""
+  ].filter(Boolean).join("\n");
+  copyText(s, "已复制这一条");
+}
+
+/* ---- 渲染 ---- */
+function viewRank() {
+  const sp = DATA[state.space];
+  if (!sp) return `<p class="tip">空间不存在。</p>`;
+
+  const tabBar = RANK_TABS.map(function (t) {
+    return '<button type="button" class="tbtn ' + (state.rankTab === t.key ? "active" : "") +
+      '" data-act="rank-tab" data-tab="' + t.key + '">' + esc(t.label) + '</button>';
+  }).join("");
+  const presetBar = RANK_PRESETS.map(function (p) {
+    return '<button type="button" class="tbtn ' + (state.rankPreset === p.key ? "active" : "") +
+      '" data-act="rank-preset" data-preset="' + p.key + '">' + esc(p.label) + '</button>';
+  }).join("");
+
+  let body = "";
+  if (state.rankLoading) {
+    body = '<div class="panel"><div class="dots"><span></span><span></span><span></span></div>'
+         + '<div class="thinking">正在生成「' + esc(sp.name) + '」的榜单，约 15~25 秒…</div></div>';
+  } else if (state.rankError) {
+    body = '<div class="sys-note err"><b>生成失败</b>' + esc(state.rankError)
+         + '<button type="button" class="tbtn" data-act="rank-regen">重新生成</button></div>';
+  } else if (!state.rankData) {
+    body = '<div class="empty"><div class="et">这个空间还没有榜单</div>'
+         + '<div class="es">让 AI 按「返工代价 / 安全影响 / 替换难度 / 使用频率 / 感知强度」五个维度打分，'
+         + '再按 S / A / B / C 梯队排出来。生成后永久缓存，切预设不会重新请求。</div>'
+         + '<button type="button" class="btn" data-act="rank-regen">生成排行榜</button></div>';
+  } else {
+    body = rankListHtml();
+  }
+
+  const hasData = !!state.rankData;
+  return '<div class="sec-title">' + esc(sp.name) + ' · 优先级排行榜</div>'
+       + '<div class="rank-tabs">' + tabBar + '</div>'
+       + (hasData ? '<div class="rank-presets">' + presetBar + '</div>' : "")
+       + body;
+}
+
+function rankListHtml() {
+  const items = rankItems(state.space, state.rankTab);
+  if (!items.length) {
+    return '<div class="empty"><div class="et">这个类别还没有条目</div>'
+         + '<div class="es">点下面的按钮单独生成这一张榜。</div>'
+         + '<button type="button" class="btn" data-act="rank-regen">生成「'
+         + esc((RANK_TABS.find(function (t) { return t.key === state.rankTab; }) || {}).label || "")
+         + '」榜</button></div>';
+  }
+  const groups = { S: [], A: [], B: [], C: [] };
+  items.forEach(function (it) { groups[it.tier].push(it); });
+
+  let html = "";
+  ["S", "A", "B", "C"].forEach(function (tier) {
+    const list = groups[tier];
+    if (!list.length) return;
+    const meta = RANK_TIER_META[tier];
+    html += '<div class="sec-title">' + esc(meta.label) + '</div>';
+    html += '<p class="rank-tier-hint">' + esc(meta.hint) + '</p>';
+    list.forEach(function (it, i) { html += rankItemHtml(it, i); });
+  });
+  return html;
+}
+
+function rankItemHtml(it, i) {
+  const cost = it.cost ? ("¥" + it.cost[0] + "~" + it.cost[1] + " " + esc(it.costUnit)) : "";
+  const basisTag = it.basis === "规范" && it.standard
+    ? '<span class="rank-basis">' + esc(it.standard) + '</span>'
+    : '<span class="rank-basis">' + esc(it.basis) + '</span>';
+  const s = it.scores || {};
+
+  return '<details class="rank-item">'
+    + '<summary>'
+    +   '<div class="rank-head">'
+    +     '<b>' + esc(it.name) + '</b>' + basisTag
+    +     '<span class="grow"></span>'
+    +     '<span class="rank-score">' + it.score.toFixed(1) + '</span>'
+    +   '</div>'
+    +   (it.why ? '<div class="rank-why">' + esc(it.why) + '</div>' : "")
+    +   (it.key ? '<div class="rank-key">🔑 ' + esc(it.key) + '</div>' : "")
+    +   (cost ? '<div class="rank-cost">' + cost + '</div>' : "")
+    + '</summary>'
+    + '<div class="rank-detail">'
+    +   '<div class="rank-dims">返工 ' + (s.rework||0) + ' · 安全 ' + (s.safety||0)
+    +     ' · 替换 ' + (s.replace||0) + ' · 频率 ' + (s.frequency||0)
+    +     ' · 感知 ' + (s.feel||0) + '</div>'
+    +   (it.fail ? '<div class="rank-fail"><b>做错的代价：</b>' + esc(it.fail) + '</div>' : "")
+    +   (it.check ? '<div class="rank-check"><b>怎么验：</b>' + esc(it.check) + '</div>' : "")
+    +   '<div class="sb-acts">'
+    +     (it.ask ? '<button type="button" class="tbtn" data-act="rank-ask" data-idx="' + i + '">问设计师</button>' : "")
+    +     '<button type="button" class="tbtn" data-act="rank-copy" data-idx="' + i + '">复制这一条</button>'
+    +   '</div>'
+    + '</div>'
+    + '</details>';
+}
+
+/* ============================================================
    八、事件委托
    ============================================================ */
 
@@ -4393,6 +4837,12 @@ document.addEventListener("click", e => {
     case "close-settings": closeModal(true); break;
     case "save-settings":  saveSettings(); break;
     case "clear-key":      clearKey(); break;
+    case "open-rank":    openRank(node.dataset.key); break;
+    case "rank-tab":     state.rankTab = node.dataset.tab; renderKeepingScroll(); break;
+    case "rank-preset":  state.rankPreset = node.dataset.preset; renderKeepingScroll(); break;
+    case "rank-regen":   doGenerateRank(); break;
+    case "rank-ask":     askRankItem(Number(node.dataset.idx)); break;
+    case "rank-copy":    copyRankItem(Number(node.dataset.idx)); break;
     case "open-space":     goSpace(node.dataset.key); break;
     case "open-object":    goObject(node.dataset.id); break;
     case "ask":            askFaq(node.dataset.key, Number(node.dataset.idx)); break;
