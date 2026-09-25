@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#1b1917" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <meta name="color-scheme" content="light dark">
-<title>室内设计助手 0.2.2 · 对话式设计顾问</title>
+<title>室内设计助手 0.2.3 · 对话式设计顾问</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -1003,6 +1003,15 @@
   .kg-acts { display:flex; flex-wrap:wrap; gap:8px; }
   .kg-note { font-size:0.75rem; color:var(--text-4); line-height:1.7; margin-top:9px; }
   /* ---------- P0-4 条件面板的同步开关 ---------- */
+  /* 输入框旁边的小问号（比密码小眼睛小一圈，避免误认） */
+  .hint-btn {
+    width:16px; height:16px; line-height:14px; padding:0; margin-left:5px;
+    font-size:11px; border-radius:50%; cursor:pointer;
+    background:transparent; color:var(--text-4); border:1px solid var(--border);
+  }
+  .hint-btn:hover { color:var(--accent-dark); border-color:var(--accent); }
+  .help-list { margin:0; padding-left:1.3em; }
+  .help-list li { font-size:0.8125rem; line-height:1.9; color:var(--text-2); }
   .profile-sync {
     display:flex; align-items:flex-start; gap:7px; cursor:pointer;
     padding:9px 11px; margin-bottom:10px; border-radius:9px;
@@ -1165,7 +1174,7 @@
     <div class="ab-main" id="abMain">室内设计助手</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.2.2</span>
+  <span class="ver-tag" id="verTag">v0.2.3</span>
   <button type="button" class="ab-btn" id="abToolsBtn" data-act="open-toolbox" aria-label="工具箱" title="工具箱">🧰</button>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
@@ -1196,7 +1205,10 @@
       <summary>连接</summary>
       <div class="set-grid">
         <div class="set-row">
-          <label for="keyInput">DeepSeek API Key</label>
+          <label for="keyInput">DeepSeek API Key
+            <button type="button" class="hint-btn" data-act="open-key-help"
+                    aria-label="怎么申请 Key" title="怎么申请 Key">?</button>
+          </label>
           <input type="password" id="keyInput" placeholder="sk-xxxxxxxxxxxxxxxx" autocomplete="off">
           <div class="set-hint">
             Key 只保存在本机浏览器 localStorage；发起对话时随请求发送给
@@ -1481,7 +1493,7 @@
 </div>
 
 <script>/* ============================================================
-   室内设计助手 v0.2.2
+   室内设计助手 v0.2.3
    ------------------------------------------------------------
    本版新增「优先级排行榜」：把「钱该花在哪」从一句话变成一张表。
 
@@ -1962,9 +1974,9 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.2.2";
+const APP_VERSION  = "0.2.3";
 const BUILD_TAG    = "v15";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
-const BASE_TITLE   = "室内设计助手 0.2.2 · 对话式设计顾问";
+const BASE_TITLE   = "室内设计助手 0.2.3 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
 const WEB_SEARCH_URL = "https://api.deepseek.com/anthropic/v1/messages";
@@ -2328,7 +2340,8 @@ const state = {
   editing: null,          /* { idx, text } */
   images: [],             /* P1-5 待发送图片 [{ id, name, dataUrl, w, h }] */
   webSearch: false,       /* P0-3 本条消息是否联网 */
-  usage: { in:0, out:0, cached:0, cost:0, unpriced:false, peak:false },   /* P1-8 */
+  usage: { in:0, out:0, cached:0, cost:0, unpriced:false, peak:false },
+  toolUsage: { in:0, out:0, cached:0, cost:0, unpriced:false, peak:false },   /* 工具箱独立的用量池 */   /* P1-8 */
   extract: null,          /* P1-6 整理成表结果 */
   sketch: null,           /* P1-7 示意图结果 */
   modelUnsupported: null, /* 环境级：接口不认的模型名（不随会话重置） */
@@ -2896,6 +2909,24 @@ function askOpen() {
   return !!(m && !m.classList.contains("hidden"));
 }
 
+/* 「怎么申请 Key」教学弹窗（复用 askDialog） */
+function openKeyHelp() {
+  askDialog({
+    title: "怎么申请 DeepSeek API Key",
+    body: '<ol class="help-list">'
+        + '<li>打开 <b>platform.deepseek.com</b> 注册（手机号或邮箱都行）</li>'
+        + '<li>左侧点「API Keys」→「创建新密钥」</li>'
+        + '<li>复制那串 <b>sk-</b> 开头的密钥 —— <b>它只显示一次</b>，当场存好</li>'
+        + '<li>到「充值」页面充一点钱（最低额度很小，够问几百次）</li>'
+        + '<li>回到本页粘贴，点「保存并验证」</li>'
+        + '</ol>'
+        + '<p class="tip">Key 只保存在你自己的浏览器里，只发给 api.deepseek.com；'
+        + '公用电脑用完请点「清除 Key」。</p>'
+        + '<p class="tip"><a class="src" href="https://platform.deepseek.com" target="_blank" rel="noopener noreferrer">去 platform.deepseek.com ›</a></p>',
+    okText: "知道了"
+  });
+}
+
 function askDialog(opts) {
   const o = opts || {};
   return new Promise(function (resolve) {
@@ -3443,7 +3474,15 @@ function toolControlsHtml(id) {
 
 function toolSourcesHtml(list) {
   if (!list || !list.length) return "";
-  return '<div class="tool-sources"><div class="lbl">来源</div>' + list.map(function (u, k) {
+  /* 白名单：只显示本次 toolWebSearch 真实返回过的链接。
+     模型自己写在 source 字段里的 URL 不在白名单里，一律不渲染成可点链接。 */
+  const allow = {};
+  (state.tool.sources || []).forEach(function (u) { allow[String(u)] = 1; });
+  const safe = list.filter(function (u) {
+    return allow[String(u)] && /^https?:\/\//i.test(String(u));
+  });
+  if (!safe.length) return "";
+  return '<div class="tool-sources"><div class="lbl">来源</div>' + safe.map(function (u, k) {
     const s = String(u);
     const ok = /^https?:\/\//i.test(s);
     return ok
@@ -3525,7 +3564,13 @@ function toolResultAsk(r) {
 
 function toolResultDesign(r) {
   const d = String(r.decision || "");
-  const cls = d.indexOf("不建议") >= 0 ? "lv-must" : (d.indexOf("有条件") >= 0 ? "lv-rec" : "lv-opt");
+  const hasAny = function (words) {
+    for (let i = 0; i < words.length; i++) { if (d.indexOf(words[i]) >= 0) return true; }
+    return false;
+  };
+  const cls = hasAny(["不建议", "不适合", "不推荐", "别做", "不要做"]) ? "lv-must"
+            : hasAny(["有条件", "看情况", "视情况", "取决于", "不一定"]) ? "lv-rec"
+            : "lv-opt";
   const alts = (r.alternatives || []).length
     ? '<div class="tool-block"><div class="tool-block-t">替代方案</div><ul class="tool-ul">'
       + (r.alternatives || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ul></div>' : "";
@@ -3640,10 +3685,7 @@ function toolOutputHtml(id) {
 
 function viewToolWorkbench(id) {
   /* 直接刷新或从别处回到工具视图时，保证 activeId 跟上 */
-  if (state.tool.activeId !== id) {
-    state.tool.activeId = id;
-    if (!state.tool.input && !(state.tool.images || []).length) state.tool.extra = {};
-  }
+  if (state.tool.activeId !== id) state.tool.activeId = id;   /* extra 的重置统一放在 openTool() 里 */
   return toolHeadHtml(id)
        + toolInputHtml(id)
        + toolControlsHtml(id)
@@ -3652,9 +3694,6 @@ function viewToolWorkbench(id) {
 }
 
 /* ---------- ② 报价单陷阱 ---------- */
-function viewTraps()  { return viewFallbackTraps(); }
-function viewTalk()   { return viewFallbackTalk(); }
-function viewAsk()    { return viewFallbackAsk(); }
 
 /* ---------- 四个工具的静态兜底内容（无 Key / 断网 / 失败时显示） ---------- */
 
@@ -4356,6 +4395,8 @@ function askFaq(spaceKey, idx) {
 function goObject(objectId) { startSession(state.space, objectId, ""); }
 
 function startSession(spaceKey, objectId, topic) {
+  /* 之前某次联网端点 404 把开关锁死了，换个会话就给它一次重来的机会 */
+  if (state.webUnsupported) state.webUnsupported = false;
   abortCurrent();
   state.view = "chat";
   state.space = spaceKey;
@@ -4461,20 +4502,18 @@ function setDraft(text) {
 /* 暂存待发问题（未设 Key 时）。覆盖前先把同会话里的旧暂存还回输入框，避免悄悄丢文本 */
 /* 不直接弹设置把人吓走：先在消息区显示两条路，让他自己选 */
 function stashPending(text) {
-state.showKeyGuide = true;
-state.view = "chat";
-render();
-const s2 = scroller();
-if (s2) s2.scrollTop = s2.scrollHeight;
-return true;
-  if (pending && pending.sessionId === state.sessionId && state.view === "chat" && pending.text !== text) {
+  /* 先把这次没发出去的问题存下来 —— 填完 Key 后 saveSettings 会把它自动发出去 */
+  if (pending && pending.sessionId === state.sessionId && state.view === "chat"&& pending.text !== text) {
     const el = $("composerInput");
-    if (el && !el.value.trim()) {
-      setDraft(pending.text);
-      toast("上一条没发出去的问题已放回输入框");
-    }
+    if (el && !el.value.trim()) setDraft(pending.text);
   }
-  pending = { text, sessionId: state.sessionId, ts: Date.now() };
+  pending = { text: text, sessionId: state.sessionId, ts: Date.now() };
+  state.showKeyGuide = true;
+  state.view = "chat";
+  render();
+  const sc = scroller();
+  if (sc) sc.scrollTop = sc.scrollHeight;
+  return true;
 }
 
 function sendMessage(text) {
@@ -5234,9 +5273,11 @@ function collectSources(json, msg) {
 }
 
 /* P1-8：累计 token 用量并本地折算费用 */
-function recordUsage(u, model, meta) {
+/* 第 4 个参数 opts：{ from:"tool" } 表示这次用量属于工具箱，记到独立池子里。
+   工具箱和聊天是两件事，混在一个「本次会话」里用户会觉得奇怪。 */
+function recordUsage(u, model, meta, opts) {
   /* 切了会话之后残留的 chunk 不该把 token 记到新会话头上 */
-  if (meta && meta.sessionId !== state.sessionId) return;
+  if (meta && meta.sessionId !== undefined && meta.sessionId !== state.sessionId) return;
   const inp = Number(u.prompt_tokens || u.input_tokens || 0) || 0;
   const out = Number(u.completion_tokens || u.output_tokens || 0) || 0;
   const cached = Number(
@@ -5245,17 +5286,20 @@ function recordUsage(u, model, meta) {
     (u.input_tokens_details && u.input_tokens_details.cached_tokens) || 0) || 0;
   if (!inp && !out) return;
 
-  state.usage.in += inp;
-  state.usage.out += out;
-  state.usage.cached += cached;
+  const isTool = !!(opts && opts.from === "tool");
+  const pool = isTool ? state.toolUsage : state.usage;
+
+  pool.in += inp;
+  pool.out += out;
+  pool.cached += cached;
 
   const p = priceOf(model);
   if (p) {
     const fresh = Math.max(0, inp - cached);
-    state.usage.cost += (fresh * p.in + cached * p.cached + out * p.out) / 1e6;
-    if (p.peak) state.usage.peak = true;      /* 本次会话里出现过高峰价，状态栏标一下 */
+    pool.cost += (fresh * p.in + cached * p.cached + out * p.out) / 1e6;
+    if (p.peak) pool.peak = true;
   } else {
-    state.usage.unpriced = true;
+    pool.unpriced = true;
   }
   updateUsageBar();
 }
@@ -5397,20 +5441,69 @@ async function webSearchText(prompt, maxTokens) {
 }
 
 /* 模型有时会包一层 ```json，或者先说一句「我查到了…」再给 JSON，这里宽容地剥掉 */
+/* 被截断的 JSON 救援：先按「最后一个完整的 } 或 ]」截回去，
+   再把没闭合的字符串和括号补齐，尽量救回一个能用的对象。 */
+function repairTruncatedJson(src) {
+  const s = String(src || "");
+  let inStr = false, esc = false, depth = 0, end = -1;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === "{" || c === "[") depth++;
+    else if (c === "}" || c === "]") { depth--; if (depth === 0) end = i; }
+  }
+  if (depth === 0 && end >= 0) return s.slice(0, end + 1);
+  if (depth <= 0) return "";
+
+  /* 截断在字符串里就先补引号封口 */
+  let cut = inStr ? (s + '"') : s;
+  /* 去掉尾部半截的键值对与逗号 */
+  cut = cut.replace(/,\s*"[^"]*"?\s*:?\s*$/, "").replace(/,\s*$/, "");
+  /* 用栈把没闭合的括号补上 */
+  const stack = [];
+  let str2 = false, esc2 = false;
+  for (let i = 0; i < cut.length; i++) {
+    const c = cut[i];
+    if (str2) {
+      if (esc2) esc2 = false;
+      else if (c === "\\") esc2 = true;
+      else if (c === '"') str2 = false;
+      continue;
+    }
+    if (c === '"') { str2 = true; continue; }
+    if (c === "{") stack.push("}");
+    else if (c === "[") stack.push("]");
+    else if (c === "}" || c === "]") stack.pop();
+  }
+  let need = "";
+  while (stack.length) need += stack.pop();
+  return cut + need;
+}
+
 function parseJsonLoose(text) {
   let s = String(text || "").trim();
   s = s.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
 
   /* 依次尝试：整体 → 第一个 { 到最后一个 } → 最后一个 { 到最后一个 }
      （联网时模型常在 JSON 前后各加一句话，取最后一段最稳） */
-  const tries = [s];
   const i = s.indexOf("{"), j = s.lastIndexOf("}");
+  /* 顺序很重要：修复版必须排在「最后一个 { 到最后一个 }」之前 ——
+     否则截断的 JSON 会先被切出一个内层小对象，拿到的是残缺结果。 */
+  const fixed = repairTruncatedJson(s.slice(i >= 0 ? i : 0));
+  const tries = [s];
+  if (fixed) tries.push(fixed);
   if (i >= 0 && j > i) tries.push(s.slice(i, j + 1));
   const k = s.lastIndexOf("{");
   if (k >= 0 && j > k) tries.push(s.slice(k, j + 1));
 
   for (const t of tries) {
-    try { return JSON.parse(t); } catch (_) {}
+    try { const o = JSON.parse(t); if (o && typeof o === "object") return o; } catch (_) {}
   }
   return null;
 }
@@ -5911,11 +6004,9 @@ const TOOL_SYSTEM_BASE = [
   "涉及承重结构、燃气、电气、防水的改动，必须提醒找有资质的专业单位。",
   "价格一律写区间，并注明「以实际询价为准」。",
   "如果输出表格，最多 4 列，保证手机竖屏不用横滑。",
-  "结尾给出 3 个可以继续追问的问题。"
+  "来源链接只能引用本次联网检索结果里实际出现过的 URL，不要凭记忆写；没有检索结果就把 source 留空数组。"
 ].join("\n");
 
-/* 只输出 JSON 的硬性要求（结构化生成时用） */
-const TOOL_JSON_RULE = "\n\n【输出格式】只输出一个合法的 JSON 对象，不要输出 Markdown 代码块、不要任何解释文字。字段名和结构必须严格按要求。";
 
 /* 各工具的结构化输出要求 */
 const TOOL_PROMPTS = {
@@ -6007,23 +6098,9 @@ const BUDGET_FALLBACK = {
   special: "有老人小孩时，优先把钱花在卫生间防滑、扶手预留和电路安全上。"
 };
 
-/* 工具 ID → 静态兜底数据（无 Key / 断网 / 失败时用） */
-function toolFallbackData(id) {
-  if (id === "traps")  return TRAPS;
-  if (id === "talk")   return TALK;
-  if (id === "ask")    return ASK_STAGES;
-  if (id === "design") return DESIGN_DECISIONS;
-  if (id === "budget") return BUDGET_FALLBACK;
-  return null;
-}
+/* 工具 ID → 静态兜底数据：已并入 toolFallbackBodyHtml，这里不再单独维护 */
 
 /* 兼容旧引用 */
-const TOOL_TITLES = {
-  traps:  { title:"报价单陷阱", views:true },
-  talk:   { title:"工头话术",   views:true },
-  ask:    { title:"该问什么",   views:true },
-  design: { title:"设计决策",   views:true }
-};
 /* ============================================================
    工具箱调用层：缓存、联网检索、结构化生成、取消
    重要：全部走 state.toolController，绝不碰聊天的 state.controller
@@ -6057,7 +6134,7 @@ function toolCacheKey(id) {
     (t.images || []).length,
     JSON.stringify(t.extra || {}),
     state.space || "",
-    settings.modelKey,
+    currentModel(),        /* 用实际发出的模型名（自定义档位时是 customModel） */
     t.web ? "w1" : "w0",
     String(toolTemperature())
   ].join("|");
@@ -6208,9 +6285,9 @@ async function toolWebSearch(prompt, maxTokens) {
             });
           }
         } else if (ev.type === "message_delta" && ev.usage) {
-          try { recordUsage(ev.usage, WEB_SEARCH_MODEL); } catch (_) {}
+          try { recordUsage(ev.usage, WEB_SEARCH_MODEL, { sessionId: state.sessionId }, { from: "tool" }); } catch (_) {}
         } else if (ev.type === "message_start" && ev.message && ev.message.usage) {
-          try { recordUsage(ev.message.usage, WEB_SEARCH_MODEL); } catch (_) {}
+          try { recordUsage(ev.message.usage, WEB_SEARCH_MODEL, { sessionId: state.sessionId }, { from: "tool" }); } catch (_) {}
         }
       }
     }
@@ -6232,7 +6309,11 @@ async function toolJsonRequest(system, user, maxTokens, images) {
   if (!key) return { ok: false, errorKind: "nokey", text: "" };
 
   const model = effectiveModel();
-  const sysText = system + "\n\n【输出格式】只输出一个合法的 JSON 对象，不要 Markdown 代码块，不要任何解释文字。";
+  const thinking = isThinking();
+  const sysText = system
+    + "\n\n【输出格式】只输出一个合法的 JSON 对象，不要 Markdown 代码块，不要任何解释文字。"
+    + "\n【额度纪律】如果内容装不下，优先保证 JSON 结构完整 —— 宁可精简每个字段的内容，"
+    + "也不要把 JSON 写到一半就断掉。所有数组和括号都必须闭合。";
 
   /* 带图时用 content 数组（与聊天同一种格式） */
   let content;
@@ -6251,11 +6332,14 @@ async function toolJsonRequest(system, user, maxTokens, images) {
       { role: "system", content: sysText },
       { role: "user", content: content }
     ],
-    response_format: { type: "json_object" },
     stream: false,
-    max_tokens: maxTokens || 4000
+    /* 思考模式下思维链也吃额度，直接给双倍；默认也比以前宽一倍 */
+    max_tokens: (thinking ? (maxTokens || 8000) * 2 : (maxTokens || 8000))
   };
-  if (!isThinking()) payload.temperature = toolTemperature();
+  /* 思考 + JSON 模式在部分网关会把思维链混进 content，
+     干脆不发 response_format，退回纯提示词约束（提示词已要求只输出 JSON） */
+  if (!thinking) payload.response_format = { type: "json_object" };
+  if (!thinking) payload.temperature = toolTemperature();
 
   const ctrl = new AbortController();
   state.toolController = ctrl;
@@ -6274,7 +6358,7 @@ async function toolJsonRequest(system, user, maxTokens, images) {
       return { ok: false, errorKind: "api", error: m, text: "" };
     }
     const data = await res.json();
-    if (data && data.usage) { try { recordUsage(data.usage, model); } catch (_) {} }
+    if (data && data.usage) { try { recordUsage(data.usage, model, { sessionId: state.sessionId }, { from: "tool" }); } catch (_) {} }
     const txt = (data && data.choices && data.choices[0] && data.choices[0].message &&
                  data.choices[0].message.content) || "";
     const parsed = parseJsonLoose(txt);
@@ -6354,7 +6438,7 @@ async function toolRun(force) {
       if (sr.errorKind === "cancel") { t.busy = false; t.errorKind = "cancel"; t.error = "已停止生成。"; renderKeepingScroll(); return; }
       if (sr.text) {
         sources = sr.sources || [];
-        webNote = "\n\n【联网检索结果】（只能引用这里的链接，序号对应来源列表）\n" + sr.text.slice(0, 6000);
+        webNote = "\n\n【联网检索结果】（只能引用这里的链接，序号对应来源列表）\n" + sr.text.slice(0, 2500);
         if (!sources.length) webNote += "\n\n（本次没有拿到可核对的来源链接，涉及价格和规范请标注「需自行核对」，并写明「本次没有检索到可验证来源」。）";
       } else {
         webNote = "\n\n（本次联网检索没有返回内容，请基于常识作答，并写明「本次没有检索到可验证来源」。）";
@@ -6367,7 +6451,14 @@ async function toolRun(force) {
     const user = promptDef.user.call(promptDef, t.input, t.extra || {}, webNote);
     const images = (t.images || []).slice(0, 4);
 
-    let out = await toolJsonRequest(sys, user, 4000, images);
+    let out = await toolJsonRequest(sys, user, 8000, images);
+    /* 结构化失败：先用精简 prompt 重试一次，别急着降级成纯文本 */
+    if (!out.ok && out.errorKind === "parse") {
+      const thinNote = "\n\n【联网检索结果（精简）】（只能引用这里的链接）\n" + String(webNote).slice(0, 1000);
+      const user2 = promptDef.user.call(promptDef, t.input, t.extra || {}, thinNote);
+      out = await toolJsonRequest(sys, user2, 8000, images);
+      if (out.errorKind === "cancel") { t.busy = false; t.errorKind = "cancel"; t.error = "已停止生成。"; renderKeepingScroll(); return; }
+    }
     if (out.errorKind === "cancel") { t.busy = false; t.errorKind = "cancel"; t.error = "已停止生成。"; renderKeepingScroll(); return; }
 
     /* ② JSON 失败就降级成文本展示 */
@@ -6493,7 +6584,7 @@ function shareAsMessageImage(idx) {
     lines.forEach(function (ln, i) { c2.fillText(ln, PAD, PAD + i * LINE); });
     c2.fillStyle = "#9a938a";
     c2.font = '13px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
-    c2.fillText("室内设计助手 0.2.2 · 仅供参考，不构成施工依据", PAD, cv.height - FOOT + 14);
+    c2.fillText("室内设计助手 0.2.3 · 仅供参考，不构成施工依据", PAD, cv.height - FOOT + 14);
     const a = document.createElement("a");
     a.href = cv.toDataURL("image/png");
     a.download = "室内设计助手_" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + ".png";
@@ -6788,17 +6879,33 @@ function saveRankWeb(spaceKey, name, query, results) {
 
 /* 把模型返回的自然语言拆成「案例」：按空行分段，段里的第一个链接当来源 */
 function parseWebCases(text) {
+  /* 按「链接出现的位置」切案例，而不是按空行 ——
+     模型经常在一个案例的摘要里换行，按空行切会把一条案例劈成两条。 */
+  const s = String(text || "");
+  const marks = [];
+  const urlRe = /https?:\/\/[^\s)）】>"']+/g;
+  let m;
+  while ((m = urlRe.exec(s)) !== null) {
+    marks.push({ start: m.index, end: m.index + m[0].length, url: m[0].replace(/[.,。，；;]$/, "") });
+  }
+  if (!marks.length) {
+    return s.split(/\n{2,}/).map(function (b) { return b.trim(); })
+      .filter(function (b) { return b.length >= 8; })
+      .slice(0, 5).map(function (b) { return { body: b.slice(0, 320), url: "" }; });
+  }
   const out = [];
-  String(text || "").split(/\n{2,}/).forEach(function (block) {
-    const t = block.trim();
-    if (!t) return;
-    const m = t.match(/https?:\/\/[^\s)）】>"']+/);
-    const url = m ? m[0].replace(/[.,。，；;]$/, "") : "";
-    let body = t.replace(/https?:\/\/[^\s)）】>"']+/g, "").replace(/来源[:：]\s*/g, "").replace(/\s*\n\s*/g, " ").trim();
-    if (body.length < 8) return;
-    out.push({ body: body.slice(0, 320), url: url });
+  let cursor = 0;
+  marks.forEach(function (mk, idx) {
+    let seg = s.slice(cursor, mk.start);
+    seg = seg.replace(/来源[:：]\s*$/g, "").replace(/\s*\n\s*/g, " ").trim();
+    if (seg.length >= 6) out.push({ body: seg.slice(0, 320), url: mk.url });
+    cursor = mk.end;
+    if (idx === marks.length - 1) {
+      const tail = s.slice(cursor).replace(/\s*\n\s*/g, " ").trim();
+      if (tail.length >= 24) out.push({ body: tail.slice(0, 320), url: "" });
+    }
   });
-  return out.slice(0, 5);
+  return out.slice(0, 6);
 }
 
 function rankWebCasesHtml(res) {
@@ -6974,6 +7081,26 @@ function progressData() {
   });
   return byStage;
 }
+/* 只更新进度页上的计数文本，不重绘整页（勾选时才最跟手） */
+function updateProgressCounts() {
+  if (state.view !== "progress") return;
+  const byStage = progressData();
+  PROGRESS_STAGES.forEach(function (st) {
+    const list = byStage[st.key] || [];
+    if (!list.length) return;
+    const stDone = list.filter(function (x) { return state.progress[x.key]; }).length;
+    const el = $("pgCount_" + st.key);
+    if (el) el.textContent = stDone + "/" + list.length;
+  });
+  let total = 0, done = 0;
+  Object.keys(byStage).forEach(function (k) {
+    total += byStage[k].length;
+    done += byStage[k].filter(function (x) { return state.progress[x.key]; }).length;
+  });
+  const sum = $("pgSum");
+  if (sum) sum.textContent = "已经完成 " + done + "/" + total;
+}
+
 function viewProgress() {
   const byStage = progressData();
   let total = 0;
@@ -6994,13 +7121,13 @@ function viewProgress() {
     const stDone = list.filter(function (x) { return state.progress[x.key]; }).length;
     return '<details class="rank-item"' + (stDone < list.length ? " open" : "") + '><summary>'
       + '<div class="rank-head"><b>' + esc(st.label) + '</b>'
-      + '<span class="pg-count">' + stDone + '/' + list.length + '</span>'
+      + '<span class="pg-count" id="pgCount_' + st.key + '">' + stDone + '/' + list.length + '</span>'
       + '<span class="grow"></span></div>'
       + '</summary><div class="rank-detail pg-list">' + rows + '</div></details>';
   }).join("");
   return '<div class="sec-title">📅 我家进度</div>'
     + '<p class="tool-lead">把全屋 ' + total + ' 个节点按施工顺序排好了，做完一个勾一个。'
-    + '进度存在本机，刷新、关掉再打开都还在。已经完成 <b>' + done + '/' + total + '</b>。</p>'
+    + '进度存在本机，刷新、关掉再打开都还在。<b id="pgSum">已经完成 ' + done + '/' + total + '</b>。</p>'
     + (done > 0 ? '<div class="pg-acts"><button type="button" class="tbtn" data-act="progress-clear">清空勾选</button></div>' : "")
     + body;
 }
@@ -7256,7 +7383,45 @@ const DESIGN_DECISIONS = {
     { name: "阳台做地台 / 卡座", why: "多出一块休闲区，可以喝茶看书，下面还能收纳。",
       cost: "抬高地面要处理排水坡度，容易积水；坐垫受潮。",
       avoid: "阳台排水本来就不畅 —— 地台会挡住水流，雨季容易泡。" }
-  ]
+  ],
+  whole: [
+    { name: "全屋智能", why: "灯光、窗帘、空调、门锁联动，生活便利度提升明显。",
+      cost: "需要提前布零线、留网关位置、选协议；后期加装要么走明线，要么换设备。",
+      avoid: "预算紧、或者家里老人不习惯 —— 先把基础的水电和网络做好，智能以后随时可以加。" },
+    { name: "中央空调 / 风管机", why: "不占地面空间、出风均匀、外观干净，一台外机带多间房。",
+      cost: "吊顶要压低 25~30 公分，必须留检修口；层高不足 2.7 米会明显压抑，造价也高。",
+      avoid: "层高低于 2.7 米、或者只开一两间房 —— 分体机更划算，也更好维修。" },
+    { name: "地暖", why: "从脚底暖起来，比空调舒服，且不占墙面空间。",
+      cost: "抬高地面 8~10 公分，地板要选地暖专用（纯实木基本不行），能耗和维护都要考虑。",
+      avoid: "层高紧张、或者只做局部 —— 局部地暖热得不均，反而不舒服。" },
+    { name: "新风系统", why: "不开窗也能换气，对雾霾天、临街、怕闷的家庭很实用。",
+      cost: "中央新风要走管道、占吊顶；壁挂新风要在外墙打两个孔，滤芯是长期开销。",
+      avoid: "老楼无法在外墙开孔、或者预算紧张 —— 先把窗户和排风扇做好，新风不是必需品。" },
+    { name: "全屋净水", why: "前置滤掉泥沙，中央软水让洗澡和洗衣更舒服，直饮解决了喝水。",
+      cost: "要提前规划管路和设备位，中央净水和软水机体积不小，最好留设备间或厨下空间。",
+      avoid: "老小区水压本来很低 —— 加装设备会进一步降压，要先确认水压。" },
+    { name: "全屋 Wi-Fi（AC + AP）", why: "每个房间都有稳定信号，走动不掉线，比单个路由器强太多。",
+      cost: "每个房间要预埋网线 + 天花板留电，装修后基本没法补。",
+      avoid: "小户型（70㎡ 以内）—— 一台好路由器加一个 Mesh 节点通常就够，不用大动干戈。" },
+    { name: "地板通铺", why: "空间连贯、显大、接缝少好打扫。",
+      cost: "对地面找平要求高，要留伸缩缝；如果局部有地暖，铺装方式要跟着调整。",
+      avoid: "各区域高差明显、或要分材质（比如厨房怕水）—— 强行通铺要先大面积找平，成本更高。" },
+    { name: "无主灯", why: "光线分布均匀、没有中心亮斑，层高显高，氛围可调。",
+      cost: "灯位和回路都要提前设计，灯具数量多、总价更高；做不好会中间亮四角黑。",
+      avoid: "不做吊顶、层高很低 —— 筒灯没地方装，只能退回吸顶灯。" },
+    { name: "全屋定制 vs 成品家具", why: "定制能贴合尺寸、把死角用起来；成品便宜、能搬走、坏了随时换。",
+      cost: "定制贵、周期长（一般 30~45 天）、后期基本不能改；成品尺寸对不上会留缝。",
+      avoid: "还没确定家具位置就先定柜子 —— 顺序错了，柜子装完发现插座被挡住。" },
+    { name: "拆改格局", why: "把不合理的户型调整过来，动线和采光都能明显改善。",
+      cost: "涉及结构就有风险，必须确认承重墙、去物业报备，燃气改动只能由燃气公司做。",
+      avoid: "拿不准是不是承重墙 —— 一律按承重墙处理。违规拆改不只是罚款，是整栋楼的安全问题。" },
+    { name: "开放式布局", why: "客厅 + 餐厅 + 厨房打通，视觉通透，适合小户型和喜欢互动的人。",
+      cost: "油烟、噪音、隐私都会互相影响；收纳压力变大，厨房要配大吸力油烟机。",
+      avoid: "天天爆炒、家里人多作息不一致 —— 先用玻璃门或半开放过渡，别一上来就全打通。" },
+    { name: "干湿分离（全屋思路）", why: "把「用水的地方」集中起来，其他区域就不会到处受潮。",
+      cost: "要重新规划排水和防水范围，改造成本不低。",
+      avoid: "只为干湿分离而大改排水 —— 如果原格局排水位置已经合理，做隔断比改管道更划算。" }
+  ],
 };
 
 const ASK_STAGES = [
@@ -7401,6 +7566,7 @@ document.addEventListener("click", e => {
     case "sb-reset":       restoreSbDefaults(); break;
     case "open-settings":  openModal(); break;
     case "open-toolbox":   openToolbox(); break;
+    case "open-key-help":  openKeyHelp(); break;
     case "close-settings": closeModal(true); break;
     case "save-settings":  saveSettings(); break;
     case "clear-key":      clearKey(); break;
@@ -7410,6 +7576,7 @@ document.addEventListener("click", e => {
       state.progress[pk] = !state.progress[pk];
       saveProgress();
       if (node.parentNode) node.parentNode.classList.toggle("done", !!state.progress[pk]);
+      updateProgressCounts();          /* 顺手刷新计数，不用等整页重绘 */
       break;
     }
     case "progress-clear": state.progress = {}; saveProgress(); renderKeepingScroll(); break;
