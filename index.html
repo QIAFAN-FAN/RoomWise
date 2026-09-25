@@ -19,9 +19,9 @@
     --text:#2c2c2c;
     --text-strong:#1f1f1f;
     --text-2:#6b665c;
-    --text-3:#8a8578;
-    --text-4:#a39c8e;
-    --text-5:#b5afa3;
+    --text-3:#6d6857;   /* 解释文字用，原 #8a8578 对比度约 3.7:1 不够 */
+    --text-4:#7b7567;   /* 次级说明 */
+    --text-5:#8b8578;   /* 只留给装饰性文字 */
     --faint:#c0b9ac;
     --accent:#a06b3f;
     --accent-dark:#8a5a33;
@@ -63,7 +63,7 @@
     --code-bg:#f3efe8;
     --shadow:rgba(160,107,63,.12);
     --shadow-strong:rgba(0,0,0,.18);
-    --fs: 1;          /* 字号缩放：0.9 小 / 1 标准 / 1.15 大 / 1.3 特大 */
+    --fs: 1.05;       /* 字号缩放：0.9 小 / 1.05 标准（默认，原 1 偏小）/ 1.15 大 / 1.3 特大 */
     --appbar-bg: rgba(247,245,241,.86);   /* 应用栏毛玻璃底 */
     --page-pad: 24px;         /* 页面左右内边距（桌面） */
     --card-gap: 16px;         /* 卡片间距 */
@@ -81,8 +81,8 @@
       --text:#e9e5df;
       --text-strong:#f5f2ee;
       --text-2:#c3bcb2;
-      --text-3:#a49d93;
-      --text-4:#918a80;
+      --text-3:#b3aba0;
+      --text-4:#a29a8e;
       --text-5:#807971;
       --faint:#6d6660;
       --accent:#d79b63;
@@ -118,8 +118,8 @@
       --text:#e9e5df;
       --text-strong:#f5f2ee;
       --text-2:#c3bcb2;
-      --text-3:#a49d93;
-      --text-4:#918a80;
+      --text-3:#b3aba0;
+      --text-4:#a29a8e;
       --text-5:#807971;
       --faint:#6d6660;
       --accent:#d79b63;
@@ -151,7 +151,7 @@
     -webkit-text-size-adjust:100%;      /* 安卓「字体放大」不会把布局撑破 */
     text-size-adjust:100%;
   }
-  h1, h2, h3, .ab-main, .card .name, .sec-title, .wb-title, .pick-head h2, .gc-body b {
+  h1, h2, h3, .ab-main, .card .name, .sec-title, .pick-head h2, .gc-body b {
     font-family:var(--font-heading);
   }
 
@@ -223,6 +223,22 @@
   }
   .ab-btn:hover { border-color:var(--gold); color:var(--accent); }
   .ab-btn:active { opacity:.82; }
+  /* 桌面端主导航：手机隐藏（用底部导航），>640px 才显示 */
+  .top-nav { display:none; }
+  .tn-item {
+    display:inline-flex; align-items:center; gap:6px;
+    font:inherit; font-size:0.8125rem; font-weight:500;
+    color:var(--text-2); background:transparent; border:1px solid transparent;
+    border-radius:9px; padding:7px 11px; cursor:pointer;
+    transition:color .18s ease, background .18s ease, border-color .18s ease;
+  }
+  .tn-item:hover { color:var(--accent-dark); background:var(--accent-soft); }
+  .tn-item.active {
+    color:var(--accent-dark); font-weight:600;
+    background:var(--accent-soft); border-color:var(--accent-light);
+  }
+  .tn-item .tn-icon { font-size:0.9375rem; line-height:1; }
+
   .ab-titles { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
   .ab-main {
     font-size:1rem; font-weight:600; line-height:1.35; color:var(--text);
@@ -543,8 +559,7 @@
   .faq-row:hover { background:var(--surface-2); }
 
   /* 手机上：连线收短、内边距略紧 */
-  @media (max-width: 640px) {   /* 手机上横幅本身就是可点的，CTA 按钮让位给文字 */
-  }
+  @media (max-width: 640px) {     }
 
   /* ===== 新手引导卡：白底细边框 + 分隔线列表，设计师工具风格 ===== */
   .guide-card {
@@ -672,56 +687,12 @@
     .pick-head { margin: 2px 0 16px; }
   }
 
-  /* ---------- 全屋大卡：首页视觉最重的一块 ---------- */
-  .whole-banner {
-    position:relative;
-    display:flex; align-items:center; gap:18px; cursor:pointer; text-align:left;
-    background:linear-gradient(135deg, var(--accent-soft) 0%, var(--surface) 100%);
-    border:1.5px solid var(--accent-light);
-    border-left:5px solid var(--accent);
-    border-radius:var(--radius-lg);
-    padding:24px 26px;
-    margin:0 0 20px;
-    box-shadow:0 4px 10px rgba(160,107,63,.14), 0 16px 40px rgba(160,107,63,.14);
-    transition:transform .22s ease, box-shadow .22s ease;
-  }
-  .whole-banner:hover {
-    transform:translateY(-2px);
-    box-shadow:0 6px 14px rgba(160,107,63,.20), 0 22px 50px rgba(160,107,63,.20);
-  }
-  .whole-banner:active { transform:scale(.99); }
-  .wb-icon {
-    flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
-    width:60px; height:60px; border-radius:16px; font-size:30px;
-    background:var(--surface); border:1.5px solid var(--accent-light);
-    box-shadow:0 2px 6px rgba(160,107,63,.10);
-  }
-  .wb-body { flex:1 1 auto; min-width:0; }
-  .wb-tag {
-    display:inline-block; font-size:0.75rem; font-weight:600; letter-spacing:.02em;
-    padding:3px 10px; border-radius:20px; margin-bottom:8px;
-    background:var(--accent); color:#fff;
-  }
-  .wb-title {
-    font-family:var(--font-heading);
-    font-size:1.375rem; font-weight:700; line-height:1.3;
-    color:var(--text-strong); letter-spacing:-.01em;
-  }
-  .wb-desc { font-size:0.875rem; color:var(--text-2); margin-top:6px; line-height:1.6; }
-  .wb-cta {
-    flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
-    background:var(--accent); color:#fff;
-    font-size:0.875rem; font-weight:600;
-    padding:10px 18px; border-radius:10px;
-    box-shadow:0 2px 6px rgba(160,107,63,.20);
-    transition:background .18s;
-  }
-  .whole-banner:hover .wb-cta { background:var(--accent-dark); }
-
-  /* ---------- 空间九宫格：一排三个（清单 / 问 AI 的选择页也用它） ---------- */
+/* ---------- 空间九宫格：一排三个（清单 / 问 AI 的选择页也用它） ---------- */
+  /* 房间 / 问 AI 的选择页：一行两个。
+     一行一格太空、三格又太挤，两个刚好放得下「大图标 + 名字」，手指也好点。 */
   .space-grid {
     display:grid;
-    grid-template-columns:repeat(3, 1fr);
+    grid-template-columns:repeat(2, 1fr);
     gap:var(--card-gap, 16px);
   }
 .space-tile {
@@ -729,13 +700,17 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 22px 12px;
+  gap: 13px;
+  padding: 26px 14px;
   text-align: center;
   border-radius: 16px;
 }
-  .space-tile .icon { margin-bottom:0; }
-  .space-tile .name { font-size:0.9375rem; font-weight:600; }
+.space-tile .icon {
+  width: 52px; height: 52px; font-size: 26px; border-radius: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: 0;
+}
+.space-tile .name { font-size: 1.0625rem; }
 
   /* ---------- 手机底部导航（只在 ≤640px 显示） ---------- */
   .bottom-nav { display:none; }
@@ -838,20 +813,12 @@
 
   /* 全屋大卡 */
 
-  .space-tile .icon { margin-bottom:0; }
-  .space-tile .name { font-size:0.9375rem; font-weight:600; }
-  @media (max-width: 900px) { .space-grid { grid-template-columns:repeat(3, 1fr); } }
   @media (max-width: 640px) {
-    .space-grid { grid-template-columns:repeat(3, 1fr); gap:var(--sp-3); }
-    .space-tile { padding:16px 8px; }
-    .space-tile .icon { width:40px; height:40px; font-size:20px; border-radius:10px; }
-    .space-tile .name { font-size:0.875rem; }
-    /* 手机上横幅本身就是可点的，CTA 按钮让位给文字 */
-    .wb-cta { display:none; }
-    .whole-banner { padding:18px; gap:12px; }
-    .wb-icon { width:48px; height:48px; font-size:24px; border-radius:13px; }
-    .wb-title { font-size:1.0625rem; }
-    .home-search input { font-size:16px; }     /* 手机聚焦不放大 */
+    /* 手机上也是一行两个：格子接近满宽，但留出页面边距和格子间距，不贴边 */
+    .space-grid { grid-template-columns:repeat(2, 1fr); gap:12px; }
+    .space-tile { padding:24px 12px; gap:11px; }
+    .space-tile .icon { width:48px; height:48px; font-size:24px; border-radius:13px; }
+    .space-tile .name { font-size:1rem; }
   }
   .sec-title {
     font-size:1rem; font-weight:600; margin:32px 0 16px;
@@ -877,6 +844,16 @@
     padding:2px 16px 16px; display:grid;
     grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:16px;
   }
+  /* 「填得更准」：折叠的次级条件，展开后和核心区同款两列 */
+  .cond-more { margin:2px 16px 16px; }
+  .cond-more > summary {
+    cursor:pointer; list-style:none; padding:7px 0;
+    font-size:0.8125rem; color:var(--accent-dark);
+  }
+  .cond-more > summary::-webkit-details-marker { display:none; }
+  .cond-more > summary::before { content:"▸ "; }
+  .cond-more[open] > summary::before { content:"▾ "; }
+  .cond-body-more { padding:4px 0 2px; }
 
   /* 表单控件 */
   .field { display:flex; flex-direction:column; gap:8px; }
@@ -1112,6 +1089,18 @@
   .tbtn:hover { border-color:var(--gold); color:var(--accent); }
   .tbtn:disabled { color:var(--faint); cursor:not-allowed; border-color:var(--border-soft); }
   .tbtn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+  /* 主行动按钮：原来 primary 这个 class 用了三处（AI 生成 / 停止 / 引导里的主按钮）却没有任何样式，
+     看起来和次要按钮一模一样，用户不知道哪个是"点这个"。 */
+  .tbtn.primary {
+    background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;
+  }
+  .tbtn.primary:hover { background:var(--accent-dark); border-color:var(--accent-dark); color:#fff; }
+  .tbtn.primary:active { opacity:.86; }
+  .tbtn.primary:disabled { background:var(--text-5); border-color:var(--text-5); color:var(--bg); cursor:not-allowed; }
+  /* toast 里的文字：允许换行、不挤压右侧动作按钮 */
+  .toast-msg { min-width:0; line-height:1.5; word-break:break-word; }
+  /* 联网提示：比普通 hint 再醒目一点，因为它提示的是"会花钱/会变慢" */
+  .hint.web-hint { color:var(--warn-text); }
 
   /* 右下角浮动按钮：回到顶部 / 回到最新 */
   .floaters {
@@ -1436,6 +1425,11 @@
     .composer-extra { margin-bottom:4px; }
   }
 
+  /* ===== 桌面主导航：641px 起出现在顶栏 ===== */
+  @media (min-width: 641px) {
+    .top-nav { display:flex; align-items:center; gap:2px; margin-right:6px; }
+  }
+
   /* ===== 平板（641-1023px）：介于手机与桌面之间 ===== */
   @media (min-width: 641px) and (max-width: 1023px) {
     :root { --page-pad: 20px; --card-gap: 16px; --msg-gap: 24px; --bubble-pad: 18px 20px; }
@@ -1504,6 +1498,39 @@
   }
   /* ===== 排行榜 ===== */
   .rank-tabs, .rank-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .rank-sort-fold { margin-top:2px; }
+  .rank-sort-fold .rank-presets { margin-bottom:6px; }
+  /* 折叠块里的说明段落（排序方式 / 关于 / 名词表都用它） */
+  .fold-plain-note { font-size:0.8125rem; color:var(--text-2); line-height:1.75; margin:0; }
+  /* 面包屑上的「第 N 步 / 共 3 步」 */
+  .step-badge {
+    margin-left:auto; flex:none;
+    font-size:0.6875rem; font-weight:600; letter-spacing:.02em;
+    color:var(--accent-dark); background:var(--accent-soft);
+    border:1px solid var(--accent-light); border-radius:20px;
+    padding:2px 9px; white-space:nowrap;
+  }
+  /* 装修名词速查 */
+  .gloss-row {
+    display:flex; gap:10px; padding:9px 0;
+    border-bottom:1px solid var(--border-soft); font-size:0.84375rem; line-height:1.75;
+  }
+  .gloss-row:last-child { border-bottom:0; }
+  .gloss-row b {
+    flex:0 0 5.2em; color:var(--accent-dark); font-weight:600;
+  }
+  .gloss-row span { flex:1 1 auto; min-width:0; color:var(--text-2); }
+  .about-fold { margin-top:22px; }
+  /* 首页一键示例 */
+  .starter-row { margin:0 0 20px; }
+  .starter-label { font-size:0.75rem; color:var(--text-4); margin-bottom:8px; }
+  .starter-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .starter-chip {
+    background:var(--surface); border:1px solid var(--border-soft);
+    color:var(--text-2); font-size:0.8125rem; padding:9px 13px; border-radius:11px;
+    box-shadow:0 1px 2px rgba(160,107,63,.04);
+  }
+  .starter-chip:hover { border-color:var(--accent-light); color:var(--accent-dark); background:var(--accent-soft); }
 .rank-item {
   background: var(--surface);
   border: 1px solid var(--border-soft);
@@ -1537,6 +1564,12 @@
     background:var(--surface-2); border:1px solid var(--border-soft); color:var(--text-3);
   }
   .rank-why { font-size:0.8125rem; color:var(--text-2); margin-top:4px; line-height:1.6; }
+  /* 收起状态下的「关键数字」：不展开也能看到门槛值 */
+  .rank-key-inline {
+    font-size:0.8125rem; color:var(--accent-dark); margin-top:5px; line-height:1.55;
+    background:var(--accent-soft); border:1px solid var(--accent-light);
+    border-radius:8px; padding:5px 9px; display:inline-block; max-width:100%;
+  }
   .rank-key { font-size:0.8125rem; color:var(--text-2); margin-top:4px; }
   .rank-cost { font-size:0.75rem; color:var(--text-3); margin-top:4px; }
   /* 「点开看怎么做」提示 */
@@ -1580,38 +1613,7 @@
   .card.mini .desc { font-size:0.8125rem; margin-top:2px; }
   @media (max-width: 640px) { .tool-grid { grid-template-columns:1fr 1fr; } }
   /* ---------- 工具箱 AI 工作台 ---------- */
-  /* ---------- P0-1 首页三步引导条 ---------- */
-  .guide-strip {
-    background:var(--surface); border:none; border-radius:10px;
-    padding:12px 16px; margin:0 0 16px;
-  }
-  .gs-title { font-size:0.875rem; color:var(--text); margin-bottom:9px; }
-  .gs-steps { display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; }
-  .gs-step {
-    flex:1 1 0; min-width:150px; display:flex; align-items:center; gap:8px; text-align:left;
-    font:inherit; cursor:pointer; padding:8px 12px; border-radius:10px;
-    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-  }
-  .gs-step:hover { border-color:var(--accent); }
-  .gs-step .n { font-size:1rem; color:var(--accent-dark); flex:0 0 auto; }
-  .gs-step .t { font-size:0.8125rem; color:var(--text); }
-  .gs-step .d { font-size:0.75rem; color:var(--text-4); margin-left:auto; white-space:nowrap; }
-  .gs-arrow { align-self:center; color:var(--text-5); font-size:0.875rem; }
-  .gs-note { font-size:0.75rem; color:var(--text-4); margin-top:9px; line-height:1.7; }
-  @media (max-width: 640px) {
-    .ver-tag { display:none; }
-    .card:hover { transform:none; }     /* 触屏上 hover 会粘住，手机上不做位移 */
-    /* 手机上底栏已经有「工具」，顶栏的 🧰 收起来，给标题让位 */
-    #abToolsBtn { display:none; }
-    .ab-titles { min-width:0; }
-    .ab-main { font-size:0.9375rem; }
-    .gs-steps { flex-direction:column; }
-    .gs-arrow { display:none; }
-    .gs-step { min-width:0; width:100%; }
-  }
-  /* 首页的排行榜小卡（和空间卡区分开） */
-  .rank-mini-grid .card.mini { padding:12px 16px; }
-  .rank-mini .desc { font-size:0.75rem; color:var(--text-4); }
+  /* 首页的排行榜小卡（和空间卡区分开） */  .rank-mini .desc { font-size:0.75rem; color:var(--text-4); }
   /* ---------- P0-3 没填 Key 的引导卡 ---------- */
   /* ---------- P1-6 预算分配器 ---------- */
   .budget-splitter {
@@ -1649,6 +1651,12 @@
   @media (max-width: 640px) {
     .pg-when { display:none; }
   }
+  /* AI 回答下方常驻的一行小字：清单页和导出图里本来就有这句话，对话里反而漏了 */
+  .ai-disclaimer {
+    font-size:0.75rem; color:var(--text-3); line-height:1.6;
+    padding:7px 2px 0; border-top:1px dashed var(--border-soft); margin-top:2px;
+  }
+
   .basis-note {
     font-size:0.75rem; color:var(--text-3); line-height:1.75; margin-top:8px;
     padding:8px 12px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
@@ -1840,12 +1848,14 @@
 </nav>
 
 <header class="appbar" id="appbar">
+  <!-- 桌面端主导航：手机上隐藏（手机用底部导航），>640px 才出现 -->
+  <nav class="top-nav" id="topNav" aria-label="主导航"></nav>
   <button type="button" class="ab-btn hidden" id="abBack" data-act="back" aria-label="返回上一级">←</button>
   <div class="ab-titles">
     <div class="ab-main" id="abMain">RoomWise</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.2.4</span>
+  <span class="ver-tag" id="verTag">v0.2.5</span>
   <button type="button" class="ab-btn" id="abToolsBtn" data-act="open-toolbox" aria-label="工具箱" title="工具箱">🧰</button>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
@@ -1857,10 +1867,10 @@
   <header class="hero" id="hero">
     <h1><span class="hero-logo" aria-hidden="true">R</span>RoomWise</h1>
     <p>装修小白的第一站 —— 不知道从哪下手？跟着走，一步都不会漏</p>
-    <div class="hero-tags" aria-hidden="true">
+    <div class="hero-tags">
       <span class="hero-tag">🏆 13 条全屋清单</span>
-      <span class="hero-tag">🍳 8 个房间</span>
-      <span class="hero-tag">✨ 不用填 Key 也能看</span>
+      <span class="hero-tag">🍳 9 个空间</span>
+      <span class="hero-tag">✨ 清单免费看，问 AI 才要 Key</span>
     </div>
   </header>
   <div class="crumb" id="crumb"></div>
@@ -1878,7 +1888,7 @@
     <h3 id="modalTitle">设置</h3>
 
     <details class="set-group" open>
-      <summary>连接</summary>
+      <summary>连接（填 API Key）</summary>
       <div class="set-grid">
         <div class="set-row">
           <label for="keyInput">DeepSeek API Key
@@ -1922,8 +1932,8 @@
       </div>
     </details>
 
-    <details class="set-group" open>
-      <summary>模型与回答</summary>
+    <details class="set-group">
+      <summary>模型与回答（技术项）</summary>
       <div class="set-grid">
         <div class="set-row">
           <label for="modelSelect">模型档位</label>
@@ -2008,7 +2018,7 @@
       </div>
     </details>
 
-    <details class="set-group">
+    <details class="set-group" open>
       <summary>界面与偏好</summary>
       <div class="set-grid">
         <div class="set-row">
@@ -2169,9 +2179,17 @@
 </div>
 
 <script>/* ============================================================
-   室内设计助手 v0.2.4
+   RoomWise v0.2.5
    ------------------------------------------------------------
-   本版新增「优先级排行榜」：把「钱该花在哪」从一句话变成一张表。
+   v0.2.5 摘要：
+   · 顶栏标题修正：工具箱 / 各工具页 / 我家进度 不再被按 state.space 猜成「厨房」之类
+   · 返回上一级不再清空当前对话（会话跟 session 走，不跟页面视图绑）
+   · 补上 .tbtn.primary 主行动按钮样式（AI 生成 / 停止 / 引导主按钮原来和次要按钮一样）
+   · 品牌名统一为 RoomWise：导出图片水印、导出文件名、导出 Markdown 标题与页脚
+   · hero 卖点写明确（「清单免费看，问 AI 才要 Key」），房间数改成实际的 9 个空间
+
+   v0.2.4 内容（保留）：
+   新增「优先级排行榜」：把「钱该花在哪」从一句话变成一张表。
 
    [排行榜：8 个空间 × 3 张榜]
    · 空间页多了入口卡「XX 的钱该花在哪」，点进去是排行榜页
@@ -2182,7 +2200,7 @@
    · 四种预设权重：均衡 / 家有老人小孩 / 预算紧 / 追求品质 ——
      切换只本地重算，不发任何请求
    · 结果按空间缓存在本机：切 tab、切预设、下次再进来都不重新花钱
-   · 每条可直接「问设计师」（带着这一条跳进对话）或「复制这一条」
+   · 每条可直接「问 AI」（带着这一条跳进对话）或「复制这一条」
 
    [为什么不会漏项]
    · 每个空间的「必须覆盖清单」写在 RANK_COVERAGE 里（按 tab 分组），
@@ -2650,8 +2668,8 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.2.4";
-const BUILD_TAG    = "v15";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
+const APP_VERSION  = "0.2.5";
+const BUILD_TAG    = "v17";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
 const BASE_TITLE   = "RoomWise · 装修小白的第一站";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
@@ -2905,6 +2923,27 @@ const BUDGET_OPTIONS = ["不限", "经济型（1 万以内）", "中档（1-3 �
 
 /* 补充条件：都不填也能问，填了答案更准。
    顺序按「先说房子，再说人，最后说钱和偏好」排，手机上一屏能扫完。 */
+/* 默认只展示这 4 个：填了就明显更准，且大部分人都答得上来。
+   其余（楼层、朝向、老人小孩宠物、风格、特殊需求…）收进「填得更准」，不逼着人一次填 13 格。 */
+const COND_CORE_IDS = ["area", "houseType", "people", "budget"];
+
+/* 单个条件字段的 HTML（核心区和「填得更准」共用同一套渲染） */
+function condFieldHtml(f) {
+  if (f.type === "select") {
+    return '<div class="field">'
+      + '<label for="c_' + escAttr(f.id) + '">' + esc(f.label) + '</label>'
+      + '<select id="c_' + escAttr(f.id) + '" data-cond="' + escAttr(f.id) + '">'
+      + f.options.map(function (o) {
+          return '<option value="' + escAttr(o) + '"' + (state.conditions[f.id] === o ? " selected" : "") + '>' + esc(o) + '</option>';
+        }).join("")
+      + '</select></div>';
+  }
+  return '<div class="field">'
+    + '<label for="c_' + escAttr(f.id) + '">' + esc(f.label) + '</label>'
+    + '<input type="text" id="c_' + escAttr(f.id) + '" data-cond="' + escAttr(f.id) + '"'
+    + ' value="' + escAttr(state.conditions[f.id] || "") + '" placeholder="' + escAttr(f.placeholder || "") + '"></div>';
+}
+
 const COND_FIELDS = [
   { id:"area",     label:"面积 / 尺寸", type:"text",   placeholder:"如：2×2.5m" },
   { id:"height",   label:"层高",       type:"text",   placeholder:"如：2.6m" },
@@ -2979,7 +3018,7 @@ const state = {
   familyProfile: {},      /* 全局「我家档案」：跨空间复用的条件 */
   profileSync: true,      /* 条件面板里的「与我家档案同步」开关 */
   showKeyGuide: false,    /* 没填 Key 时在对话页显示的引导卡 */
-  homeTab: "rank",        /* 首页排行榜区块的选中空间 */
+  homeTab: "rank",        /* 预留：首页曾用过的区块选中空间，现已不在首页展示 */
   pickMode: "rank",       /* pick 中间页：rank 看清单 / ask 问 AI */
   budgetTotal: 20,        /* 预算分配器的总额（万元） */
   budgetRatios: [35, 40, 25],   /* 隐藏 / 表面 / 软装 的比例 */
@@ -3302,6 +3341,7 @@ function doRender() {
 
   renderCrumb();
   renderAppbar();
+  renderTopNav();
   renderBottomNav();
   const view = $("view");
   if (state.view === "home")        view.innerHTML = viewHome();
@@ -3502,11 +3542,15 @@ function updateControls() {
 function appbarTitle() {
   if (state.view === "home") return "RoomWise";
   if (state.view === "pick") return state.pickMode === "ask" ? "想问哪个房间" : "进哪个房间";
+  /* 工具箱与各工具页必须排在最前面判断：
+     否则会落到下面按 state.space 猜的逻辑上，把「工具箱」显示成「室内设计助手」或「厨房」。 */
+  if (state.view === "toolbox") return "工具箱";
+  if (state.view === "progress") return "我家进度";
+  if (isToolView(state.view)) return (TOOL_META[state.view] && TOOL_META[state.view].title) || "工具箱";
   const sp = DATA[state.space];
-  if (!sp) return "室内设计助手";
+  if (!sp) return "RoomWise";
   if (state.view === "space") return sp.name;
   if (state.view === "rank") return sp.name + " · 最需要先解决";
-  if (state.view === "toolbox") return "工具箱";
   const ob = state.objectId ? sp.objects.find(o => o.id === state.objectId) : null;
   let t = sp.name + (ob ? " · " + ob.name : "");
   if (state.topic) t += "（" + state.topic + "）";
@@ -3661,6 +3705,13 @@ function showHelp() {
    ============================================================ */
 
 function goBack() {
+  /* 「←」和手机的返回键、浏览器后退键，尽量是同一件事：
+     只要历史栈里有我们自己压进去的那一条，就直接 back()；
+     直接打开链接进来的（栈里只有这一页）才走下面的层级兜底。 */
+  if (navPushed > 0 && typeof history !== "undefined" && history.length > 1) {
+    navPushed--;
+    try { history.back(); return true; } catch (_) {}
+  }
   if (state.view === "pick") { goHome(); return true; }
   if (state.view === "toolbox") { goHome(); return true; }
   if (isToolView(state.view)) {
@@ -3759,15 +3810,29 @@ function renderCrumb() {
   const c = $("crumb");
   if (state.view === "home") { c.innerHTML = ""; return; }
   const sp = DATA[state.space];
+  /* 小白进来常常不知道自己在第几步、还能去哪。
+     这里按当前视图标一个「第 N 步 / 共 3 步」，和首页那张三步引导卡是同一套说法。 */
+  const STEP_OF = function () {
+    /* 已经进了房间/清单还说「挑房间」就不对了，这里按实际所处的位置分开写 */
+    if (state.view === "pick") return [2, "挑房间"];
+    if (state.view === "space" || state.view === "rank") return [2, "看这个房间的必做清单"];
+    if (state.view === "chat") return [3, "问 AI"];
+    if (state.view === "toolbox" || state.view === "progress" || TOOL_META[state.view]) return [0, ""];
+    return [0, ""];
+  };
+  const st = STEP_OF();
+  const stepBadge = st[0]
+    ? '<span class="step-badge">第 ' + st[0] + ' 步 / 共 3 步 · ' + esc(st[1]) + '</span>'
+    : "";
   let html = `<button type="button" class="link" data-act="home">首页</button>`;
   if (state.view === "pick") {
-    html += '<span class="sep">›</span><span>' + (state.pickMode === "ask" ? "想问哪个房间" : "进哪个房间") + '</span>';
-    c.innerHTML = html;
+    html += '<span class="sep">›</span><span>' + (state.pickMode === "ask" ? "直接问 AI" : "按房间看必做清单") + '</span>';
+    c.innerHTML = html + stepBadge;
     return;
   }
   if (state.view === "toolbox") {
     html += `<span class="sep">›</span><span>工具箱</span>`;
-    c.innerHTML = html;
+    c.innerHTML = html + stepBadge;
     return;
   }
   if (isToolView(state.view)) {
@@ -3775,7 +3840,7 @@ function renderCrumb() {
     html += `<span class="sep">›</span><span>工具箱</span>`;
     const tv = TOOL_META[state.view];
     html += `<span class="sep">›</span><span>${esc(tv ? tv.title : "我家进度")}</span>`;
-    c.innerHTML = html;
+    c.innerHTML = html + stepBadge;
     return;
   }
   if (state.view === "space") {
@@ -3787,7 +3852,7 @@ function renderCrumb() {
     html += `<span class="sep">›</span><button type="button" class="link" data-act="open-space" data-key="${escAttr(state.space)}">${esc(sp.name)}</button>`;
     html += `<span class="sep">›</span><span>${esc(chatTitleText())}</span>`;
   }
-  c.innerHTML = html;
+  c.innerHTML = html + stepBadge;
 }
 
 function chatTitleText() {
@@ -3807,10 +3872,10 @@ function chatTitleText() {
 function viewPick() {
   const mode = state.pickMode || "rank";
   const isRank = mode === "rank";
-  const title = isRank ? "进哪个房间？" : "想问哪个房间的问题？";
+  const title = isRank ? "按房间看必做清单" : "直接问 AI";
   const desc = isRank
-    ? "选一个房间进去，里面是它的主页：必做的事、包含哪些东西、常见问题、设计决策都在那儿"
-    : "选一个房间，进去直接跟 AI 聊 —— 不知道问什么也没关系，它会先问你一个最关键的问题";
+    ? "选一个房间进去，里面是它的主页：必做的事、包含哪些东西、常见问题、设计决策都在那儿。不用联网、不用填 Key。"
+    : "选一个房间，进去直接跟 AI 聊 —— 不知道问什么也没关系，它会先问你一个最关键的问题。全屋级的事（预算、合同、增项）选「全屋」就行。";
 
   let cards = '<div class="card mini space-tile rank-entry" role="button" tabindex="0" data-act="pick-space" data-key="whole">'
     + '<span class="icon">🏠</span>'
@@ -3875,21 +3940,48 @@ function viewHome() {
   return `
         ${guideCardHtml()}
         ${homeSearchHtml()}
+        ${starterHtml()}
         <div id="histBlock">${histBlockHtml()}</div>
-        <p class="tip center">
-          RoomWise v${APP_VERSION} (${BUILD_TAG}) · 思维链横条 · 联网检索状态条 · 继续说完 · 快捷键<br>
-          <b>全屋和房间清单完全离线、不需要填 Key；底栏「房间」按房间看，🧰 是工具箱。</b><br>
-          登录后对话记录保存在 Supabase（${esc(sbDomainText())}）；没登录时只在这次页面里，关掉就没有。<br>
-          API Key 只发给 DeepSeek 官方接口（api.deepseek.com），不会发给任何第三方，也不会进云端。
-        </p>
+        <p class="tip center">全屋和房间的清单完全离线：不联网、不花钱、不用填 Key。</p>
+        <details class="fold about-fold">
+          <summary>关于 RoomWise · 数据与隐私</summary>
+          <div class="fold-body">
+            <div class="fold-plain-note">
+              <b>版本</b> RoomWise v${APP_VERSION}（${BUILD_TAG}）<br>
+              <b>离线可用</b> 全屋和房间的必做清单、工具箱里的内置对照表，都打包在网页里，不联网也能看。<br>
+              <b>对话记录</b> 登录后保存在 Supabase（${esc(sbDomainText())}）；没登录时只在当前页面里，关掉就没有。<br>
+              <b>API Key</b> 只保存在本机浏览器，发起对话时随请求发给 DeepSeek 官方接口（api.deepseek.com），
+              不会发给任何第三方，也不会进云端。<br>
+              <b>功能提示</b> 对话页支持思维链横条、联网检索状态条、「继续说完」和键盘快捷键。
+            </div>
+          </div>
+        </details>
   `;
 }
 
 /* ---------- 全局搜索：听到一个词就想查，这是最基础的需求 ---------- */
+/* 一键示例：第一次打开的人不知道能问什么。
+   三个问题分别对应「钱怎么分 / 别人说的话要不要信 / 施工要做几遍」这三类最常见的焦虑。 */
+const STARTERS = [
+  "3 万块钱先做厨房还是卫生间？",
+  "工头说这个不用做，是真的吗",
+  "卫生间防水要做几遍才够"
+];
+
+function starterHtml() {
+  return '<div class="starter-row">'
+    + '<div class="starter-label">不知道问什么？试试：</div>'
+    + '<div class="starter-chips">'
+    + STARTERS.map(function (q, i) {
+        return '<button type="button" class="chip starter-chip" data-act="starter" data-idx="' + i + '">' + esc(q) + '</button>';
+      }).join("")
+    + '</div></div>';
+}
+
 function homeSearchHtml() {
   return '<div class="home-search">'
     + '<span class="hs-icon" aria-hidden="true">🔍</span>'
-    + '<input type="search" id="homeSearch" placeholder="想查什么？比如「防水」「插座高度」「增项」"'
+    + '<input type="search" id="homeSearch" placeholder="想查什么？也能搜房间名，比如「厨房」「防水」「增项」"'
     + ' autocomplete="off" aria-label="搜索">'
     + '</div>'
     + '<div id="homeSearchRes" class="home-search-res hidden"></div>';
@@ -3941,7 +4033,7 @@ function renderHomeSearch() {
     const kindText = r.kind === "rank" ? "清单" : r.kind === "space" ? "空间" : r.kind === "object" ? "包含" : "问题";
     const name = r.kind === "faq" ? truncateWidth(r.name, 26) : r.name;
     let act = "";
-    if (r.kind === "rank") act = 'data-act="hs-rank" data-space="' + escAttr(r.space) + '" data-tab="' + escAttr(r.tab) + '"';
+    if (r.kind === "rank") act = 'data-act="hs-rank" data-space="' + escAttr(r.space) + '" data-tab="' + escAttr(r.tab) + '" data-name="' + escAttr(r.name) + '"';
     else if (r.kind === "space") act = 'data-act="hs-space" data-space="' + escAttr(r.space) + '"';
     else if (r.kind === "object") act = 'data-act="hs-object" data-space="' + escAttr(r.space) + '" data-id="' + escAttr(r.id) + '"';
     else act = 'data-act="hs-faq" data-space="' + escAttr(r.space) + '" data-idx="' + r.idx + '"';
@@ -3954,40 +4046,14 @@ function renderHomeSearch() {
 
 /* 搜到某一条清单：进榜单并把它展开 */
 function openRankToItem(spaceKey, tab, name) {
-  state.rankTab = tab || "hidden";
-  state.rankFocus = name || "";
-  openRank(spaceKey);
+  /* 先按 tab 打开榜单（openRank 会清掉上一次的 rankFocus），
+     再设这一次要展开的那条，然后重绘一次让它自动展开 */
+  openRank(spaceKey, tab || "hidden");
+  if (name) { state.rankFocus = name; render(); }
 }
 
 /* ---------- 全屋：单独一张大卡（它不是「空间」，是全局） ---------- */
-function wholeBannerHtml() {
-  let n = 0;
-  ["hidden", "surface", "soft"].forEach(function (t) { n += (((RANK_DATA.whole) || {})[t] || []).length; });
-  return '<div class="whole-banner" role="button" tabindex="0" data-act="open-space" data-key="whole">'
-    + '<div class="wb-icon">🏆</div>'
-    + '<div class="wb-body">'
-    +   '<div class="wb-tag">第一次装修 · 从这里开始</div>'
-    +   '<div class="wb-title">钱怎么分、合同怎么签、什么时候验收</div>'
-    +   '<div class="wb-desc">' + n + ' 条必做的事，已经按先后顺序排好了 —— 做完一个勾一个，不会漏</div>'
-    + '</div>'
-    + '<span class="wb-cta">打开全屋清单 →</span>'
-    + '</div>';
-}
-
 /* ---------- 空间九宫格：只有图标 + 名字，一屏看完 ---------- */
-function homeSpaceCards() {
-  let cards = "";
-  for (const key in DATA) {
-    if (key === "whole") continue;
-    const s = DATA[key];
-    cards += '<div class="card mini space-tile" role="button" tabindex="0" data-act="open-space" data-key="' + escAttr(key) + '">'
-      + '<span class="icon">' + s.icon + '</span>'
-      + '<div class="name">' + esc(s.name) + '</div>'
-      + '</div>';
-  }
-  return cards;
-}
-
 /* 历史区顶部那行状态：未登录 / 云端同步中 / 表没建 / 出错 */
 function histNoteHtml() {
   if (!isLoggedIn()) {
@@ -4144,20 +4210,6 @@ const TOOLS = [
 ];
 const TOOL_GROUPS = ["防坑", "决策", "记录"];
 
-function toolsHtml() {
-  const cards = TOOLS.map(function (t) {
-    return '<div class="card mini" role="button" tabindex="0" data-act="open-tool" data-tool="' + escAttr(t.id) + '">'
-      + '<span class="icon">' + t.icon + '</span>'
-      + '<div class="name">' + esc(t.name) + '</div>'
-      + '<div class="desc">' + esc(t.desc) + '</div>'
-      + '</div>';
-  }).join("");
-  return '<div class="sec-title">工具箱 · 装修防坑</div>'
-       + '<div class="tool-grid">' + cards + '</div>'
-       + '<p class="tool-lead">这四个都能<b>填自己的情况、传截图、联网核对</b>，'
-       + '生成针对你家的分析 —— 不是让你再看一遍通用清单。</p>';
-}
-
 /* ---------- 统一 AI 工作台 ---------- */
 
 function toolImgStripHtml() {
@@ -4275,7 +4327,7 @@ function toolActionsHtml(id) {
   return '<div class="tool-actions">'
     + '<button type="button" class="tbtn" data-act="tool-copy">复制全部</button>'
     + '<button type="button" class="tbtn" data-act="tool-export">导出 Markdown</button>'
-    + '<button type="button" class="tbtn" data-act="tool-ask">问设计师</button>'
+    + '<button type="button" class="tbtn" data-act="tool-ask">问 AI</button>'
     + '<button type="button" class="tbtn" data-act="tool-retry">重新生成</button>'
     + '<button type="button" class="tbtn" data-act="tool-save-to-chat">保存到当前对话</button>'
     + '</div>';
@@ -4585,8 +4637,6 @@ function viewFallbackDesign() {
        + '所以每一项都写了「什么情况别做」—— 对照自己家的情况看。</p>';
 }
 
-function viewDesign() { return viewFallbackDesign(); }
-
 function viewSpace() {
   const sp = DATA[state.space];
   let rankN = 0;
@@ -4627,7 +4677,35 @@ function viewSpace() {
       <summary>设计决策 · 该不该做（${ddList.length} 项）</summary>
       <div class="fold-body fold-plain">${designBlockHtml(state.space)}</div>
     </details>
+    <details class="fold">
+      <summary>装修名词速查（${Object.keys(GLOSSARY).length} 个）</summary>
+      <div class="fold-body fold-plain">${glossaryHtml()}</div>
+    </details>
   `;
+}
+
+/* ============ 装修名词速查 ============
+   清单和对话里会出现「打压试验」「闭水试验」「空鼓」这类词，
+   小白第一眼不知道指什么。这里给一句人话解释，随时能翻。 */
+const GLOSSARY = {
+  "打压试验": "给水管里打压到 0.8~1.0 兆帕、保持半小时看压力掉不掉，用来检查水管接头漏不漏。漏了要砸砖重做，所以必须在封槽贴砖前做。",
+  "闭水试验": "把卫生间地面放满水（一般 2~5 公分），静置 24~48 小时，到楼下看天花板有没有渗水印子。防水做完了必须做这一项。",
+  "点位表": "把家里所有插座、开关、水口、网口的位置和数量列成一张表，开工前定好，避免做完发现缺插座。",
+  "空鼓": "瓷砖或墙面和底层没粘实，敲上去「咚咚」响、里面是空的。空鼓的地方以后容易开裂、脱落。",
+  "找平": "把不平的地面或墙面用水泥砂浆做平整，不做的话后面铺地板会响、铺砖会高低不平。",
+  "增项": "签合同之后，施工方说「这个不在报价里」再加的钱。多数装修纠纷都出在增项上。",
+  "隐蔽工程": "做完就被封起来、看不见的部分：水电管线、防水、基层。返工要砸开，所以验收必须在封之前。",
+  "动线": "人在家里走动的路线。动线不顺，就是每天都在绕路、开门撞人、做饭来回窜。",
+  "E0 级": "板材甲醛释放量的等级。数值越低越安全，E0 比 E1 更严。衣柜、橱柜、地板这些大面积用板的要问清楚。",
+  "返工": "做完的东西不合格，拆掉重做。返工不只是多花钱，还会连带破坏已经做好的部分。",
+  "门槛石": "铺在不同地面材料交界处的那条石头。不做门槛石直接通铺，视觉上更完整，但对地面找平要求更高。",
+  "存水弯": "下水管上弯出来存水的一段，水封住管道防止下水道的臭味和小虫子倒灌进家里。"
+};
+
+function glossaryHtml() {
+  return Object.keys(GLOSSARY).map(function (k) {
+    return '<div class="gloss-row"><b>' + esc(k) + '</b><span>' + esc(GLOSSARY[k]) + '</span></div>';
+  }).join("");
 }
 
 /* ---------- 对话页 ---------- */
@@ -4663,21 +4741,12 @@ function viewChat() {
               <span>与「我家档案」同步</span>
               <span class="pnote">面积、层高、人口这些和空间无关，勾上后每个空间都带上，不用重填。</span>
             </label>
-            ${COND_FIELDS.map(f => {
-              if (f.type === "select") {
-                return `<div class="field">
-                  <label for="c_${f.id}">${esc(f.label)}</label>
-                  <select id="c_${f.id}" data-cond="${escAttr(f.id)}">
-                    ${f.options.map(o => `<option value="${escAttr(o)}" ${state.conditions[f.id] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}
-                  </select>
-                </div>`;
-              }
-              return `<div class="field">
-                <label for="c_${f.id}">${esc(f.label)}</label>
-                <input type="text" id="c_${f.id}" data-cond="${escAttr(f.id)}"
-                       value="${escAttr(state.conditions[f.id] || "")}" placeholder="${escAttr(f.placeholder)}">
-              </div>`;
-            }).join("")}
+            ${COND_FIELDS.filter(f => COND_CORE_IDS.indexOf(f.id) >= 0).map(f => condFieldHtml(f)).join("")}
+          <details class="cond-more">
+            <summary>填得更准（${COND_FIELDS.length - COND_CORE_IDS.length} 项，可选）</summary>
+            <div class="cond-body cond-body-more">${COND_FIELDS.filter(f => COND_CORE_IDS.indexOf(f.id) < 0).map(f => condFieldHtml(f)).join("")}</div>
+          </details>
+          
           </div>
         </details>
         ${imgStrip()}
@@ -4699,8 +4768,8 @@ function viewChat() {
           ${webHintHtml()}
         </div>
         <div class="composer-row">
-          <textarea id="composerInput" rows="1" aria-label="继续追问" enterkeyhint="send"
-                    placeholder="继续追问，例如：那排风扇买多大风量的？"></textarea>
+          <textarea id="composerInput" rows="1" aria-label="输入问题" enterkeyhint="send"
+                    placeholder="问点什么，比如：那排风扇买多大风量的？"></textarea>
           <button type="button" class="btn small" id="sendBtn" data-act="send">发送</button>
           <button type="button" class="btn small ghost hidden" id="stopBtn" data-act="stop">停止</button>
         </div>
@@ -4886,6 +4955,7 @@ function msgHtml(m, i) {
         ${srcs}
         ${fu}
         ${notes}
+        ${m.text && m.text.trim() ? '<div class="ai-disclaimer">仅供参考，不构成施工依据；涉及承重、燃气、电路的改动，请找专业人员确认。</div>' : ""}
         <div class="msg-acts">
           <button type="button" class="tbtn xs" data-act="copy-one" data-idx="${i}">复制这条</button>
           <button type="button" class="tbtn xs" data-act="share-image" data-idx="${i}">存图</button>
@@ -4937,22 +5007,20 @@ function splitFollowups(text, streaming) {
 }
 
 /* 没填 Key 时的引导卡：不是错误，所以不放进错误区，也不弹设置 */
-/* 引导卡上的「先看排行榜（免费）」：回到首页并滚到排行榜区块 */
+/* 引导卡上的「先看必做清单（免费）」：回到首页并滚到清单区块 */
 function guiToRank() {
-  goHome();
-  setTimeout(function () {
-    const g = document.querySelector(".rank-mini-grid");
-    if (g) g.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 80);
+  /* 首页那个 .rank-mini-grid 早就删了，原来这里什么都滚不到。
+     直接进「全屋」的房间主页 —— 必做清单的入口就在那一页最上面。 */
+  goSpace("whole");
 }
 
 function keyGuideHtml() {
   if (!state.showKeyGuide) return "";
   return '<div class="key-guide">'
     + '<b>还没有填 DeepSeek API Key</b>'
-    + '<div class="kg-body">现在有两条路：先免费看排行榜，或者去填 Key 开始提问。</div>'
+    + '<div class="kg-body">现在有两条路：先免费看必做清单，或者去填 Key 开始提问。</div>'
     + '<div class="kg-acts">'
-    +   '<button type="button" class="tbtn primary" data-act="guide-free">先看排行榜（免费）</button>'
+    +   '<button type="button" class="tbtn primary" data-act="guide-free">先看必做清单（免费）</button>'
     +   '<button type="button" class="tbtn" data-act="guide-key">去填 Key 开始提问</button>'
     +   '<button type="button" class="tbtn" data-act="guide-dismiss">先不用</button>'
     + '</div>'
@@ -5169,7 +5237,9 @@ function goHome() {
   abortCurrent();
   state.view = "home";
   state.space = null;
-  clearSessionState();
+  /* 这里**不**清会话：对话内容跟 session 走，不跟当前页面绑。
+     随便点个返回就把聊了一半的内容抹掉，是用户最容易炸的一个点。 */
+  syncHash();
   render();
 }
 
@@ -5177,7 +5247,8 @@ function goSpace(key) {
   abortCurrent();
   state.view = "space";
   state.space = key;
-  clearSessionState();
+  /* 同样不清会话：回来还能接着看刚才那条对话 */
+  syncHash();
   render();
 }
 
@@ -5206,6 +5277,7 @@ function startSession(spaceKey, objectId, topic) {
   /* 会话 id：登录后前缀就是 Supabase 的 user.id —— 一眼看得出这条会话属于谁；
      后面仍带时间戳与随机尾巴，保证「再来一次新对话」是各自独立的一条历史 */
   state.sessionId = (auth.userId ? auth.userId : "s") + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+  syncHash();
   render();
 }
 
@@ -7344,6 +7416,23 @@ function popCacheNote() {
 function isToolView(v) { return !!(TOOL_META[v]) || v === "progress"; }
 
 /* 手机底栏：高亮 + 对话页隐藏 */
+/* 桌面顶栏主导航。和底部导航共用同一组 data-act，所以点击逻辑不用重写。 */
+function renderTopNav() {
+  const nav = $("topNav");
+  if (!nav) return;
+  const isPick = state.view === "pick";
+  const items = [
+    { act: "bn-home",  icon: "🏠", text: "首页",   on: ["home", "space", "rank"].indexOf(state.view) >= 0 },
+    { act: "bn-rank",  icon: "🚪", text: "房间",   on: isPick && state.pickMode === "rank" },
+    { act: "bn-tools", icon: "🧰", text: "工具箱", on: state.view === "toolbox" || state.view === "progress" || isToolView(state.view) },
+    { act: "bn-ask",   icon: "💬", text: "问 AI",  on: isPick && state.pickMode === "ask" }
+  ];
+  nav.innerHTML = items.map(function (it) {
+    return '<button type="button" class="tn-item' + (it.on ? " active" : "") + '" data-act="' + it.act + '">'
+      + '<span class="tn-icon">' + it.icon + '</span>' + it.text + '</button>';
+  }).join("");
+}
+
 function renderBottomNav() {
   const nav = $("bottomNav");
   if (!nav) return;
@@ -7367,6 +7456,7 @@ function renderBottomNav() {
 
 function openToolbox() {
   state.view = "toolbox";
+  syncHash();
   render();
 }
 
@@ -7430,10 +7520,10 @@ function shareAsMessageImage(idx) {
     lines.forEach(function (ln, i) { c2.fillText(ln, PAD, PAD + i * LINE); });
     c2.fillStyle = "#9a938a";
     c2.font = '13px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
-    c2.fillText("室内设计助手 0.2.4 · 仅供参考，不构成施工依据", PAD, cv.height - FOOT + 14);
+    c2.fillText("RoomWise v" + APP_VERSION + " · 仅供参考，不构成施工依据", PAD, cv.height - FOOT + 14);
     const a = document.createElement("a");
     a.href = cv.toDataURL("image/png");
-    a.download = "室内设计助手_" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + ".png";
+    a.download = "RoomWise_" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + ".png";
     document.body.appendChild(a);
     a.click();
     setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 500);
@@ -7642,12 +7732,17 @@ function toolSaveToChat() {
   toast("已保存到当前对话");
 }
 
-function openRank(spaceKey) {
+function openRank(spaceKey, tab) {
   if (!DATA[spaceKey]) return;
   abortCurrent();
   state.view = "rank";
   state.space = spaceKey;
-  state.rankTab = "hidden";
+  /* tab 由调用方决定：搜索里点某一条时应该落在它所在的那张榜上，
+     以前写死 "hidden"，把调用方设好的 tab 又覆盖回去了。 */
+  state.rankTab = (tab === "surface" || tab === "soft" || tab === "hidden") ? tab : "hidden";
+  /* 上一次「要自动展开的那条」必须清掉，否则同一条记录每次进来都会自己弹开 */
+  state.rankFocus = "";
+  syncHash();
   render();
 }
 /* ---- 从榜单直接跳去问 AI ---- */
@@ -7999,7 +8094,7 @@ function viewRank() {
   } else {
     const groups = { S: [], A: [], B: [], C: [] };
     items.forEach(function (it) { groups[it.tier].push(it); });
-    /* 索引必须按「扁平数组」算：点「问设计师 / 联网搜索」用的就是这个序号。
+    /* 索引必须按「扁平数组」算：点「问 AI / 搜别人家怎么做的」用的就是这个序号。
        如果每个梯队各自从 0 开始，A 组第 1 条会取到 S 组第 1 条。 */
     let flatIdx = 0;
     ["S", "A", "B", "C"].forEach(function (tier) {
@@ -8016,19 +8111,22 @@ function viewRank() {
     });
   }
 
-       const wholeTip = (state.space === "whole")
-         ? '<p class="tip">预算分配已移到工具箱（点右上角 🧰 → 预算分配），输入总预算可以让 AI 帮你算怎么分。</p>'
-         : "";
        const wholeTip2 = (state.space === "whole")
          ? '<p class="tip">预算怎么分已经移到工具箱（点 🧰 → 预算分配），输入总预算可以让 AI 帮你算。</p>'
          : "";
-  return '<div class="sec-title">' + esc(sp.name) + ' · 最需要先解决的排行榜</div>'
+  return '<div class="sec-title">' + esc(sp.name) + ' · 最需要先解决的</div>'
        + '<div class="rank-tabs">' + tabBar + '</div>'
-       + '<div class="rank-presets">' + presetBar + '</div>'
+       + '<details class="fold rank-sort-fold">'
+    + '<summary>排序方式 · 切换只改排序，不重新请求</summary>'
+    + '<div class="fold-body"><div class="rank-presets">' + presetBar + '</div>'
+    + '<p class="fold-plain-note">四种权重只在本机重算顺序：均衡（默认）按综合分排；'
+    + '「家有老人小孩」把安全的权重调高；「预算紧」更看重花小钱办大事；'
+    + '「追求品质」会把手感、观感类的条目往前排。任何一次切换都不会联网、不会花 token。</p></div>'
+    + '</details>'
        + body
        + '<p class="tip">内容依据《装修避坑手册（2025）》整理'
        + '（每条展开后的「依据」栏会写明出自手册哪一节，或者对应的国标编号），'
-       + '不需要联网、不再调用 AI 生成。想更细问某一条，点条目里的「问设计师」或「联网搜索」。</p>'
+       + '不需要联网、不再调用 AI 生成。想更细问某一条，点条目里的「问 AI」或「搜别人家怎么做的」。</p>'
        + wholeTip2
        + '<p class="tip rank-disclaimer">以上内容不构成施工依据：'
        + '各地规范、材料与施工条件不同，实际以现行国标、当地规定和现场情况为准。'
@@ -8358,6 +8456,8 @@ function rankItemHtml(it, i, forceOpen) {
     +     '<span class="grow"></span>'
     +   '</div>'
     +   (it.why ? '<div class="rank-why">' + esc(it.why) + '</div>' : "")
+    /* 收起的摘要里也带一句关键数字：不想展开的人扫一眼就知道「做到什么程度算对」 */
+    +   (it.key ? '<div class="rank-key-inline">🔑 ' + esc(it.key) + '</div>' : "")
     +   '<div class="rank-flag">' + esc(rankDimText(it.scores)) + '</div>'
     + '<div class="rank-expand-hint"></div>'
     + '</summary>'
@@ -8371,8 +8471,8 @@ function rankItemHtml(it, i, forceOpen) {
     +   (it.standard ? '<div class="rank-standard"><b>依据：</b>' + esc(it.standard) + '</div>' : "")
     +   (it.tip ? '<div class="rank-tip"><b>💡 经验提醒：</b>' + esc(it.tip) + '</div>' : "")
     +   '<div class="sb-acts">'
-    +     (it.ask ? '<button type="button" class="tbtn" data-act="rank-ask" data-idx="' + i + '">问设计师</button>' : "")
-    +     '<button type="button" class="tbtn" data-act="rank-web" data-idx="' + i + '">联网搜索</button>'
+    +     (it.ask ? '<button type="button" class="tbtn" data-act="rank-ask" data-idx="' + i + '">问 AI</button>' : "")
+    +     '<button type="button" class="tbtn" data-act="rank-web" data-idx="' + i + '">搜别人家怎么做的</button>'
     +     '<button type="button" class="tbtn" data-act="rank-copy" data-idx="' + i + '">复制这条</button>'
     +   '</div>'
     + '</div>'
@@ -8421,12 +8521,12 @@ document.addEventListener("click", e => {
     case "open-settings":  openModal(); break;
     case "open-toolbox":   openToolbox(); break;
     case "bn-home":   goHome(); break;
-    case "bn-rank":   state.pickMode = "rank"; state.view = "pick"; render(); break;
+    case "bn-rank":   state.pickMode = "rank"; state.view = "pick"; syncHash(); render(); break;
     case "bn-tools":  openToolbox(); break;
-    case "bn-ask":    state.pickMode = "ask";  state.view = "pick"; render(); break;
+    case "bn-ask":    state.pickMode = "ask";  state.view = "pick"; syncHash(); render(); break;
     case "gc-whole":  goSpace("whole"); break;   /* 进「全屋」房间主页，不直接跳榜单 */
-    case "gc-pick-space": state.pickMode = "rank"; state.view = "pick"; render(); break;
-    case "gc-ask":    state.pickMode = "ask";  state.view = "pick"; render(); break;
+    case "gc-pick-space": state.pickMode = "rank"; state.view = "pick"; syncHash(); render(); break;
+    case "gc-ask":    state.pickMode = "ask";  state.view = "pick"; syncHash(); render(); break;
     case "pick-space": {
       const key = node.dataset.key;
       if (state.pickMode === "rank") {
@@ -8440,8 +8540,8 @@ document.addEventListener("click", e => {
       }
       break;
     }
-    case "hist-all":  state.histShowAll = true; renderKeepingScroll(); break;
-    case "hs-rank":   openRankToItem(node.dataset.space, node.dataset.tab, ""); break;
+    case "hist-all": state.histExpanded = true; refreshHistList(); break;
+    case "hs-rank": openRankToItem(node.dataset.space, node.dataset.tab, node.dataset.name || ""); break;
     case "hs-space":  goSpace(node.dataset.space); break;
     case "hs-object": state.fromSearch = true; goObject(node.dataset.id, node.dataset.space); break;
     case "hs-faq":    askFaq(node.dataset.space, Number(node.dataset.idx)); break;
@@ -8461,8 +8561,7 @@ document.addEventListener("click", e => {
     case "progress-clear": state.progress = {}; saveProgress(); renderKeepingScroll(); break;
     case "share-image":    shareAsMessageImage(Number(node.dataset.idx)); break;
     case "guide-whole":  goSpace("whole"); break;
-    case "guide-space":  { const g = document.querySelector(".rank-mini-grid") || document.querySelector(".grid"); if (g) g.scrollIntoView({ behavior:"smooth", block:"start" }); break; }
-    case "guide-ask":    { const tc = $("composerInput"); if (tc) { try { tc.focus(); } catch (_) {} } break; }
+    case "guide-space": { const g = document.querySelector(".rank-entry") || document.querySelector(".obj-wall"); if (g) g.scrollIntoView({ behavior:"smooth", block:"start" }); break; }
     case "guide-free":   state.showKeyGuide = false; guiToRank(); break;
     case "guide-key":    state.showKeyGuide = false; openModal(); break;
     case "guide-dismiss": state.showKeyGuide = false; renderKeepingScroll(); break;
@@ -8518,6 +8617,16 @@ document.addEventListener("click", e => {
     case "export-md":      exportMarkdown(); break;
     case "export-pdf":     exportPdf(); break;
     case "home":           goHome(); break;
+    case "starter": {
+      /* 首页的一键示例：进全屋对话，直接把这句话发出去，用户不用自己打字 */
+      const q = STARTERS[Number(node.dataset.idx)];
+      if (q) {
+        state.showKeyGuide = false;
+        startSession("whole", null, q);
+        sendMessage(q);
+      }
+      break;
+    }
     case "hist":           openHistory(node.dataset.id); break;
     case "hist-del":       deleteHistory(node.dataset.id); break;
     case "hist-more":      state.histExpanded = !state.histExpanded; refreshHistList(); break;
@@ -9657,7 +9766,7 @@ function buildMarkdown(withReasoning) {
   const sp = state.space ? DATA[state.space] : null;
   const ob = (sp && state.objectId) ? sp.objects.find(o => o.id === state.objectId) : null;
 
-  let md = `# 室内设计助手 · 对话记录\n\n`;
+  let md = `# RoomWise · 对话记录\n\n`;
   md += `- 空间：${sp ? sp.name : "—"}${ob ? " · " + ob.name : ""}\n`;
   md += `- 时间：${new Date().toLocaleString("zh-CN")}\n`;
   md += `- 模型：${currentModel()}${isThinking() ? "（思考模式）" : ""}\n`;
@@ -9678,7 +9787,7 @@ function buildMarkdown(withReasoning) {
       md += m.sources.map((x, i) => `[${i + 1}] ${x}`).join("\n") + "\n\n";
     }
   });
-  md += `> 由室内设计助手 v${APP_VERSION} 生成，内容供施工参考，涉及承重、燃气、水电请找专业人员确认。\n`;
+  md += `> 由 RoomWise v${APP_VERSION} 生成，内容供施工参考，涉及承重、燃气、水电请找专业人员确认。\n`;
   return md;
 }
 
@@ -10227,6 +10336,145 @@ function renderMarkdown(md, streaming) {
 }
 
 /* ============================================================
+   十六、Hash 路由：让返回键 / 侧滑返回 / 刷新 / 分享都能用
+   ------------------------------------------------------------
+   URL 形态：
+     #/home                    首页
+     #/pick/rank | #/pick/ask  房间选择页（看清单 / 问 AI）
+     #/space/kitchen           房间主页
+     #/rank/kitchen/hidden     榜单（tab: hidden|surface|soft）
+     #/toolbox                 工具箱
+     #/progress                我家进度
+     #/tool/traps              具体工具页
+     #/chat/kitchen            对话页
+   ============================================================ */
+
+let lastHash = null;      /* 上一次已应用的 hash，用来判断要不要重新导航 */
+let routingNow = false;   /* 正在按 hash 导航时，不要再把 hash 写回去（否则死循环） */
+let navPushed = 0;        /* 我们自己往历史栈里压了几条：>0 时「←」可以直接 history.back() */
+
+function encodeSeg(s) { return encodeURIComponent(String(s == null ? "" : s)); }
+
+/* 当前视图 → 应该显示的 hash */
+function viewToHash() {
+  const v = state.view;
+  if (v === "pick")     return "#/pick/" + (state.pickMode === "ask" ? "ask" : "rank");
+  if (v === "space")    return "#/space/" + encodeSeg(state.space || "whole");
+  if (v === "rank")     return "#/rank/" + encodeSeg(state.space || "whole") + "/" + encodeSeg(state.rankTab || "hidden");
+  if (v === "toolbox")  return "#/toolbox";
+  if (v === "progress") return "#/progress";
+  if (TOOL_META[v])     return "#/tool/" + encodeSeg(v);
+  if (v === "chat")     return "#/chat/" + encodeSeg(state.space || "whole");
+  return "#/home";
+}
+
+/* 把当前视图同步到地址栏。相同就不写，避免多余的历史记录和 hashchange。 */
+function syncHash() {
+  if (routingNow) return;
+  const h = viewToHash();
+  const before = lastHash;
+  lastHash = h;
+  try {
+    if (location.hash !== h) {
+      if (before !== null) navPushed++;   /* 真的是我们压进去的一条历史 */
+      location.hash = h;
+    }
+  } catch (_) {}
+}
+
+/* 按 hash 恢复状态。这里只改 state，不调用 goHome/goSpace 之类的导航函数，
+   否则会反过来再写一次 hash，绕成环。 */
+function navigateFromHash(hash) {
+  const raw = String(hash || "").replace(/^#\/?/, "");
+  const parts = raw.split("/").filter(Boolean).map(function (s) {
+    try { return decodeURIComponent(s); } catch (_) { return s; }
+  });
+  const head = parts[0] || "home";
+
+  if (head === "pick") {
+    state.view = "pick";
+    state.pickMode = (parts[1] === "ask") ? "ask" : "rank";
+    return;
+  }
+  if (head === "space") {
+    const k = parts[1];
+    if (DATA[k]) { state.view = "space"; state.space = k; return; }
+    state.view = "home"; state.space = null; return;
+  }
+  if (head === "rank") {
+    const k = parts[1];
+    if (DATA[k]) {
+      state.view = "rank";
+      state.space = k;
+      const tab = parts[2];
+      state.rankTab = (tab === "surface" || tab === "soft" || tab === "hidden") ? tab : "hidden";
+      return;
+    }
+    state.view = "home"; state.space = null; return;
+  }
+  if (head === "toolbox")  { state.view = "toolbox"; return; }
+  if (head === "progress") { state.view = "progress"; return; }
+  if (head === "tool") {
+    const t = parts[1];
+    if (TOOL_META[t]) { state.view = t; return; }
+    state.view = "toolbox"; return;
+  }
+  if (head === "chat") {
+    const k = parts[1];
+    if (DATA[k]) { state.space = k; state.view = "chat"; state.conditions = conditionsFor(k); }
+    else { state.view = "home"; state.space = null; }
+    return;
+  }
+  /* 认不出来的一律回首页，别把用户卡在白屏上 */
+  state.view = "home";
+  state.space = null;
+}
+
+/* hashchange：浏览器返回键、侧滑返回、手改地址栏、点分享链接，都走这里 */
+function onHashChange() {
+  const h = location.hash || "#/home";
+  if (h === lastHash) return;          /* 自己写进去的不重复处理 */
+  /* 走到这里说明是「浏览器后退/前进」或手改地址栏触发的，
+     把我们自己那条计数还回去，免得「←」一直以为还有历史可用 */
+  if (navPushed > 0) navPushed--;
+  lastHash = h;
+  routingNow = true;
+  try {
+    if (state.view === "chat") abortCurrent();   /* 离开对话页就停掉正在生成的回答 */
+    navigateFromHash(h);
+  } catch (e) {
+    reportProblem(e);
+  } finally {
+    routingNow = false;
+  }
+  render();
+  if (state.view === "chat") scrollBottom(false);
+}
+
+/* 启动时读一次地址栏：刷新 / 从收藏点进来，都落到当时那一页 */
+let routeListenerReady = false;
+function initRoute() {
+  const h = location.hash || "";
+  lastHash = h || "#/home";
+  if (h) {
+    navigateFromHash(h);
+    /* 地址栏里的 hash 和恢复出来的视图对不上（比如 #/space/不存在），把它修正掉 */
+    if (viewToHash() !== lastHash) {
+      lastHash = viewToHash();
+      try { location.replace("#" + lastHash.replace(/^#/, "")); } catch (_) {}
+    }
+  } else {
+    try { location.replace("#/home"); } catch (_) {}
+    lastHash = "#/home";
+  }
+  /* 监听只注册一次：万一 initRoute 被调两次，也不能让一次 hashchange 触发两遍导航 */
+  if (!routeListenerReady) {
+    routeListenerReady = true;
+    try { window.addEventListener("hashchange", onHashChange); } catch (_) {}
+  }
+}
+
+/* ============================================================
    十六、启动
    ============================================================ */
 
@@ -10249,6 +10497,7 @@ loadProgress();               /* 「我家进度」的勾选状态 */
 storageUsable = probeStorage();
 if (!storageUsable) showStorageWarning();
 applyKeyboardOffset();
+initRoute();                  /* 先按地址栏恢复视图，再渲染 */
 updateTitle();
 render();
 /* 开机的账号恢复：有登录态就先续期、再拉云端历史（异步，不挡首屏） */
