@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#1b1917" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <meta name="color-scheme" content="light dark">
-<title>室内设计助手 0.2.3 · 对话式设计顾问</title>
+<title>RoomWise · 装修小白的第一站</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -28,6 +28,29 @@
     --accent-light:#e0d5c2;
     --accent-soft:#fdfaf5;
     --gold:#c9a227;
+    --accent-2:#4a6b5c;          /* 辅助色（墨绿）：正面/已完成标记，和暖色系拉开对比 */
+    --accent-2-soft:#eef3f0;
+    --accent-2-border:#cfded6;
+    /* ===== 间距系统：只用 4 / 8 / 12 / 16 / 24 / 32 / 48 ===== */
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
+    --sp-6:24px; --sp-8:32px; --sp-12:48px;
+    /* ===== 圆角：只留两个值 ===== */
+    --radius-lg:16px;            /* 卡片 / 面板 / 大按钮 */
+    --radius-sm:10px;            /* 小按钮 / 标签 / 输入框 / 图标块 */
+    /* ===== 阴影：三层，多层叠加（单层看起来脏） ===== */
+    --shadow-sm:0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:0 2px 8px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.04);
+    --shadow-lg:0 4px 16px rgba(0,0,0,.08), 0 16px 48px rgba(0,0,0,.06);
+    /* ===== 字号：收敛到五级（相邻至少差 2px） ===== */
+    --fs-display:1.75rem;        /* 28px 首页大标题 */
+    --fs-title:1.125rem;         /* 18px 卡片 / 区块标题 */
+    --fs-body:0.9375rem;         /* 15px 正文 */
+    --fs-label:0.8125rem;        /* 13px 标签 / 辅助 */
+    --fs-caption:0.75rem;        /* 12px 极少必要的小字 */
+    /* ===== 字体：明确指定，不交给 system-ui 随意决定 ===== */
+    --font-heading:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --font-body:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --bottom-nav-h:0px;          /* 手机底栏高度，桌面为 0 */
     --bubble-user-bg:#a06b3f;
     --bubble-user-text:#ffffff;
     --danger:#a4432b;
@@ -43,8 +66,8 @@
     --fs: 1;          /* 字号缩放：0.9 小 / 1 标准 / 1.15 大 / 1.3 特大 */
     --appbar-bg: rgba(247,245,241,.86);   /* 应用栏毛玻璃底 */
     --page-pad: 24px;         /* 页面左右内边距（桌面） */
-    --card-gap: 18px;         /* 卡片间距 */
-    --msg-gap: 22px;          /* 消息之间的间距 */
+    --card-gap: 16px;         /* 卡片间距 */
+    --msg-gap: 24px;          /* 消息之间的间距 */
     --bubble-pad: 20px 22px;  /* 气泡内边距 */
     --kb: 0px;
   }
@@ -64,6 +87,9 @@
       --faint:#6d6660;
       --accent:#d79b63;
       --accent-dark:#e8ae79;
+      --accent-2:#8fb8a4;
+      --accent-2-soft:#26302c;
+      --accent-2-border:#3a4a43;
       --accent-light:#4a3d30;
       --accent-soft:#2f2822;
       --gold:#d8b45c;
@@ -125,6 +151,10 @@
     -webkit-text-size-adjust:100%;      /* 安卓「字体放大」不会把布局撑破 */
     text-size-adjust:100%;
   }
+  h1, h2, h3, .ab-main, .card .name, .sec-title, .wb-title, .pick-head h2, .gc-body b {
+    font-family:var(--font-heading);
+  }
+
   body {
     font-family: system-ui, -apple-system, "Roboto", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
     background:var(--bg); color:var(--text);
@@ -143,8 +173,14 @@
 
   /* 触屏上 hover 会「粘」在最后点过的元素上，这里把悬停效果复位 */
   @media (hover: none) {
-    .card:hover { border-color:var(--border); transform:none; box-shadow:none; }
-    .card:hover .card-go { background:var(--accent); }
+    .card:hover {
+  border-color: var(--accent-light);
+  box-shadow: 0 2px 8px rgba(160,107,63,.06);
+  transform: none;
+    }
+    .card:hover .card-go {
+  gap: 10px; background: transparent;
+    }
     .chip:hover { border-color:var(--border-soft); color:var(--text-2); background:var(--surface-2); }
     .chip.big:hover { transform:none; }
     .tbtn:hover { border-color:var(--border); color:var(--text-2); }
@@ -176,14 +212,14 @@
     min-height:62px;
     background:var(--appbar-bg);
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border-bottom:1px solid var(--border);
+    box-shadow:0 1px 0 rgba(0,0,0,.05), 0 2px 10px rgba(0,0,0,.03);
   }
   .ab-btn {
     flex:none; width:40px; height:40px; min-width:40px;
     display:inline-flex; align-items:center; justify-content:center;
-    font-size:1.0625rem; line-height:1; font-family:inherit;
+    font-size:1.125rem; line-height:1; font-family:inherit;
     color:var(--text-2); background:var(--surface); cursor:pointer;
-    border:1px solid var(--border); border-radius:11px; transition:all .18s;
+    border:1px solid var(--border); border-radius:10px; transition:all .18s;
   }
   .ab-btn:hover { border-color:var(--gold); color:var(--accent); }
   .ab-btn:active { opacity:.82; }
@@ -193,31 +229,31 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .ab-sub {
-    font-size:0.78125rem; line-height:1.3; color:var(--text-4);
+    font-size:0.75rem; line-height:1.3; color:var(--text-4);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .ab-sub .busy { color:var(--accent); font-weight:600; }
   .ver-tag {
-    flex:none; font-size:0.6875rem; font-weight:700; color:#fff; background:var(--accent);
-    padding:3px 9px; border-radius:20px; letter-spacing:.4px;
+    flex:none; font-size:0.75rem; font-weight:700; color:#fff; background:var(--accent);
+    padding:4px 8px; border-radius:20px; letter-spacing:.4px;
   }
   /* 更多菜单 */
   .ab-menu {
     position:absolute; right:12px; top:calc(100% - 6px);
-    min-width:196px; padding:6px; z-index:50;
+    min-width:196px; padding:8px; z-index:50;
     display:flex; flex-direction:column; gap:2px;
-    background:var(--surface); border:1.5px solid var(--border); border-radius:14px;
+    background:var(--surface); border:1.5px solid var(--border); border-radius:16px;
     box-shadow:0 16px 40px var(--shadow-strong);
   }
   .ab-menu .mi {
     display:flex; align-items:center; gap:8px; width:100%;
-    padding:10px 12px; border:none; border-radius:9px; background:none;
+    padding:10px 12px; border:none; border-radius:10px; background:none;
     font-family:inherit; font-size:0.875rem; color:var(--text-2);
     text-align:left; cursor:pointer; transition:background .15s;
   }
   .ab-menu .mi:hover { background:var(--accent-soft); color:var(--accent); }
   .ab-menu .mi:disabled { color:var(--faint); cursor:not-allowed; }
-  .ab-menu .sep { height:1px; background:var(--border-soft); margin:4px 6px; }
+  .ab-menu .sep { height:1px; background:var(--border-soft); margin:4px 8px; }
 
   /* ===== 三栏固定布局（只用于对话页）=====
      顶部应用栏 + 中间独立滚动的消息区 + 底部固定输入区 */
@@ -230,6 +266,8 @@
   body.chat-mode .appbar { position:static; flex:none; }
   body.chat-mode .hero { display:none; }
   body.chat-mode .crumb { display:none; }
+  /* 非首页视图一律不显示 hero —— 房间 / 工具 / 问 AI / 空间 / 榜单 / 对话页都算 */
+  body.not-home .hero { display:none; }
   body.chat-mode .wrap {
     flex:1; min-height:0; overflow:hidden; max-width:none; padding:0;
     display:flex; flex-direction:column;
@@ -238,13 +276,125 @@
   .chat-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
   .chat-inner {
     width:100%; max-width:1400px !important;
-    margin:0 auto !important; padding:20px 24px 12px !important;
+    margin:0 auto !important; padding:24px 24px 12px !important;
     box-sizing:border-box;
   }
 
-  .hero { text-align:center; margin-bottom:30px; }
-  .hero h1 { font-size:1.625rem; font-weight:700; letter-spacing:.5px; color:var(--text); }
-  .hero p { color:var(--text-3); font-size:0.84375rem; margin-top:8px; }
+  /* ===== Hero：首页顶部的品牌卡片 ===== */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    margin: 0 0 16px;
+    padding: 52px 44px 44px;
+    border-radius: 28px;
+    background: linear-gradient(160deg, var(--accent-soft) 0%, var(--surface) 62%);
+    border: 1px solid var(--accent-light);
+    box-shadow:
+      0 1px 2px rgba(160,107,63,.06),
+      0 14px 40px rgba(160,107,63,.10),
+      0 40px 80px rgba(160,107,63,.05);
+  }
+  /* 右上角柔和光晕 */
+  .hero::before {
+    content: "";
+    position: absolute;
+    top: -90px; right: -80px;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-light) 0%, transparent 62%);
+    opacity: .55;
+    pointer-events: none;
+  }
+  /* 右下角点阵装饰 */
+  .hero::after {
+    content: "";
+    position: absolute;
+    right: 26px; bottom: 22px;
+    width: 92px; height: 60px;
+    background-image: radial-gradient(circle, var(--accent) 1px, transparent 1px);
+    background-size: 11px 11px;
+    opacity: .22;
+    pointer-events: none;
+  }
+
+  .hero h1 {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-heading);
+    font-size: 2.375rem;
+    font-weight: 800;
+    letter-spacing: -.035em;
+    color: var(--text-strong);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    line-height: 1.1;
+  }
+  .hero h1 .hero-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 15px;
+    background: var(--text-strong);
+    color: var(--bg);
+    font-family: var(--font-heading);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1;
+    box-shadow:
+      0 8px 22px rgba(0,0,0,.18),
+      0 2px 4px rgba(0,0,0,.10),
+      inset 0 1px 0 rgba(255,255,255,.14);
+  }
+  .hero p {
+    position: relative;
+    z-index: 1;
+    color: var(--text-3);
+    font-size: 0.9375rem;
+    margin: 18px 0 0;
+    line-height: 1.7;
+    max-width: 560px;
+  }
+  /* slogan 前的小横线，做一个视觉停顿 */
+  .hero p::before {
+    content: "";
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+    margin-bottom: 10px;
+    opacity: .8;
+  }
+  /* Slogan 下面那排小胶囊：填满空白，也让新用户一眼知道能干什么 */
+  .hero-tags {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--accent-light);
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    box-shadow: 0 1px 2px rgba(160,107,63,.05);
+  }
 
   /* 面包屑 */
   .crumb {
@@ -252,6 +402,8 @@
     display:flex; gap:8px; align-items:center; flex-wrap:wrap;
     min-height:20px;
   }
+  /* 首页不需要面包屑：内容为空时，不要用 min-height + margin 占一大块空白 */
+  .crumb:empty { display: none; }
   .crumb .link { color:var(--accent); cursor:pointer; background:none; border:none; font:inherit; padding:0; }
   .crumb .link:hover { text-decoration:underline; }
   .crumb .sep { color:var(--text-5); }
@@ -259,68 +411,467 @@
   /* 卡片网格 */
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:var(--card-gap); }
   .card {
-    background:var(--surface); border-radius:16px; padding:22px;
-    border:1.5px solid var(--border); cursor:pointer; text-align:left;
-    transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease;
-    position:relative; font-family:inherit; color:inherit; width:100%;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 22px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(0,0,0,.02);
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  position: relative;
+  font-family: inherit;
+  color: inherit;
+  width: 100%;
   }
-  .card:hover { border-color:var(--gold); transform:translateY(-3px); box-shadow:0 10px 26px var(--shadow); }
+  /* 只保留两个动效之一：hover 上浮 2px */
+  .card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
   /* 按下就给反馈：轻微缩小 + 边框变色 + 背景变浅，手指「按到了」是有感觉的 */
   .card:active {
-    transform:scale(.985);
-    border-color:var(--accent);
-    background:var(--accent-soft);
+  transform: scale(.992);
+  background: var(--surface-2);
   }
   /* 卡片里的「大家常问」区：虚线分隔，和「进入」按钮拉开距离，避免抢点击 */
   .card-qa { margin-top:12px; padding-top:10px; border-top:1px dashed var(--border-soft); }
   .card-qa-title { font-size:0.75rem; color:var(--text-4); margin-bottom:6px; }
-  .card-qa .chips { flex-direction:column; align-items:flex-start; gap:6px; margin-top:0; }
+  .card-qa .chips { flex-direction:column; align-items:flex-start; gap:8px; margin-top:0; }
   /* 卡片底部那个「进入 XX ›」：一眼就知道这才是正门。
      它只是个提示元素，点击由整张卡片接手，所以不会跟快捷问题抢事件 */
   .card-go {
-    display:flex; align-items:center; justify-content:center;
-    margin-top:14px; padding:11px 16px; border-radius:11px;
-    background:var(--accent); color:#fff;
-    font-size:0.875rem; font-weight:600; letter-spacing:.3px;
-    transition:background .18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -.005em;
+  transition: gap .2s ease;
   }
   .card:hover .card-go { background:var(--accent-dark); }
-  .card .icon { font-size:1.625rem; margin-bottom:8px; display:block; line-height:1; }
-  .card .name { font-size:1.0625rem; font-weight:600; }
-  .card .desc { font-size:0.84375rem; color:var(--text-3); margin-top:6px; line-height:1.55; }
-  .card .more { font-size:0.75rem; color:var(--faint); margin-top:12px; }
+  .card .icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  font-size: 20px;
+  line-height: 1;
+  }
+  .card .name {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -.008em;
+  color: var(--text-strong);
+  }
+  .card .desc {
+  font-size: 0.875rem;
+  color: var(--text-3);
+  margin-top: 6px;
+  line-height: 1.6;
+  }
+  .card .more {
+  font-size: 0.75rem;
+  color: var(--text-5);
+  margin-top: 14px;
+  }
 
   /* 快捷问题 */
-  .chips { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+  .chips { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
   .chips.row { flex-direction:row; flex-wrap:wrap; }
   .chip {
-    text-align:left; font-size:0.78125rem; color:var(--text-2); background:var(--surface-2);
-    border:1px solid var(--border-soft); border-radius:9px; padding:7px 10px;
+    text-align:left; font-size:0.75rem; color:var(--text-2); background:var(--surface-2);
+    border:1px solid var(--border-soft); border-radius:10px; padding:8px 10px;
     cursor:pointer; font-family:inherit; line-height:1.45; transition:all .18s;
   }
   .chip:hover { border-color:var(--gold); color:var(--accent); background:var(--accent-soft); }
-  .chip.big { font-size:0.875rem; padding:12px 15px; background:var(--surface); border:1.5px solid var(--border); border-radius:11px; }
+  .chip.big { font-size:0.875rem; padding:12px 16px; background:var(--surface); border:1.5px solid var(--border); border-radius:10px; }
   .chip.big:hover { transform:translateX(3px); }
 
+  /* ---------- 空间页：标签墙 + 折叠区 ---------- */
+  .obj-wall { display:flex; flex-wrap:wrap; gap:8px; }
+  .obj-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: var(--text-2);
+  box-shadow: none;
+  transition: border-color .2s ease, color .2s ease, background .2s ease;
+  }
+  .obj-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  }
+  .obj-chip .oi { font-size:1.125rem; }
+  .obj-chip .on { font-size:0.875rem; }
+  .fold {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  margin: 14px 0;
+  overflow: hidden;
+  box-shadow: none;
+  }
+  .fold > summary {
+    cursor:pointer; list-style:none; padding:16px 16px; font-size:0.9375rem; font-weight:600;
+    display:flex; align-items:center; gap:8px;
+  }
+  .fold > summary::-webkit-details-marker { display:none; }
+  .fold > summary::after { content:"▾"; margin-left:auto; color:var(--text-4); }
+  .fold[open] > summary::after { content:"▴"; }
+  .fold[open] > summary { border-bottom:1px solid var(--border-soft); }
+  .fold-body { padding:10px 16px 16px; }
+  .fold-body.fold-plain { padding:8px 10px 12px; }
+  .faq-row {
+    display:block; width:100%; text-align:left; font:inherit; cursor:pointer;
+    background:transparent; border:0; border-radius:var(--radius-sm); padding:10px;
+    font-size:0.875rem; color:var(--text); line-height:1.6;
+  }
+  .faq-row:hover { background:var(--surface-2); }
+
+  /* 手机上：连线收短、内边距略紧 */
+  @media (max-width: 640px) {   /* 手机上横幅本身就是可点的，CTA 按钮让位给文字 */
+  }
+
+  /* ===== 新手引导卡：白底细边框 + 分隔线列表，设计师工具风格 ===== */
+  .guide-card {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 20px;
+    padding: 30px 28px 10px;
+    margin: 0 0 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.02);
+  }
+  .gc-head { margin-bottom: 6px; }
+  .gc-eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    color: var(--text-4);
+    margin-bottom: 12px;
+  }
+  .gc-title {
+    font-family: var(--font-heading);
+    font-size: 1.4375rem;
+    font-weight: 700;
+    letter-spacing: -.022em;
+    line-height: 1.28;
+    color: var(--text-strong);
+  }
+  .gc-subtitle {
+    font-size: 0.8125rem;
+    color: var(--text-3);
+    margin-top: 7px;
+    line-height: 1.6;
+  }
+  .gc-steps { display: flex; flex-direction: column; }
+  .gc-step {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    width: 100%;
+    padding: 19px 0;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: transparent;
+    border: none;
+    border-top: 1px solid var(--border-soft);
+    border-radius: 0;
+    cursor: pointer;
+  }
+  .gc-step:first-child {
+    border-top: none;
+    padding-top: 16px;
+  }
+  .gc-num {
+    flex: 0 0 auto;
+    min-width: 24px;
+    padding-top: 1px;
+    font-family: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--text-5);
+    font-variant-numeric: tabular-nums;
+    transition: color .2s ease;
+  }
+  .gc-step-primary .gc-num { color: var(--accent); }
+  .gc-step:hover .gc-num { color: var(--accent); }
+  .gc-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .gc-body b {
+    font-family: var(--font-heading);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -.005em;
+    color: var(--text-strong);
+    transition: color .2s ease;
+  }
+  .gc-step:hover .gc-body b { color: var(--accent-dark); }
+  .gc-body span {
+    font-size: 0.8125rem;
+    color: var(--text-3);
+    line-height: 1.6;
+  }
+  .gc-body em {
+    font-style: normal;
+    font-size: 0.75rem;
+    color: var(--text-4);
+    letter-spacing: .01em;
+    margin-top: 5px;
+  }
+  .gc-arrow {
+    flex: 0 0 auto;
+    padding-top: 1px;
+    font-size: 0.9375rem;
+    color: var(--text-5);
+    transition: color .2s ease, transform .2s ease;
+  }
+  .gc-step:hover .gc-arrow {
+    color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  /* ===== 空间选择页（底栏清单/问 AI 的中间页） ===== */
+.pick-head {
+  text-align: left; margin: 4px 0 22px;
+}
+.pick-head h2 {
+  font-size: 1.375rem; font-weight: 700; letter-spacing: -.018em;
+  color: var(--text-strong); margin: 0;
+  padding: 0; border: 0;
+}
+.pick-head p {
+  font-size: 0.875rem; color: var(--text-3); margin-top: 8px; line-height: 1.7;
+  max-width: 520px;
+}
+
+  @media (max-width: 640px) {
+    .pick-head h2 { font-size:1.125rem; }
+    .pick-head p { font-size:0.8125rem; }
+    .pick-head { margin: 2px 0 16px; }
+  }
+
+  /* ---------- 全屋大卡：首页视觉最重的一块 ---------- */
+  .whole-banner {
+    position:relative;
+    display:flex; align-items:center; gap:18px; cursor:pointer; text-align:left;
+    background:linear-gradient(135deg, var(--accent-soft) 0%, var(--surface) 100%);
+    border:1.5px solid var(--accent-light);
+    border-left:5px solid var(--accent);
+    border-radius:var(--radius-lg);
+    padding:24px 26px;
+    margin:0 0 20px;
+    box-shadow:0 4px 10px rgba(160,107,63,.14), 0 16px 40px rgba(160,107,63,.14);
+    transition:transform .22s ease, box-shadow .22s ease;
+  }
+  .whole-banner:hover {
+    transform:translateY(-2px);
+    box-shadow:0 6px 14px rgba(160,107,63,.20), 0 22px 50px rgba(160,107,63,.20);
+  }
+  .whole-banner:active { transform:scale(.99); }
+  .wb-icon {
+    flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+    width:60px; height:60px; border-radius:16px; font-size:30px;
+    background:var(--surface); border:1.5px solid var(--accent-light);
+    box-shadow:0 2px 6px rgba(160,107,63,.10);
+  }
+  .wb-body { flex:1 1 auto; min-width:0; }
+  .wb-tag {
+    display:inline-block; font-size:0.75rem; font-weight:600; letter-spacing:.02em;
+    padding:3px 10px; border-radius:20px; margin-bottom:8px;
+    background:var(--accent); color:#fff;
+  }
+  .wb-title {
+    font-family:var(--font-heading);
+    font-size:1.375rem; font-weight:700; line-height:1.3;
+    color:var(--text-strong); letter-spacing:-.01em;
+  }
+  .wb-desc { font-size:0.875rem; color:var(--text-2); margin-top:6px; line-height:1.6; }
+  .wb-cta {
+    flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+    background:var(--accent); color:#fff;
+    font-size:0.875rem; font-weight:600;
+    padding:10px 18px; border-radius:10px;
+    box-shadow:0 2px 6px rgba(160,107,63,.20);
+    transition:background .18s;
+  }
+  .whole-banner:hover .wb-cta { background:var(--accent-dark); }
+
+  /* ---------- 空间九宫格：一排三个（清单 / 问 AI 的选择页也用它） ---------- */
+  .space-grid {
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:var(--card-gap, 16px);
+  }
+.space-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 12px;
+  text-align: center;
+  border-radius: 16px;
+}
+  .space-tile .icon { margin-bottom:0; }
+  .space-tile .name { font-size:0.9375rem; font-weight:600; }
+
+  /* ---------- 手机底部导航（只在 ≤640px 显示） ---------- */
+  .bottom-nav { display:none; }
+  @media (max-width: 640px) {
+    :root { --bottom-nav-h:56px; }
+    .bottom-nav {
+      display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+      height: var(--bottom-nav-h);
+      background: var(--appbar-bg);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 -1px 0 rgba(0,0,0,.05), 0 -8px 28px rgba(0,0,0,.05);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bottom-nav.hidden { display: none; }
+
+    .bn-item {
+      flex: 1 1 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px;
+      background: transparent; border: 0;
+      font: inherit; cursor: pointer;
+      color: var(--text-4);
+      padding: 6px 0;
+      position: relative;
+      transition: color .22s ease;
+    }
+    /* 取消旧的顶部色条 —— 现在用图标容器的填色做视觉锚点 */
+    .bn-item::before { display: none; }
+
+    /* 图标放进一个小圆角容器里，选中时填暖色 */
+    .bn-item .bn-icon {
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      width: 36px; height: 28px;
+      border-radius: 10px;
+      font-size: 1.0625rem;
+      line-height: 1;
+      background: transparent;
+      transition: background .22s ease, transform .22s ease;
+    }
+    .bn-item .bn-text {
+      font-size: 0.6875rem;
+      letter-spacing: .02em;
+      transition: color .22s ease;
+    }
+    .bn-item.active { color: var(--accent-dark); }
+    .bn-item.active .bn-icon {
+      background: var(--accent-soft);
+      box-shadow: inset 0 0 0 1px var(--accent-light);
+      transform: translateY(-1px) scale(1.04);
+    }
+    .bn-item.active .bn-text { font-weight: 600; }
+    /* 给底部留出导航高度：页面、浮动按钮、toast、输入区 */
+    .wrap { padding-bottom:calc(var(--bottom-nav-h) + 16px); }
+    .floater, .to-bottom { bottom:calc(var(--bottom-nav-h) + 16px); }
+    .toast { bottom:calc(var(--bottom-nav-h) + 16px); }
+    .composer { padding-bottom:calc(var(--bottom-nav-h) + 8px); }
+  }
+
+  /* ---------- 首页：搜索 / 全屋大卡 / 空间九宫格 ---------- */
+.home-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 0 16px;
+  margin: 0 0 16px;
+  box-shadow: none;
+  transition: border-color .2s ease;
+}
+.home-search:focus-within {
+  border-color: var(--accent); box-shadow: none;
+}
+  .home-search .hs-icon { font-size:1rem; opacity:.7; }
+  .home-search input {
+    flex:1 1 auto; border:0; outline:0; background:transparent; font:inherit;
+    font-size:1rem; color:var(--text); padding:12px 0; min-width:0;
+  }
+  .home-search-res {
+    background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-lg);
+    box-shadow:0 8px 28px rgba(0,0,0,.10); margin:-10px 0 16px; padding:8px; overflow:hidden;
+  }
+  .hs-item {
+    display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+    font:inherit; cursor:pointer; background:transparent; border:0; border-radius:var(--radius-sm);
+    padding:8px 10px; color:var(--text);
+  }
+  .hs-item:hover { background:var(--surface-2); }
+  .hs-kind {
+    flex:0 0 auto; font-size:0.75rem; padding:2px 8px; border-radius:20px;
+    background:var(--accent-soft); color:var(--accent-dark); border:1px solid var(--accent-light);
+  }
+  .hs-name { flex:1 1 auto; font-size:0.875rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hs-label { flex:0 0 auto; font-size:0.75rem; color:var(--text-4); }
+  .hs-empty { padding:12px; font-size:0.8125rem; color:var(--text-3); text-align:center; }
+
+  /* 全屋大卡 */
+
+  .space-tile .icon { margin-bottom:0; }
+  .space-tile .name { font-size:0.9375rem; font-weight:600; }
+  @media (max-width: 900px) { .space-grid { grid-template-columns:repeat(3, 1fr); } }
+  @media (max-width: 640px) {
+    .space-grid { grid-template-columns:repeat(3, 1fr); gap:var(--sp-3); }
+    .space-tile { padding:16px 8px; }
+    .space-tile .icon { width:40px; height:40px; font-size:20px; border-radius:10px; }
+    .space-tile .name { font-size:0.875rem; }
+    /* 手机上横幅本身就是可点的，CTA 按钮让位给文字 */
+    .wb-cta { display:none; }
+    .whole-banner { padding:18px; gap:12px; }
+    .wb-icon { width:48px; height:48px; font-size:24px; border-radius:13px; }
+    .wb-title { font-size:1.0625rem; }
+    .home-search input { font-size:16px; }     /* 手机聚焦不放大 */
+  }
   .sec-title {
-    font-size:0.9375rem; font-weight:600; margin:32px 0 15px;
-    padding-left:12px; border-left:3px solid var(--accent);
+    font-size:1rem; font-weight:600; margin:32px 0 16px;
+    padding-left:12px; border-left:4px solid var(--accent);
   }
   .sec-title:first-child { margin-top:0; }
 
   /* 折叠条件 */
   .cond {
-    background:var(--surface); border:1.5px solid var(--border); border-radius:12px;
-    margin:18px 0 4px; overflow:hidden;
+    background:var(--surface); border:1.5px solid var(--border); border-radius:10px;
+    margin:16px 0 4px; overflow:hidden;
   }
   .cond > summary {
-    cursor:pointer; padding:12px 16px; font-size:0.84375rem; color:var(--text-2);
+    cursor:pointer; padding:12px 16px; font-size:0.8125rem; color:var(--text-2);
     font-weight:500; list-style:none;
   }
   .cond > summary::-webkit-details-marker { display:none; }
   .cond > summary::before { content:"▸ "; color:var(--accent); }
   .cond[open] > summary::before { content:"▾ "; }
-  .cond > summary .hint { color:var(--text-5); font-weight:400; font-size:0.78125rem; }
+  .cond > summary .hint { color:var(--text-5); font-weight:400; font-size:0.75rem; }
   .cond > summary .cond-sum { color:var(--accent); font-weight:600; }
   .cond-body {
     padding:2px 16px 16px; display:grid;
@@ -328,11 +879,11 @@
   }
 
   /* 表单控件 */
-  .field { display:flex; flex-direction:column; gap:6px; }
+  .field { display:flex; flex-direction:column; gap:8px; }
   .field label { font-size:0.8125rem; color:var(--text-2); font-weight:500; }
   .field input, .field select, .field textarea,
   .set-row input, .set-row select, .hist-search input {
-    padding:11px 13px; border:1.5px solid var(--border); border-radius:10px;
+    padding:12px 12px; border:1.5px solid var(--border); border-radius:10px;
     font-size:0.875rem; font-family:inherit; background:var(--surface); outline:none;
     transition:border-color .2s; color:var(--text);
   }
@@ -342,29 +893,29 @@
   /* 按钮 */
   .btn {
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    padding:12px 26px; border-radius:10px; border:none; cursor:pointer;
-    font-size:0.90625rem; font-weight:600; font-family:inherit;
+    padding:12px 24px; border-radius:10px; border:none; cursor:pointer;
+    font-size:0.8125rem; font-weight:600; font-family:inherit;
     background:var(--accent); color:#fff; transition:all .2s;
   }
   .btn:hover { background:var(--accent-dark); }
   .btn:disabled { background:var(--text-5); cursor:not-allowed; }
   .btn.ghost { background:var(--surface); color:var(--accent); border:1.5px solid var(--accent); }
   .btn.ghost:hover { background:var(--accent-soft); }
-  .btn.small { padding:9px 17px; font-size:0.84375rem; }
+  .btn.small { padding:8px 17px; font-size:0.8125rem; }
 
   /* 对话 */
   .chat-title-row { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
   .chat-title { font-size:1rem; font-weight:600; }
-  .chat-sub { font-size:0.78125rem; color:var(--text-4); }
+  .chat-sub { font-size:0.75rem; color:var(--text-4); }
 
   .msgs { display:flex; flex-direction:column; gap:var(--msg-gap); margin-top:14px; }
   .msg { display:flex; }
   .msg.user { justify-content:flex-end; }
-  .msg .col { display:flex; flex-direction:column; gap:11px; align-items:flex-start; max-width:72%; }
+  .msg .col { display:flex; flex-direction:column; gap:12px; align-items:flex-start; max-width:72%; }
   .msg.user .col { align-items:flex-end; }
   .msg .bubble {
     border-radius:16px; padding:var(--bubble-pad); max-width:100%;
-    font-size:0.90625rem; line-height:1.75; overflow-wrap:anywhere;
+    font-size:0.8125rem; line-height:1.75; overflow-wrap:anywhere;
   }
   .msg.user .bubble {
     background:var(--bubble-user-bg); color:var(--bubble-user-text);
@@ -379,21 +930,21 @@
   }
   @keyframes caret { 50% { opacity:0; } }
 
-  .msg-acts { display:flex; gap:6px; flex-wrap:wrap; opacity:.5; transition:opacity .2s; }
+  .msg-acts { display:flex; gap:8px; flex-wrap:wrap; opacity:.5; transition:opacity .2s; }
   .msg .col:hover .msg-acts, .msg-acts:focus-within { opacity:1; }
   .msg-acts.right { justify-content:flex-end; }
   .tbtn.xs { padding:4px 10px; font-size:0.75rem; border-radius:8px; }
 
   .edit-box {
     width:min(560px, 78vw); min-height:88px; resize:vertical;
-    padding:13px 15px; border:1.5px solid var(--accent); border-radius:14px;
-    font-family:inherit; font-size:0.90625rem; line-height:1.7;
+    padding:12px 16px; border:1.5px solid var(--accent); border-radius:16px;
+    font-family:inherit; font-size:0.8125rem; line-height:1.7;
     background:var(--surface); color:var(--text); outline:none;
   }
 
   .empty {
-    background:var(--surface); border:1.5px dashed var(--border); border-radius:14px;
-    padding:26px 24px; margin-top:14px;
+    background:var(--surface); border:1.5px dashed var(--border); border-radius:16px;
+    padding:24px 24px; margin-top:14px;
   }
   .empty .et { font-size:0.9375rem; font-weight:600; margin-bottom:4px; }
   .empty .es { font-size:0.8125rem; color:var(--text-3); margin-bottom:14px; }
@@ -404,23 +955,23 @@
   .thinking { font-size:0.8125rem; color:var(--text-4); }
 
   /* 系统提示条 */
-  .sys-note { font-size:0.8125rem; border-radius:10px; padding:10px 14px; line-height:1.6; max-width:100%; }
+  .sys-note { font-size:0.8125rem; border-radius:10px; padding:10px 16px; line-height:1.6; max-width:100%; }
   .sys-note b { display:block; margin-bottom:4px; }
-  .sys-note .hint { font-size:0.78125rem; color:var(--text-3); margin-top:4px; }
+  .sys-note .hint { font-size:0.75rem; color:var(--text-3); margin-top:4px; }
   .sys-note.err { background:var(--danger-bg); border:1.5px solid var(--danger-border); color:var(--danger); }
-  .sys-note.warn { background:var(--warn-bg); border:1.5px solid var(--warn-border); color:var(--warn-text); font-size:0.78125rem; }
-  .sys-note.tip { background:var(--muted-bg); border:1.5px solid var(--border); color:var(--text-3); font-size:0.78125rem; }
+  .sys-note.warn { background:var(--warn-bg); border:1.5px solid var(--warn-border); color:var(--warn-text); font-size:0.75rem; }
+  .sys-note.tip { background:var(--muted-bg); border:1.5px solid var(--border); color:var(--text-3); font-size:0.75rem; }
   .sys-note .tbtn { margin-top:8px; }
 
   /* 推荐追问：按钮按文字长度自适应，不占满整行 —— 满宽按钮在手机上上下滑动时极易误触 */
   .followups { display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin-top:6px; width:100%; }
   .followups .fl { font-size:0.75rem; color:var(--text-4); }
-  .followups .chip { width:auto; max-width:100%; padding:8px 13px; }
+  .followups .chip { width:auto; max-width:100%; padding:8px 12px; }
 
   /* 思维链：实线边框，和 AI 气泡一致；结束后收成一行横条 */
   .think {
     background:var(--surface); border:1.5px solid var(--border);
-    border-radius:12px; padding:9px 13px; max-width:100%; width:100%;
+    border-radius:10px; padding:8px 12px; max-width:100%; width:100%;
   }
   .think > summary { cursor:pointer; font-size:0.8125rem; color:var(--text-3); list-style:none; }
   .think > summary::-webkit-details-marker { display:none; }
@@ -435,13 +986,13 @@
   .web-status {
     width:100%; max-width:100%;
     background:var(--accent-soft); border:1.5px solid var(--border-light, var(--border));
-    border-radius:12px; padding:8px 13px; font-size:0.8125rem; color:var(--text-2);
+    border-radius:10px; padding:8px 12px; font-size:0.8125rem; color:var(--text-2);
   }
   .web-status > summary { cursor:pointer; list-style:none; }
   .web-status > summary::-webkit-details-marker { display:none; }
   .web-status.running > summary { color:var(--accent); }
-  .web-body { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
-  .web-body .src { font-size:0.78125rem; }
+  .web-body { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .web-body .src { font-size:0.75rem; }
 
   /* 消息里的「继续说完」 */
   .continue-btn { align-self:flex-start; }
@@ -450,20 +1001,20 @@
   .lightbox {
     position:fixed; inset:0; z-index:200; cursor:zoom-out;
     background:rgba(20,17,14,.86); backdrop-filter:blur(3px);
-    display:flex; align-items:center; justify-content:center; padding:18px;
+    display:flex; align-items:center; justify-content:center; padding:16px;
   }
-  .lightbox img { max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  .lightbox img { max-width:100%; max-height:100%; border-radius:10px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
   .thumb, .pending-img img { cursor:zoom-in; }
 
   /* 通用确认 / 速查弹窗 */
   .ask-body { font-size:0.875rem; color:var(--text-2); line-height:1.7; }
-  .help-list { list-style:none; display:flex; flex-direction:column; gap:7px; }
+  .help-list { list-style:none; display:flex; flex-direction:column; gap:8px; }
   .help-list b { color:var(--text); }
   .ask-check { display:flex; align-items:center; gap:8px; margin-top:14px; font-size:0.875rem; color:var(--text-2); cursor:pointer; }
 
   /* P1-5 图片 */
   .thumbs { display:flex; gap:8px; flex-wrap:wrap; }
-  .thumb { max-width:170px; max-height:170px; border-radius:12px; border:1.5px solid var(--border); }
+  .thumb { max-width:170px; max-height:170px; border-radius:10px; border:1.5px solid var(--border); }
   .img-note { font-size:0.75rem; color:var(--text-4); }
   .pending-imgs { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; }
   .pending-img { position:relative; display:inline-block; }
@@ -484,7 +1035,7 @@
   .cite-ref:hover { text-decoration:underline; }
 
   /* P1-8 用量状态栏 */
-  .usage-bar { font-size:0.75rem; color:var(--text-4); text-align:center; padding:6px 0 0; }
+  .usage-bar { font-size:0.75rem; color:var(--text-4); text-align:center; padding:8px 0 0; }
 
   /* 输入区上方那排小工具 */
   .composer-extra { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
@@ -492,18 +1043,18 @@
 
   /* P1-6 / P1-7 面板 */
   .panel {
-    background:var(--surface); border:1.5px solid var(--border); border-radius:14px;
-    padding:16px 18px; margin-top:16px;
+    background:var(--surface); border:1.5px solid var(--border); border-radius:16px;
+    padding:16px 16px; margin-top:16px;
   }
   .panel-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
   .panel-head b { font-size:0.9375rem; }
   .panel-head .hint { font-size:0.75rem; color:var(--text-4); }
   .panel-head .grow { flex:1; }
   .panel-sec { margin-top:14px; }
-  .panel-sec .sech { font-size:0.84375rem; font-weight:600; color:var(--accent); margin-bottom:8px; }
+  .panel-sec .sech { font-size:0.8125rem; font-weight:600; color:var(--accent); margin-bottom:8px; }
   .timeline { padding-left:20px; }
   .timeline li { margin:8px 0; }
-  .timeline .sub, .checklist .sub { font-size:0.78125rem; color:var(--text-3); }
+  .timeline .sub, .checklist .sub { font-size:0.75rem; color:var(--text-3); }
   .checklist { list-style:none; display:flex; flex-direction:column; gap:10px; }
   .checklist label { display:flex; gap:8px; align-items:flex-start; font-size:0.875rem; cursor:pointer; }
   .checklist input { margin-top:4px; }
@@ -511,25 +1062,25 @@
   .sketch { width:100%; height:auto; max-height:70vh; }
 
   /* Markdown */
-  .md h4 { font-size:1rem; margin:26px 0 10px; color:var(--accent); padding-left:11px; border-left:3px solid var(--accent-light); }
+  .md h4 { font-size:1rem; margin:24px 0 10px; color:var(--accent); padding-left:11px; border-left:3px solid var(--accent-light); }
   .md h4:first-child { margin-top:0; }
-  .md p { margin:11px 0; }
+  .md p { margin:12px 0; }
   .md ul, .md ol { margin:12px 0 12px 4px; padding-left:23px; }
-  .md li { margin:5px 0; }
+  .md li { margin:4px 0; }
   .md strong { color:var(--text-strong); font-weight:600; }
   .md code {
-    background:var(--code-bg); padding:1px 6px; border-radius:5px;
+    background:var(--code-bg); padding:1px 8px; border-radius:6px;
     font-size:0.8125rem; font-family:ui-monospace, Menlo, monospace;
   }
   .md pre.md-pre {
     background:var(--code-bg); border:1px solid var(--border-soft); border-radius:10px;
-    padding:12px 14px; margin:12px 0; overflow-x:auto;
+    padding:12px 16px; margin:12px 0; overflow-x:auto;
   }
-  .md pre.md-pre code { background:none; padding:0; font-size:0.78125rem; line-height:1.6; }
-  .md hr { border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
+  .md pre.md-pre code { background:none; padding:0; font-size:0.75rem; line-height:1.6; }
+  .md hr { border:none; border-top:1px solid var(--border-soft); margin:16px 0; }
   .md .tbl-wrap { overflow-x:auto; margin:12px 0; -webkit-overflow-scrolling:touch; }
-  .md table { border-collapse:collapse; width:100%; font-size:0.84375rem; }
-  .md th, .md td { border:1px solid var(--border-soft); padding:8px 11px; text-align:left; vertical-align:top; line-height:1.6; }
+  .md table { border-collapse:collapse; width:100%; font-size:0.8125rem; }
+  .md th, .md td { border:1px solid var(--border-soft); padding:8px 12px; text-align:left; vertical-align:top; line-height:1.6; }
   .md th { background:var(--surface-2); font-weight:600; color:var(--text-2); white-space:nowrap; }
 
   /* 输入区 */
@@ -542,21 +1093,21 @@
     width:100%; max-width:1400px !important;
     margin:0 auto !important; padding:0 24px;
     box-sizing:border-box;
-    display:flex; flex-direction:column; gap:9px;
+    display:flex; flex-direction:column; gap:8px;
   }
   .composer-row { display:flex; gap:10px; align-items:flex-end; }
   .composer textarea {
-    flex:1; resize:none; min-height:48px; max-height:140px; padding:13px 15px;
-    border:1.5px solid var(--border); border-radius:12px; background:var(--surface);
+    flex:1; resize:none; min-height:48px; max-height:140px; padding:12px 16px;
+    border:1.5px solid var(--border); border-radius:10px; background:var(--surface);
     color:var(--text); font-family:inherit; font-size:0.875rem; line-height:1.6; outline:none;
     transition:border-color .2s;
   }
   .composer textarea:focus { border-color:var(--accent); }
 
-  .chat-tools { display:flex; gap:9px; flex-wrap:wrap; margin-top:16px; }
+  .chat-tools { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
   .tbtn {
-    font-size:0.78125rem; color:var(--text-2); background:var(--surface); border:1.5px solid var(--border);
-    border-radius:9px; padding:7px 13px; cursor:pointer; font-family:inherit; transition:all .18s;
+    font-size:0.75rem; color:var(--text-2); background:var(--surface); border:1.5px solid var(--border);
+    border-radius:10px; padding:8px 12px; cursor:pointer; font-family:inherit; transition:all .18s;
   }
   .tbtn:hover { border-color:var(--gold); color:var(--accent); }
   .tbtn:disabled { color:var(--faint); cursor:not-allowed; border-color:var(--border-soft); }
@@ -571,25 +1122,90 @@
   .fab {
     pointer-events:auto; font-size:0.8125rem; font-family:inherit; cursor:pointer;
     background:var(--text); color:var(--bg); border:none; border-radius:20px;
-    padding:9px 15px; box-shadow:0 6px 18px var(--shadow-strong);
+    padding:8px 16px; box-shadow:0 6px 18px var(--shadow-strong);
     transition:opacity .2s, transform .2s;
   }
   .fab:active { opacity:.85; transform:scale(.97); }
 
+  /* ===== 首页「最近问过的」分组标题 ===== */
+  .home-sec-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 30px 0 12px;
+  }
+  .home-sec-head .hsh-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-light);
+    font-size: 0.8125rem;
+    line-height: 1;
+  }
+  .home-sec-head .hsh-title {
+    font-family: var(--font-heading);
+    font-size: 1rem; font-weight: 700;
+    letter-spacing: -.015em;
+    color: var(--text-strong);
+  }
+  .home-sec-head .hsh-count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--text-4);
+  }
+
   /* 历史 */
-  .hist { display:flex; flex-direction:column; gap:9px; }
-  .hist-empty { text-align:center; padding:18px 0; }
+  .hist { display:flex; flex-direction:column; gap:8px; }
+  .hist-empty { text-align:center; padding:16px 0; }
   .hist-filter { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .hist-search { margin-bottom:10px; }
   .hist-search input { width:100%; }
   .hist-item {
-    position:relative; background:var(--surface); border:1.5px solid var(--border);
-    border-radius:12px; padding:13px 56px 13px 16px; cursor:pointer;
-    transition:transform .18s, border-color .18s;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 14px 52px 14px 14px;
+    cursor: pointer;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
   }
-  .hist-item:hover { border-color:var(--gold); transform:translateX(3px); }
-  .hist-q { font-size:0.875rem; font-weight:500; }
-  .hist-meta { font-size:0.75rem; color:var(--text-4); margin-top:4px; }
+  .hist-item:hover {
+    border-color: var(--accent-light);
+    box-shadow: 0 2px 10px rgba(160,107,63,.06);
+    transform: translateY(-1px);
+  }
+
+  .hist-icon {
+    flex: 0 0 auto;
+    width: 38px; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 11px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    font-size: 1.0625rem;
+    line-height: 1;
+  }
+  .hist-body { flex: 1 1 auto; min-width: 0; }
+  .hist-q {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-strong);
+    line-height: 1.45;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .hist-meta {
+    font-size: 0.75rem;
+    color: var(--text-4);
+    margin-top: 5px;
+    line-height: 1.5;
+  }
   .hist-del {
     position:absolute; right:4px; top:50%; transform:translateY(-50%);
     border:none; background:none; color:var(--faint); font-size:1.125rem;
@@ -598,7 +1214,7 @@
   .hist-del:hover { color:var(--danger); }
 
   /* 加载 */
-  .dots { display:inline-flex; gap:5px; margin-bottom:10px; }
+  .dots { display:inline-flex; gap:4px; margin-bottom:10px; }
   .dots span {
     display:inline-block; width:8px; height:8px; border-radius:50%;
     background:var(--accent); animation:blink 1.2s infinite;
@@ -607,7 +1223,7 @@
   .dots span:nth-child(3){ animation-delay:.4s; }
   @keyframes blink { 0%,80%,100%{opacity:.22;} 40%{opacity:1;} }
 
-  .tip { font-size:0.78125rem; color:var(--text-4); margin-top:10px; line-height:1.6; }
+  .tip { font-size:0.75rem; color:var(--text-4); margin-top:10px; line-height:1.6; }
   .tip.center { text-align:center; margin-top:34px; }
   .tip.warn { color:var(--warn-text); }
   .hidden { display:none !important; }
@@ -615,16 +1231,16 @@
   /* 存储不可用时的常驻提示 */
   .warn-bar {
     background:var(--warn-bg); border-bottom:1.5px solid var(--warn-border);
-    color:var(--warn-text); font-size:0.78125rem; line-height:1.6;
-    padding:9px 16px; text-align:center;
+    color:var(--warn-text); font-size:0.75rem; line-height:1.6;
+    padding:8px 16px; text-align:center;
   }
 
   /* Toast */
   .toast {
     position:fixed; left:50%; bottom:calc(112px + var(--kb)); z-index:999;
     display:flex; align-items:center; gap:12px;
-    background:var(--text); color:var(--bg); padding:11px 18px; border-radius:10px;
-    font-size:0.84375rem; max-width:84vw;
+    background:var(--text); color:var(--bg); padding:12px 16px; border-radius:10px;
+    font-size:0.8125rem; max-width:84vw;
     opacity:0; pointer-events:none; transform:translate(-50%, 8px);
     transition:opacity .25s, transform .25s; box-shadow:0 8px 24px var(--shadow-strong);
   }
@@ -637,36 +1253,36 @@
   /* 弹窗 */
   .modal-mask {
     position:fixed; inset:0; background:rgba(30,26,22,.5);
-    display:flex; align-items:center; justify-content:center; padding:20px;
+    display:flex; align-items:center; justify-content:center; padding:24px;
     z-index:99; backdrop-filter:blur(2px); overflow-y:auto;
   }
   .modal {
-    background:var(--surface); border-radius:16px; padding:26px 28px;
+    background:var(--surface); border-radius:16px; padding:24px 32px;
     max-width:620px; width:100%; box-shadow:0 24px 60px var(--shadow-strong);
     max-height:88vh; overflow-y:auto;
   }
-  .modal h3 { font-size:1.0625rem; margin-bottom:12px; }
+  .modal h3 { font-size:1.125rem; margin-bottom:12px; }
   .modal .set-hint { font-size:0.75rem; color:var(--text-3); line-height:1.6; margin-top:6px; }
   .modal .set-hint .em { color:var(--accent); }
-  .set-row { display:flex; flex-direction:column; gap:9px; margin-bottom:14px; }
+  .set-row { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
   .set-row label { font-size:0.8125rem; color:var(--text-2); font-weight:500; }
   .set-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:0 16px; }
   /* 设置项分组折叠，不要一屏全铺 */
-  .set-group { border:1.5px solid var(--border); border-radius:12px; margin-bottom:12px; overflow:hidden; }
+  .set-group { border:1.5px solid var(--border); border-radius:10px; margin-bottom:12px; overflow:hidden; }
   .set-group > summary {
-    cursor:pointer; padding:11px 14px; list-style:none;
+    cursor:pointer; padding:12px 16px; list-style:none;
     font-size:0.875rem; font-weight:600; color:var(--text-2);
     background:var(--surface-2);
   }
   .set-group > summary::-webkit-details-marker { display:none; }
   .set-group > summary::before { content:"▸ "; color:var(--accent); }
   .set-group[open] > summary::before { content:"▾ "; }
-  .set-group .set-grid { padding:14px; }
-  .key-state { font-size:0.78125rem; margin-top:6px; }
+  .set-group .set-grid { padding:16px; }
+  .key-state { font-size:0.75rem; margin-top:6px; }
   .key-state.ok { color:var(--accent); }
   .key-state.bad { color:var(--danger); }
   .key-state.warn { color:var(--warn-text); }
-  .auth-state { font-size:0.78125rem; margin-top:6px; }
+  .auth-state { font-size:0.75rem; margin-top:6px; }
   .auth-state.ok { color:var(--accent); }
   .auth-state.bad { color:var(--danger); }
   .auth-user { font-size:0.8125rem; color:var(--text-2); word-break:break-all; min-height:1.2em; }
@@ -679,8 +1295,8 @@
   .pw-wrap .pw-toggle {
     position:absolute; right:6px; top:50%; transform:translateY(-50%);
     width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center;
-    border:none; background:none; border-radius:9px; cursor:pointer;
-    font-size:1.0625rem; line-height:1; font-family:inherit; color:var(--text-3);
+    border:none; background:none; border-radius:10px; cursor:pointer;
+    font-size:1.125rem; line-height:1; font-family:inherit; color:var(--text-3);
     transition:color .18s, background .18s;
   }
   .pw-wrap .pw-toggle:hover { color:var(--accent); background:var(--surface-2); }
@@ -688,24 +1304,45 @@
   .sb-acts { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
   /* 首页历史区那行「未登录 / 云端状态」提示 */
   .hist-note { display:flex; flex-wrap:wrap; align-items:center; gap:10px;
-    font-size:0.8125rem; color:var(--text-3); margin:6px 0 2px; }
-  .hist-note .tbtn { padding:5px 12px; font-size:0.78125rem; }
-  .hist-note code { font-size:0.75rem; background:var(--surface-2); border:1px solid var(--border-soft); padding:1px 5px; border-radius:5px; }
+    font-size:0.8125rem; color:var(--text-3); margin:8px 0 2px; }
+  .hist-note .tbtn { padding:4px 12px; font-size:0.75rem; }
+  .hist-note code { font-size:0.75rem; background:var(--surface-2); border:1px solid var(--border-soft); padding:1px 4px; border-radius:6px; }
   .sql-box { margin:10px 0 0; font-size:0.8125rem; color:var(--text-3); }
   .sql-box summary { cursor:pointer; }
-  .sql-box pre { margin:8px 0 0; padding:12px 14px; overflow:auto; font-size:0.75rem; line-height:1.55;
+  .sql-box pre { margin:8px 0 0; padding:12px 16px; overflow:auto; font-size:0.75rem; line-height:1.55;
     background:var(--code-bg); border:1px solid var(--border-soft); border-radius:10px; }
   .modal-btns { display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:18px; flex-wrap:wrap; }
   .modal-btns .right { display:flex; gap:10px; }
 
   /* ===== 手机（≤640px）：单列 + 少内容，不靠缩小字号 ===== */
   @media (max-width: 640px) {
-    :root { --page-pad: 14px; --card-gap: 13px; --msg-gap: 18px; --bubble-pad: 16px 17px; }
-    .wrap { padding:14px var(--page-pad) 40px; }
-    .hero { margin-bottom:18px; }
-    .hero h1 { font-size:1.375rem; }
-    .hero p { font-size:0.875rem; line-height:1.75; }
-    .sec-title { font-size:0.9375rem; margin:22px 0 12px; }
+    :root { --page-pad: 14px; --card-gap: 12px; --msg-gap: 16px; --bubble-pad: 16px 17px; }
+    .wrap { padding:16px var(--page-pad) 40px; }
+    .hero {
+      margin-bottom: 14px;
+      padding: 36px 22px 32px;
+      border-radius: 20px;
+    }
+    .hero::before { width: 220px; height: 220px; top: -80px; right: -70px; }
+    .hero::after { right: 18px; bottom: 20px; width: 80px; height: 52px; background-size: 10px 10px; opacity: .18; }
+    .hero h1 { font-size: 1.875rem; gap: 12px; }
+    .hero h1 .hero-logo { width: 46px; height: 46px; border-radius: 13px; font-size: 23px; }
+    .hero p { font-size: 0.875rem; margin-top: 14px; line-height: 1.7; max-width: 100%; }
+    .hero p::before { width: 22px; margin-bottom: 10px; }
+    .hero-tags { margin-top: 18px; gap: 6px; }
+    .hero-tag { font-size: 0.6875rem; padding: 6px 10px; }
+    .guide-card { padding:22px 18px 6px; border-radius:16px; }
+    .gc-eyebrow { font-size:0.625rem; letter-spacing:.12em; margin-bottom:10px; }
+    .gc-title { font-size:1.1875rem; }
+    .gc-subtitle { font-size:0.75rem; margin-top:6px; }
+    .gc-step { gap:14px; padding:16px 0; }
+    .gc-step:first-child { padding-top:13px; }
+    .gc-num { min-width:20px; font-size:0.75rem; }
+    .gc-body b { font-size:0.9375rem; }
+    .gc-body span { font-size:0.75rem; line-height:1.55; }
+    .gc-body em { font-size:0.6875rem; margin-top:4px; }
+    .gc-arrow { font-size:0.875rem; }
+    .sec-title { font-size:0.9375rem; margin:24px 0 12px; }
 
     /* 首页卡片：居中单列 + 限宽，内容完整显示，不再是一根光秃秃的长条 */
     .grid {
@@ -714,44 +1351,44 @@
     }
     .card {
       width:100%; max-width:420px;        /* 限宽，别被拉成长条 */
-      padding:16px 18px; border-radius:14px;
+      padding:16px 16px; border-radius:16px;
     }
-    .card .icon { font-size:1.5rem; }
-    .card .name { font-size:1.05rem; }
+    .card .icon { font-size:1.375rem; }
+    .card .name { font-size:1rem; }
     /* 之前被隐藏的内容全部显示回来 */
-    .card .desc { display:block; font-size:0.85rem; margin-top:6px; }
-    .card .chips { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
-    .card .chips .chip { font-size:0.78rem; padding:8px 10px; }
+    .card .desc { display:block; font-size:0.8125rem; margin-top:6px; }
+    .card .chips { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+    .card .chips .chip { font-size:0.75rem; padding:8px 10px; }
     .card .more { display:block; font-size:0.75rem; margin-top:12px; }
 
     /* 空间页 FAQ 按钮整行宽，触控区给足 */
     .chips.row { flex-direction:column; }
-    .chip.big { width:100%; padding:13px 15px; font-size:0.96875rem; }
+    .chip.big { width:100%; padding:12px 16px; font-size:0.9375rem; }
 
     /* 对话正文：行高更松、气泡更宽 */
-    .msg .col { max-width:96%; gap:9px; }
-    .msg .bubble { font-size:1rem; padding:var(--bubble-pad); line-height:1.8; border-radius:15px; }
+    .msg .col { max-width:96%; gap:8px; }
+    .msg .bubble { font-size:1rem; padding:var(--bubble-pad); line-height:1.8; border-radius:16px; }
     .msg-acts { opacity:1; }
 
     /* 输入区 */
-    .composer { padding:9px 0 calc(9px + env(safe-area-inset-bottom, 0px)); }
-    .composer-extra { gap:7px; }
+    .composer { padding:8px 0 calc(9px + env(safe-area-inset-bottom, 0px)); }
+    .composer-extra { gap:8px; }
     .composer-extra .hint { flex-basis:100%; font-size:0.8125rem; }
     .composer textarea { min-height:44px; max-height:120px; font-size:1rem; }
     .composer-row .btn.small { min-width:76px; }     /* 发送 / 停止不被挤扁 */
 
     /* 面板与表格 */
-    .panel { padding:15px 16px; border-radius:13px; }
+    .panel { padding:16px 16px; border-radius:12px; }
     .panel-head .hint { flex-basis:100%; order:3; }
     .md table { font-size:0.875rem; }
     .md th, .md td { padding:8px 10px; }
-    .md h4 { font-size:0.96875rem; margin:20px 0 8px; }
+    .md h4 { font-size:0.9375rem; margin:24px 0 8px; }
     .cond-body { grid-template-columns:1fr; }
 
     /* 历史：搜索条吸顶 */
     .hist-search {
       position:sticky; top:calc(56px + env(safe-area-inset-top, 0px)); z-index:5;
-      background:var(--bg); padding:8px 0 6px; margin-bottom:6px;
+      background:var(--bg); padding:8px 0 8px; margin-bottom:6px;
     }
     .hist { display:flex; flex-direction:column; }
 
@@ -759,34 +1396,35 @@
     .modal-mask { align-items:flex-end; padding:0; }
     .modal {
       width:100%; max-width:100%; max-height:88vh;
-      border-radius:18px 18px 0 0;
-      padding:18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+      border-radius:16px 18px 0 0;
+      padding:16px 16px calc(18px + env(safe-area-inset-bottom, 0px));
     }
     .set-grid { grid-template-columns:1fr; }
-    .set-row { gap:9px; }
+    .set-row { gap:8px; }
     .set-row input, .set-row select { min-height:48px; }
-    .modal-btns { flex-direction:column-reverse; align-items:stretch; gap:9px; }
+    .modal-btns { flex-direction:column-reverse; align-items:stretch; gap:8px; }
     .modal-btns .right { flex-direction:column-reverse; }
     .modal-btns .btn, .modal-btns .tbtn { width:100%; }
 
-    .chat-inner { padding:14px 14px 10px !important; }
-    .composer-inner { padding:0 14px; }
+    .chat-inner { padding:16px 16px 10px !important; }
+    .composer-inner { padding:0 16px; }
     .appbar { padding-left:14px; padding-right:14px; }
     .thumb { max-width:118px; max-height:118px; }
     .pending-img img { width:48px; height:48px; }
     .toast { bottom:calc(104px + var(--kb)); max-width:92vw; }
-    .floaters { right:12px; bottom:calc(104px + var(--kb)); gap:7px; }
-    .fab { padding:9px 13px; font-size:0.78125rem; }
-    .hist-item { padding:13px 52px 13px 14px; }
+    .floaters { right:12px; bottom:calc(104px + var(--kb)); gap:8px; }
+    .fab { padding:8px 12px; font-size:0.75rem; }
+    .hist-item { padding: 12px 48px 12px 12px; gap: 10px; }
+    .hist-icon { width: 34px; height: 34px; border-radius: 10px; font-size: 1rem; }
   }
 
   /* ===== 超窄屏（≤480px）===== */
   @media (max-width: 480px) {
     .wrap { padding:12px 12px 36px; }
-    .hero h1 { font-size:1.3125rem; }
+    .hero h1 { font-size:1.375rem; }
     .appbar { min-height:56px; }
     .ab-main { font-size:0.9375rem; }
-    .msg .bubble { padding:15px 16px; }
+    .msg .bubble { padding:16px 16px; }
     .composer-row .btn.small { min-width:70px; }
   }
 
@@ -800,12 +1438,12 @@
 
   /* ===== 平板（641-1023px）：介于手机与桌面之间 ===== */
   @media (min-width: 641px) and (max-width: 1023px) {
-    :root { --page-pad: 20px; --card-gap: 15px; --msg-gap: 20px; --bubble-pad: 18px 20px; }
-    .wrap { padding:20px var(--page-pad) 56px; }
+    :root { --page-pad: 20px; --card-gap: 16px; --msg-gap: 24px; --bubble-pad: 18px 20px; }
+    .wrap { padding:24px var(--page-pad) 56px; }
     .grid { grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); }
     .msg .col { max-width:80%; }
     .cond-body { grid-template-columns:repeat(2, 1fr); }
-    .composer { padding:11px 0 calc(11px + env(safe-area-inset-bottom, 0px)); }
+    .composer { padding:12px 0 calc(11px + env(safe-area-inset-bottom, 0px)); }
   }
 
   /* ===== 小桌面（1024-1279px）===== */
@@ -816,17 +1454,19 @@
 
   /* ===== 宽屏（≥1280px）：舒展开，行宽受控 ===== */
   @media (min-width: 1280px) {
-    :root { --page-pad: 26px; --card-gap: 20px; --msg-gap: 26px; --bubble-pad: 22px 24px; }
-    .wrap { padding:28px var(--page-pad) 64px; }
-    .hero h1 { font-size:1.875rem; }
+    :root { --page-pad: 26px; --card-gap: 24px; --msg-gap: 24px; --bubble-pad: 22px 24px; }
+    .wrap { padding:32px var(--page-pad) 64px; }
+    .hero { padding: 60px 52px 52px; }
+    .hero h1 { font-size: 2.75rem; }
+    .hero h1 .hero-logo { width: 64px; height: 64px; font-size: 32px; border-radius: 17px; }
     .grid { grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); }
     .card { padding:24px; }
     /* 大屏上气泡太宽反而难读，收一收 */
     .msg .col { max-width:74%; }
-    .msg .bubble { font-size:0.96875rem; }
+    .msg .bubble { font-size:0.9375rem; }
     .md table { font-size:0.875rem; }
     .appbar { min-height:64px; }
-    .ab-main { font-size:1.0625rem; }
+    .ab-main { font-size:1.125rem; }
     .cond-body { grid-template-columns:repeat(3, 1fr); }
     /* 历史记录桌面两列 */
     .hist { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
@@ -835,7 +1475,7 @@
 
   /* ===== 超宽（≥1600px）===== */
   @media (min-width: 1600px) {
-    :root { --msg-gap: 28px; }
+    :root { --msg-gap: 32px; }
     .msg .col { max-width:70%; }
   }
 
@@ -864,11 +1504,18 @@
   }
   /* ===== 排行榜 ===== */
   .rank-tabs, .rank-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-  .rank-item {
-    background:var(--surface); border:1.5px solid var(--border);
-    border-radius:12px; padding:13px 16px;
-  }
-  .rank-item + .rank-item { margin-top:10px; }
+.rank-item {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: none;
+  transition: border-color .2s ease;
+}
+  .rank-item:hover { border-color: var(--accent-light); }
+.rank-item + .rank-item {
+  margin-top: 8px;
+}
   .rank-item > summary { cursor:pointer; list-style:none; }
   .rank-item > summary::-webkit-details-marker { display:none; }
   .rank-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
@@ -881,20 +1528,28 @@
   .rank-web-field { margin-top:14px; }
   .rank-web-note { font-size:0.75rem; color:var(--text-4); line-height:1.7; margin-top:10px; }
   .rank-web-result { margin-top:14px; }
-  .rank-web-case { background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:11px 13px; margin-bottom:9px; }
-  .rank-web-case-title { font-size:0.78125rem; font-weight:600; color:var(--accent); margin-bottom:5px; }
-  .rank-web-case-body { font-size:0.84375rem; color:var(--text-2); line-height:1.7; white-space:pre-wrap; }
+  .rank-web-case { background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:12px 12px; margin-bottom:9px; }
+  .rank-web-case-title { font-size:0.75rem; font-weight:600; color:var(--accent); margin-bottom:5px; }
+  .rank-web-case-body { font-size:0.8125rem; color:var(--text-2); line-height:1.7; white-space:pre-wrap; }
   .rank-web-case .src { display:inline-block; margin-top:6px; font-size:0.75rem; }
   .rank-basis {
-    font-size:0.6875rem; padding:2px 7px; border-radius:5px;
+    font-size:0.75rem; padding:2px 8px; border-radius:6px;
     background:var(--surface-2); border:1px solid var(--border-soft); color:var(--text-3);
   }
   .rank-why { font-size:0.8125rem; color:var(--text-2); margin-top:4px; line-height:1.6; }
   .rank-key { font-size:0.8125rem; color:var(--text-2); margin-top:4px; }
-  .rank-cost { font-size:0.78125rem; color:var(--text-3); margin-top:4px; }
+  .rank-cost { font-size:0.75rem; color:var(--text-3); margin-top:4px; }
+  /* 「点开看怎么做」提示 */
+  .rank-expand-hint { font-size:0.8125rem; color:var(--accent); margin-top:7px; }
+  .rank-verify-row .e { flex:0 0 1.4em; text-align:center; }
+  .rank-verify-bad .v { color:var(--danger); }
+  .rank-verify-act .v { color:var(--accent-2); font-weight:600; }
+  .rank-ver { font-size:0.75rem; color:var(--text-5); text-align:center; margin-top:8px; }
+  .rank-expand-hint::after { content:"点开看怎么做 ▾"; }
+  details[open] .rank-expand-hint::after { content:"收起 ▴"; }
   /* 证据等级角标（事实标签，不是评分） */
   .rank-level {
-    font-size:0.6875rem; padding:1px 7px; border-radius:20px; white-space:nowrap;
+    font-size:0.75rem; padding:1px 8px; border-radius:20px; white-space:nowrap;
     border:1px solid transparent; margin-left:6px; vertical-align:1px;
   }
   .rank-level.lv-must { background:var(--text); color:var(--bg); border-color:var(--text); font-weight:600; }
@@ -903,7 +1558,7 @@
   /* 验收动作卡 */
   /* 一票否决小标（说明它为什么在 S 级） */
   .rank-veto {
-    font-size:0.6875rem; padding:1px 7px; border-radius:20px; margin-left:6px; vertical-align:1px;
+    font-size:0.75rem; padding:1px 8px; border-radius:20px; margin-left:6px; vertical-align:1px;
     background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger-border); white-space:nowrap;
   }
   .rank-verify {
@@ -919,87 +1574,92 @@
     display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
     gap:var(--card-gap); margin-bottom:6px;
   }
-  .card.mini { padding:14px 16px; }
-  .card.mini .icon { font-size:1.4rem; }
+  .card.mini { padding:16px 16px; }
+  .card.mini .icon { font-size:1.375rem; }
   .card.mini .name { font-size:0.9375rem; }
   .card.mini .desc { font-size:0.8125rem; margin-top:2px; }
   @media (max-width: 640px) { .tool-grid { grid-template-columns:1fr 1fr; } }
   /* ---------- 工具箱 AI 工作台 ---------- */
   /* ---------- P0-1 首页三步引导条 ---------- */
   .guide-strip {
-    background:var(--surface); border:1px solid var(--border-soft); border-radius:12px;
-    padding:12px 14px; margin:0 0 14px;
+    background:var(--surface); border:none; border-radius:10px;
+    padding:12px 16px; margin:0 0 16px;
   }
   .gs-title { font-size:0.875rem; color:var(--text); margin-bottom:9px; }
   .gs-steps { display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; }
   .gs-step {
     flex:1 1 0; min-width:150px; display:flex; align-items:center; gap:8px; text-align:left;
-    font:inherit; cursor:pointer; padding:9px 11px; border-radius:10px;
+    font:inherit; cursor:pointer; padding:8px 12px; border-radius:10px;
     background:var(--surface-2); border:1px solid var(--border); color:var(--text);
   }
   .gs-step:hover { border-color:var(--accent); }
   .gs-step .n { font-size:1rem; color:var(--accent-dark); flex:0 0 auto; }
   .gs-step .t { font-size:0.8125rem; color:var(--text); }
-  .gs-step .d { font-size:0.6875rem; color:var(--text-4); margin-left:auto; white-space:nowrap; }
+  .gs-step .d { font-size:0.75rem; color:var(--text-4); margin-left:auto; white-space:nowrap; }
   .gs-arrow { align-self:center; color:var(--text-5); font-size:0.875rem; }
   .gs-note { font-size:0.75rem; color:var(--text-4); margin-top:9px; line-height:1.7; }
   @media (max-width: 640px) {
-    .ver-tag { display:none; }          /* 顶栏按钮多，手机上先让出版本号的位置 */
+    .ver-tag { display:none; }
+    .card:hover { transform:none; }     /* 触屏上 hover 会粘住，手机上不做位移 */
+    /* 手机上底栏已经有「工具」，顶栏的 🧰 收起来，给标题让位 */
+    #abToolsBtn { display:none; }
+    .ab-titles { min-width:0; }
+    .ab-main { font-size:0.9375rem; }
     .gs-steps { flex-direction:column; }
     .gs-arrow { display:none; }
     .gs-step { min-width:0; width:100%; }
   }
   /* 首页的排行榜小卡（和空间卡区分开） */
-  .rank-mini-grid .card.mini { padding:12px 14px; }
+  .rank-mini-grid .card.mini { padding:12px 16px; }
   .rank-mini .desc { font-size:0.75rem; color:var(--text-4); }
   /* ---------- P0-3 没填 Key 的引导卡 ---------- */
   /* ---------- P1-6 预算分配器 ---------- */
   .budget-splitter {
-    background:var(--surface); border:1px solid var(--border-soft); border-radius:12px;
-    padding:12px 14px; margin:0 0 14px;
+    background:var(--surface); border:1px solid var(--border-soft); border-radius:10px;
+    padding:12px 16px; margin:0 0 16px;
   }
   .bs-title { font-size:0.875rem; color:var(--text); margin-bottom:10px; }
   .bs-title input {
     width:5.5em; font:inherit; font-size:0.875rem; text-align:center;
     color:var(--text); background:var(--surface-2); border:1px solid var(--border);
-    border-radius:8px; padding:4px 6px;
+    border-radius:8px; padding:4px 8px;
   }
   .bs-row { margin-bottom:12px; }
   .bs-head { display:flex; align-items:baseline; gap:8px; }
   .bs-head b { font-size:0.8125rem; color:var(--text); }
   .bs-money { font-size:0.875rem; color:var(--accent-dark); margin-left:auto; }
-  .bs-hint { font-size:0.6875rem; color:var(--text-4); margin:2px 0 5px; }
+  .bs-hint { font-size:0.75rem; color:var(--text-4); margin:2px 0 4px; }
   .bs-row input[type=range] { width:100%; accent-color:var(--accent); }
-  .bs-pct { font-size:0.6875rem; color:var(--text-4); text-align:right; }
+  .bs-pct { font-size:0.75rem; color:var(--text-4); text-align:right; }
   .bs-foot { font-size:0.75rem; color:var(--text-4); line-height:1.7; margin-top:6px; }
   /* ---------- P1-7 我家进度 ---------- */
   .pg-acts { margin:0 0 12px; }
   .pg-count { font-size:0.75rem; color:var(--accent-dark); margin-left:8px; }
   .pg-list { display:flex; flex-direction:column; gap:2px; }
   .pg-row {
-    display:flex; align-items:center; gap:9px; cursor:pointer;
-    padding:7px 8px; border-radius:8px; border:1px solid transparent;
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+    padding:8px 8px; border-radius:8px; border:1px solid transparent;
   }
   .pg-row:hover { background:var(--surface-2); }
   .pg-row.done .pg-name { color:var(--text-4); text-decoration:line-through; }
   .pg-row input { flex:0 0 auto; }
   .pg-name { font-size:0.8125rem; color:var(--text); flex:1 1 auto; }
-  .pg-space { font-size:0.6875rem; color:var(--text-4); }
-  .pg-when { font-size:0.6875rem; color:var(--text-5); max-width:9em; text-align:right; }
+  .pg-space { font-size:0.75rem; color:var(--text-4); }
+  .pg-when { font-size:0.75rem; color:var(--text-5); max-width:9em; text-align:right; }
   @media (max-width: 640px) {
     .pg-when { display:none; }
   }
   .basis-note {
-    font-size:0.78125rem; color:var(--text-3); line-height:1.75; margin-top:8px;
-    padding:8px 11px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:9px;
+    font-size:0.75rem; color:var(--text-3); line-height:1.75; margin-top:8px;
+    padding:8px 12px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
   }
   .basis-note b { color:var(--text-2); margin-right:6px; }
   .key-guide {
     background:var(--surface); border:1px solid var(--accent-light); border-left:3px solid var(--accent);
-    border-radius:10px; padding:12px 14px; margin:10px 0;
+    border-radius:10px; padding:12px 16px; margin:10px 0;
   }
   .key-guide > b { font-size:0.875rem; color:var(--text); }
-  .kg-body { font-size:0.8125rem; color:var(--text-2); line-height:1.8; margin:5px 0 9px; }
+  .kg-body { font-size:0.8125rem; color:var(--text-2); line-height:1.8; margin:4px 0 8px; }
   .kg-acts { display:flex; flex-wrap:wrap; gap:8px; }
   .kg-note { font-size:0.75rem; color:var(--text-4); line-height:1.7; margin-top:9px; }
   /* ---------- P0-4 条件面板的同步开关 ---------- */
@@ -1013,22 +1673,22 @@
   .help-list { margin:0; padding-left:1.3em; }
   .help-list li { font-size:0.8125rem; line-height:1.9; color:var(--text-2); }
   .profile-sync {
-    display:flex; align-items:flex-start; gap:7px; cursor:pointer;
-    padding:9px 11px; margin-bottom:10px; border-radius:9px;
+    display:flex; align-items:flex-start; gap:8px; cursor:pointer;
+    padding:8px 12px; margin-bottom:10px; border-radius:10px;
     background:var(--surface-2); border:1px solid var(--border-soft);
   }
   .profile-sync input { margin-top:3px; flex:0 0 auto; }
   .profile-sync span { font-size:0.8125rem; color:var(--text); }
-  .profile-sync .pnote { font-size:0.6875rem; color:var(--text-4); line-height:1.6; display:block; margin-top:2px; }
-  .tool-badges { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px; }
+  .profile-sync .pnote { font-size:0.75rem; color:var(--text-4); line-height:1.6; display:block; margin-top:2px; }
+  .tool-badges { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
   .tbadge {
-    font-size:0.6875rem; padding:2px 8px; border-radius:20px;
+    font-size:0.75rem; padding:2px 8px; border-radius:20px;
     background:var(--accent-soft); color:var(--accent-dark); border:1px solid var(--accent-light);
   }
   .tbadge.muted { background:transparent; color:var(--text-4); border-color:var(--border); }
   .tool-box {
-    background:var(--surface); border:1px solid var(--border-soft); border-radius:12px;
-    padding:12px 13px; margin-bottom:12px;
+    background:var(--surface); border:none; border-radius:10px;
+    padding:12px 12px; margin-bottom:12px;
   }
   .tool-label { display:block; font-size:0.8125rem; color:var(--text-2); margin-bottom:6px; }
   .tool-textarea {
@@ -1038,7 +1698,7 @@
   }
   .tool-textarea:focus { outline:2px solid var(--accent); outline-offset:-1px; }
   .tool-row-inline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
-  .tool-examples { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .tool-examples { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .tool-examples .lbl { font-size:0.75rem; color:var(--text-4); }
   .tool-imgs { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
   .tool-img { position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1px solid var(--border); }
@@ -1052,19 +1712,19 @@
   .tool-field .k { font-size:0.75rem; color:var(--text-4); }
   .tool-field input {
     font:inherit; font-size:0.8125rem; color:var(--text); background:var(--surface-2);
-    border:1px solid var(--border); border-radius:8px; padding:7px 9px; min-width:0;
+    border:1px solid var(--border); border-radius:8px; padding:8px 8px; min-width:0;
   }
   .tool-ctrl { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
-  .tool-inline { display:flex; align-items:center; gap:6px; font-size:0.78125rem; color:var(--text-3); }
+  .tool-inline { display:flex; align-items:center; gap:8px; font-size:0.75rem; color:var(--text-3); }
   .tool-inline select, .tool-ctrl select {
-    font:inherit; font-size:0.78125rem; color:var(--text); background:var(--surface-2);
-    border:1px solid var(--border); border-radius:8px; padding:5px 7px;
+    font:inherit; font-size:0.75rem; color:var(--text); background:var(--surface-2);
+    border:1px solid var(--border); border-radius:8px; padding:4px 8px;
   }
   .tool-tempnote { font-size:0.75rem; color:var(--text-4); }
-  .tool-hint { font-size:0.75rem; color:var(--text-4); line-height:1.7; margin:0 0 14px; }
+  .tool-hint { font-size:0.75rem; color:var(--text-4); line-height:1.7; margin:0 0 16px; }
   .tool-cachenote { font-size:0.75rem; color:var(--text-4); margin:-6px 0 8px; min-height:1em; }
   .tool-out { margin:10px 0; }
-  .tool-empty { text-align:center; padding:26px 12px; color:var(--text-4); }
+  .tool-empty { text-align:center; padding:24px 12px; color:var(--text-4); }
   .tool-empty .et { font-size:0.9375rem; color:var(--text-3); margin-bottom:6px; }
   .tool-empty .es { font-size:0.8125rem; line-height:1.7; }
   .tool-warn {
@@ -1079,34 +1739,34 @@
   .tool-summary {
     font-size:0.875rem; line-height:1.85; color:var(--text);
     background:var(--surface-2); border:1px solid var(--border-soft);
-    border-radius:10px; padding:11px 13px;
+    border-radius:10px; padding:12px 12px;
   }
   .tool-block {
     background:var(--surface); border:1px solid var(--border-soft);
-    border-radius:10px; padding:11px 13px;
+    border-radius:10px; padding:12px 12px;
   }
   .tool-block-t { font-size:0.75rem; color:var(--text-4); margin-bottom:6px; letter-spacing:.04em; }
   .tool-card {
     background:var(--surface); border:1px solid var(--border-soft);
-    border-radius:10px; padding:11px 13px;
+    border-radius:10px; padding:12px 12px;
   }
   .tool-card-head { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
   .tool-card-head b { font-size:0.875rem; color:var(--text); }
   .tool-contract {
     font-size:0.8125rem; line-height:1.75; color:var(--accent-dark);
     background:var(--accent-soft); border:1px solid var(--accent-light);
-    border-radius:9px; padding:8px 11px; margin-top:6px;
+    border-radius:10px; padding:8px 12px; margin-top:6px;
   }
-  .tool-reply { padding:7px 0; border-bottom:1px solid var(--border-soft); }
+  .tool-reply { padding:8px 0; border-bottom:1px solid var(--border-soft); }
   .tool-reply:last-child { border-bottom:0; }
   .tool-reply .tag {
-    display:inline-block; font-size:0.6875rem; padding:1px 7px; border-radius:20px;
+    display:inline-block; font-size:0.75rem; padding:1px 8px; border-radius:20px;
     background:var(--muted-bg); color:var(--text-3); margin-bottom:4px;
   }
   .tool-ul { margin:0; padding-left:1.1em; }
   .tool-ul li { font-size:0.8125rem; line-height:1.8; color:var(--text-2); }
   .tool-decision { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
-  .tool-decision .rank-level { margin-left:0; font-size:0.8125rem; padding:3px 11px; }
+  .tool-decision .rank-level { margin-left:0; font-size:0.8125rem; padding:4px 12px; }
   .tool-sources {
     display:flex; flex-wrap:wrap; gap:8px; align-items:center;
     margin:12px 0 4px; padding:10px 12px;
@@ -1117,9 +1777,9 @@
     font-size:0.75rem; color:var(--accent-dark); text-decoration:none;
     max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .tool-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 6px; }
+  .tool-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 8px; }
   @media (max-width: 640px) {
-    .tool-ctrl { gap:6px; }
+    .tool-ctrl { gap:8px; }
     .tool-ctrl .tbtn { flex:0 1 auto; }
     .tool-actions .tbtn { flex:1 1 46%; }
     .tool-textarea { font-size:16px; }        /* 手机聚焦时不放大 */
@@ -1133,48 +1793,59 @@
   .tool-row { padding:10px 0; border-bottom:1px solid var(--border-soft); }
   .tool-row:last-child { border-bottom:0; }
   .tool-say { font-size:0.875rem; color:var(--text); line-height:1.75; }
-  .tool-mean { font-size:0.84375rem; color:var(--text-2); line-height:1.8; margin-top:4px; }
+  .tool-mean { font-size:0.8125rem; color:var(--text-2); line-height:1.8; margin-top:4px; }
   .tool-mean b, .tool-say b { color:var(--accent-dark); }
   .tool-foot {
-    font-size:0.78125rem; color:var(--text-3); line-height:1.75; margin-top:16px;
-    padding:10px 12px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:9px;
+    font-size:0.75rem; color:var(--text-3); line-height:1.75; margin-top:16px;
+    padding:10px 12px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
   }
   /* 排行榜的数据版本行与底部免责 */
   .rank-meta { font-size:0.75rem; color:var(--text-4); margin:2px 0 10px; }
   .rank-disclaimer { margin-top:14px; padding:10px 12px; background:var(--surface-2);
-    border:1px solid var(--border-soft); border-radius:9px; line-height:1.75; }
+    border:1px solid var(--border-soft); border-radius:10px; line-height:1.75; }
   /* 设置里的并排输入 */
   .set-inline { display:flex; gap:8px; }
   .set-inline input { flex:1 1 0; min-width:0; }
   /* 详情区新增的三块：展开说清楚 / 依据 / 经验提醒 */
   .rank-detail-text {
-    font-size:0.84375rem; color:var(--text-2); line-height:1.85; margin-top:10px;
-    padding:11px 13px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
+    font-size:0.8125rem; color:var(--text-2); line-height:1.85; margin-top:10px;
+    padding:12px 12px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
   }
   .rank-detail-text b { color:var(--text); }
-  .rank-standard { font-size:0.78125rem; color:var(--text-3); line-height:1.7; margin-top:8px; }
+  .rank-standard { font-size:0.75rem; color:var(--text-3); line-height:1.7; margin-top:8px; }
   .rank-standard b { color:var(--text-2); }
   .rank-tip {
     font-size:0.8125rem; color:var(--warn-text); line-height:1.75; margin-top:8px;
-    background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:9px; padding:9px 12px;
+    background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:10px; padding:8px 12px;
   }
   .rank-detail { margin-top:10px; padding-top:10px; border-top:1px solid var(--border-soft); }
   .rank-dims { font-size:0.75rem; color:var(--text-4); margin-bottom:6px; }
   .rank-fail { font-size:0.8125rem; color:var(--danger); margin-bottom:6px; line-height:1.6; }
   .rank-check { font-size:0.8125rem; color:var(--text-2); margin-bottom:8px; line-height:1.6; }
-  .rank-tier-hint { font-size:0.78125rem; color:var(--text-4); margin:-8px 0 10px; }
+  .rank-tier-hint { font-size:0.75rem; color:var(--text-4); margin:-8px 0 10px; }
   .rank-entry { border-color:var(--gold) !important; background:var(--accent-soft) !important; }
 </style>
 </head>
 <body>
 <!-- 常驻应用栏：吸在顶部，滚动不消失。返回 / 标题 / 设置 / 更多 -->
+<nav class="bottom-nav" id="bottomNav" aria-label="主导航">
+  <button type="button" class="bn-item" data-act="bn-home" id="bnHome">
+    <span class="bn-icon">🏠</span><span class="bn-text">首页</span></button>
+  <button type="button" class="bn-item" data-act="bn-rank" id="bnRank">
+    <span class="bn-icon">🚪</span><span class="bn-text">房间</span></button>
+  <button type="button" class="bn-item" data-act="bn-tools" id="bnTools">
+    <span class="bn-icon">🧰</span><span class="bn-text">工具</span></button>
+  <button type="button" class="bn-item" data-act="bn-ask" id="bnAsk">
+    <span class="bn-icon">💬</span><span class="bn-text">问 AI</span></button>
+</nav>
+
 <header class="appbar" id="appbar">
   <button type="button" class="ab-btn hidden" id="abBack" data-act="back" aria-label="返回上一级">←</button>
   <div class="ab-titles">
-    <div class="ab-main" id="abMain">室内设计助手</div>
+    <div class="ab-main" id="abMain">RoomWise</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.2.3</span>
+  <span class="ver-tag" id="verTag">v0.2.4</span>
   <button type="button" class="ab-btn" id="abToolsBtn" data-act="open-toolbox" aria-label="工具箱" title="工具箱">🧰</button>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
@@ -1184,8 +1855,13 @@
 
 <div class="wrap" id="wrap">
   <header class="hero" id="hero">
-    <h1>室内设计助手</h1>
-    <p>先看全屋，再看空间。有问题随时问 —— 跟设计师聊天一样，可以一直追问下去</p>
+    <h1><span class="hero-logo" aria-hidden="true">R</span>RoomWise</h1>
+    <p>装修小白的第一站 —— 不知道从哪下手？跟着走，一步都不会漏</p>
+    <div class="hero-tags" aria-hidden="true">
+      <span class="hero-tag">🏆 13 条全屋清单</span>
+      <span class="hero-tag">🍳 8 个房间</span>
+      <span class="hero-tag">✨ 不用填 Key 也能看</span>
+    </div>
   </header>
   <div class="crumb" id="crumb"></div>
   <main id="view"></main>
@@ -1493,7 +2169,7 @@
 </div>
 
 <script>/* ============================================================
-   室内设计助手 v0.2.3
+   室内设计助手 v0.2.4
    ------------------------------------------------------------
    本版新增「优先级排行榜」：把「钱该花在哪」从一句话变成一张表。
 
@@ -1974,9 +2650,9 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.2.3";
+const APP_VERSION  = "0.2.4";
 const BUILD_TAG    = "v15";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
-const BASE_TITLE   = "室内设计助手 0.2.3 · 对话式设计顾问";
+const BASE_TITLE   = "RoomWise · 装修小白的第一站";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
 const WEB_SEARCH_URL = "https://api.deepseek.com/anthropic/v1/messages";
@@ -2073,15 +2749,15 @@ const RANK_PRESETS = [
   { key:"quality",  label:"追求品质" }
 ];
 const RANK_TABS = [
-  { key:"hidden",  label:"硬装 · 隐藏" },
-  { key:"surface", label:"硬装 · 表面" },
-  { key:"soft",    label:"软装" }
+  { key:"hidden",  label:"埋在墙里的" },
+  { key:"surface", label:"露在外面的" },
+  { key:"soft",    label:"可以搬走的" }
 ];
 const RANK_TIER_META = {
-  S: { label:"S 级 · 做错要砸掉重来", hint:"藏在里面、返工代价极高、涉及安全" },
-  A: { label:"A 级 · 重点花钱",       hint:"每天都用，好坏差别直接能感觉到" },
-  B: { label:"B 级 · 够用就行",       hint:"达标即可，多花钱买不到体验" },
-  C: { label:"C 级 · 可以后补",       hint:"随时能换、能加、能扔" }
+  S: { label:"最要紧 · 做错得砸掉重来", hint:"藏在里面、返工代价极高、涉及安全" },
+  A: { label:"重要 · 值得花钱做好",     hint:"每天都用，好坏差别直接能感觉到" },
+  B: { label:"一般 · 够用就行",         hint:"达标即可，多花钱买不到体验" },
+  C: { label:"不急 · 以后再加也行",     hint:"随时能换、能加、能扔" }
 };
 const DATA = {
   whole: {
@@ -2304,6 +2980,7 @@ const state = {
   profileSync: true,      /* 条件面板里的「与我家档案同步」开关 */
   showKeyGuide: false,    /* 没填 Key 时在对话页显示的引导卡 */
   homeTab: "rank",        /* 首页排行榜区块的选中空间 */
+  pickMode: "rank",       /* pick 中间页：rank 看清单 / ask 问 AI */
   budgetTotal: 20,        /* 预算分配器的总额（万元） */
   budgetRatios: [35, 40, 25],   /* 隐藏 / 表面 / 软装 的比例 */
   progress: {},           /* 「我家进度」勾选状态：key -> true */
@@ -2442,7 +3119,7 @@ function shortHost(u) {
 /* 出错也要让用户看得见，而不是白屏 */
 let problemShownAt = 0;
 function reportProblem(e) {
-  try { if (window.console && console.error) console.error("[室内设计助手]", e); } catch (_) {}
+  try { if (window.console && console.error) console.error("[RoomWise]", e); } catch (_) {}
   const msg = (e && e.message) ? String(e.message) : String(e || "未知错误");
   const now = Date.now();
   if (now - problemShownAt < 3000) return;      /* 节流：同一波错误只提示一次 */
@@ -2619,11 +3296,16 @@ function doRender() {
 
   /* 对话页切三栏固定布局，其余页面保持整页滚动 */
   try { document.body.classList.toggle("chat-mode", state.view === "chat"); } catch (_) {}
+  /* 只有首页显示 hero —— 房间 / 工具 / 问 AI 等页面把它收起来，
+     让下面的内容直接顶上来，不被一块大 logo 占掉首屏 */
+  try { document.body.classList.toggle("not-home", state.view !== "home"); } catch (_) {}
 
   renderCrumb();
   renderAppbar();
+  renderBottomNav();
   const view = $("view");
   if (state.view === "home")        view.innerHTML = viewHome();
+  else if (state.view === "pick")   view.innerHTML = viewPick();
   else if (state.view === "space")  view.innerHTML = viewSpace();
   else if (state.view === "rank")   view.innerHTML = viewRank();
   else if (state.view === "toolbox") view.innerHTML = viewToolbox();
@@ -2818,7 +3500,8 @@ function updateControls() {
    ============================================================ */
 
 function appbarTitle() {
-  if (state.view === "home") return "室内设计助手";
+  if (state.view === "home") return "RoomWise";
+  if (state.view === "pick") return state.pickMode === "ask" ? "想问哪个房间" : "进哪个房间";
   const sp = DATA[state.space];
   if (!sp) return "室内设计助手";
   if (state.view === "space") return sp.name;
@@ -2978,6 +3661,7 @@ function showHelp() {
    ============================================================ */
 
 function goBack() {
+  if (state.view === "pick") { goHome(); return true; }
   if (state.view === "toolbox") { goHome(); return true; }
   if (isToolView(state.view)) {
     /* 从工具箱进来的具体工具，返回到工具箱列表；否则回首页 */
@@ -3076,6 +3760,11 @@ function renderCrumb() {
   if (state.view === "home") { c.innerHTML = ""; return; }
   const sp = DATA[state.space];
   let html = `<button type="button" class="link" data-act="home">首页</button>`;
+  if (state.view === "pick") {
+    html += '<span class="sep">›</span><span>' + (state.pickMode === "ask" ? "想问哪个房间" : "进哪个房间") + '</span>';
+    c.innerHTML = html;
+    return;
+  }
   if (state.view === "toolbox") {
     html += `<span class="sep">›</span><span>工具箱</span>`;
     c.innerHTML = html;
@@ -3113,119 +3802,192 @@ function chatTitleText() {
 /* ---------- 首页 ---------- */
 /* ---------- P0-1：第一次装修的三步引导 ---------- */
 /* ---------- 首页两步引导：先全屋规划，再选空间 ---------- */
-function guideStripHtml() {
-  const w = DATA.whole;
-  return '<div class="sec-title">第一步：先看全屋</div>'
-    + '<div class="grid">'
-    +   '<div class="card rank-entry" role="button" tabindex="0" data-act="open-space" data-key="whole">'
-    +     '<span class="icon">' + (w ? w.icon : "🏠") + '</span>'
-    +     '<div class="name">全屋 · 钱怎么分、合同怎么签、工期怎么排</div>'
-    +     '<div class="desc">预算分配、装修公司筛选、合同条款、付款节点、验收时间线 —— 这些全屋级的事先定下来，后面每个空间才不会被动</div>'
-    +     '<span class="card-go">进入全屋规划 ›</span>'
-    +   '</div>'
+
+/* ===== 空间选择页：底栏「清单」「问 AI」都先经这里，不替用户决定 ===== */
+function viewPick() {
+  const mode = state.pickMode || "rank";
+  const isRank = mode === "rank";
+  const title = isRank ? "进哪个房间？" : "想问哪个房间的问题？";
+  const desc = isRank
+    ? "选一个房间进去，里面是它的主页：必做的事、包含哪些东西、常见问题、设计决策都在那儿"
+    : "选一个房间，进去直接跟 AI 聊 —— 不知道问什么也没关系，它会先问你一个最关键的问题";
+
+  let cards = '<div class="card mini space-tile rank-entry" role="button" tabindex="0" data-act="pick-space" data-key="whole">'
+    + '<span class="icon">🏠</span>'
+    + '<div class="name">全屋</div>'
+    + '</div>';
+  for (const key in DATA) {
+    if (key === "whole") continue;
+    const s = DATA[key];
+    cards += '<div class="card mini space-tile" role="button" tabindex="0" data-act="pick-space" data-key="' + escAttr(key) + '">'
+      + '<span class="icon">' + s.icon + '</span>'
+      + '<div class="name">' + esc(s.name) + '</div>'
+      + '</div>';
+  }
+  return '<div class="pick-head">'
+    + '<h2>' + title + '</h2>'
+    + '<p>' + desc + '</p>'
     + '</div>'
-    + '<div class="sec-title">第二步：选一个空间，看具体怎么做</div>'
-    + '<div class="grid">' + homeSpaceCards() + '</div>';
+    + '<div class="space-grid">' + cards + '</div>';
 }
 
-/* 空间卡片（全屋除外） */
+/* ---------- 装修设计三步引导：把「下一步该干嘛」讲清楚 ---------- */
+function guideCardHtml() {
+  let n = 0;
+  ["hidden", "surface", "soft"].forEach(function (t) { n += (((RANK_DATA.whole) || {})[t] || []).length; });
+  return '<div class="guide-card">'
+    + '<div class="gc-head">'
+    +   '<div class="gc-eyebrow">第一次装修 · 三步走完</div>'
+    +   '<div class="gc-title">按这三步走，一步都不会漏</div>'
+    +   '<div class="gc-subtitle">不用懂设计、不用填 Key，跟着点就行</div>'
+    + '</div>'
+    + '<div class="gc-steps">'
+    +   '<button type="button" class="gc-step gc-step-primary" data-act="gc-whole">'
+    +     '<span class="gc-num">01</span>'
+    +     '<span class="gc-body">'
+    +       '<b>先看全屋清单</b>'
+    +       '<span>' + n + ' 条必做的事，按「先做哪个最不容易返工」排好了</span>'
+    +       '<em>钱怎么分 · 合同怎么签 · 什么时候验收</em>'
+    +     '</span>'
+    +     '<span class="gc-arrow" aria-hidden="true">→</span>'
+    +   '</button>'
+    +   '<button type="button" class="gc-step" data-act="gc-pick-space">'
+    +     '<span class="gc-num">02</span>'
+    +     '<span class="gc-body">'
+    +       '<b>再挑房间看细节</b>'
+    +       '<span>厨房、卫生间、卧室 —— 每个房间各有各的坑</span>'
+    +     '</span>'
+    +     '<span class="gc-arrow" aria-hidden="true">→</span>'
+    +   '</button>'
+    +   '<button type="button" class="gc-step" data-act="gc-ask">'
+    +     '<span class="gc-num">03</span>'
+    +     '<span class="gc-body">'
+    +       '<b>拿不准就问 AI</b>'
+    +       '<span>把尺寸和情况说清楚，就有针对你家的答案</span>'
+    +     '</span>'
+    +     '<span class="gc-arrow" aria-hidden="true">→</span>'
+    +   '</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function viewHome() {
+  return `
+        ${guideCardHtml()}
+        ${homeSearchHtml()}
+        <div id="histBlock">${histBlockHtml()}</div>
+        <p class="tip center">
+          RoomWise v${APP_VERSION} (${BUILD_TAG}) · 思维链横条 · 联网检索状态条 · 继续说完 · 快捷键<br>
+          <b>全屋和房间清单完全离线、不需要填 Key；底栏「房间」按房间看，🧰 是工具箱。</b><br>
+          登录后对话记录保存在 Supabase（${esc(sbDomainText())}）；没登录时只在这次页面里，关掉就没有。<br>
+          API Key 只发给 DeepSeek 官方接口（api.deepseek.com），不会发给任何第三方，也不会进云端。
+        </p>
+  `;
+}
+
+/* ---------- 全局搜索：听到一个词就想查，这是最基础的需求 ---------- */
+function homeSearchHtml() {
+  return '<div class="home-search">'
+    + '<span class="hs-icon" aria-hidden="true">🔍</span>'
+    + '<input type="search" id="homeSearch" placeholder="想查什么？比如「防水」「插座高度」「增项」"'
+    + ' autocomplete="off" aria-label="搜索">'
+    + '</div>'
+    + '<div id="homeSearchRes" class="home-search-res hidden"></div>';
+}
+
+function homeSearchAll(q) {
+  const kw = String(q || "").trim().toLowerCase();
+  if (!kw) return [];
+  const out = [];
+  const hit = function (s) { return String(s || "").toLowerCase().indexOf(kw) >= 0; };
+  Object.keys(RANK_DATA).forEach(function (sp) {
+    const spName = (DATA[sp] ? DATA[sp].name : sp);
+    ["hidden", "surface", "soft"].forEach(function (tab) {
+      (((RANK_DATA[sp] || {})[tab]) || []).forEach(function (it) {
+        if (hit(it.name) || hit(it.why) || hit(it.key)) {
+          out.push({ kind: "rank", space: sp, tab: tab, name: it.name, label: spName });
+        }
+      });
+    });
+  });
+  Object.keys(DATA).forEach(function (k) {
+    if (hit(DATA[k].name) || hit(DATA[k].desc)) {
+      out.push({ kind: "space", space: k, name: DATA[k].name, label: "空间" });
+    }
+    ((DATA[k].objects) || []).forEach(function (o) {
+      if (hit(o.name) || hit(o.desc)) {
+        out.push({ kind: "object", space: k, id: o.id, name: o.name, label: DATA[k].name + " 里包含的" });
+      }
+    });
+    ((DATA[k].faqs) || []).forEach(function (q2, qi) {
+      if (hit(q2)) out.push({ kind: "faq", space: k, idx: qi, name: q2, label: DATA[k].name + " · 常见问题" });
+    });
+  });
+  return out.slice(0, 12);
+}
+
+function renderHomeSearch() {
+  const box = $("homeSearchRes"), inp = $("homeSearch");
+  if (!box || !inp) return;
+  const q = String(inp.value || "").trim();
+  if (!q) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+  const list = homeSearchAll(q);
+  box.classList.remove("hidden");
+  if (!list.length) {
+    box.innerHTML = '<div class="hs-empty">没找到「' + esc(q) + '」相关条目。换个词，或者直接去问 AI。</div>';
+    return;
+  }
+  box.innerHTML = list.map(function (r) {
+    const kindText = r.kind === "rank" ? "清单" : r.kind === "space" ? "空间" : r.kind === "object" ? "包含" : "问题";
+    const name = r.kind === "faq" ? truncateWidth(r.name, 26) : r.name;
+    let act = "";
+    if (r.kind === "rank") act = 'data-act="hs-rank" data-space="' + escAttr(r.space) + '" data-tab="' + escAttr(r.tab) + '"';
+    else if (r.kind === "space") act = 'data-act="hs-space" data-space="' + escAttr(r.space) + '"';
+    else if (r.kind === "object") act = 'data-act="hs-object" data-space="' + escAttr(r.space) + '" data-id="' + escAttr(r.id) + '"';
+    else act = 'data-act="hs-faq" data-space="' + escAttr(r.space) + '" data-idx="' + r.idx + '"';
+    return '<button type="button" class="hs-item" ' + act + '>'
+      + '<span class="hs-kind">' + kindText + '</span>'
+      + '<span class="hs-name">' + esc(name) + '</span>'
+      + '<span class="hs-label">' + esc(r.label) + '</span></button>';
+  }).join("");
+}
+
+/* 搜到某一条清单：进榜单并把它展开 */
+function openRankToItem(spaceKey, tab, name) {
+  state.rankTab = tab || "hidden";
+  state.rankFocus = name || "";
+  openRank(spaceKey);
+}
+
+/* ---------- 全屋：单独一张大卡（它不是「空间」，是全局） ---------- */
+function wholeBannerHtml() {
+  let n = 0;
+  ["hidden", "surface", "soft"].forEach(function (t) { n += (((RANK_DATA.whole) || {})[t] || []).length; });
+  return '<div class="whole-banner" role="button" tabindex="0" data-act="open-space" data-key="whole">'
+    + '<div class="wb-icon">🏆</div>'
+    + '<div class="wb-body">'
+    +   '<div class="wb-tag">第一次装修 · 从这里开始</div>'
+    +   '<div class="wb-title">钱怎么分、合同怎么签、什么时候验收</div>'
+    +   '<div class="wb-desc">' + n + ' 条必做的事，已经按先后顺序排好了 —— 做完一个勾一个，不会漏</div>'
+    + '</div>'
+    + '<span class="wb-cta">打开全屋清单 →</span>'
+    + '</div>';
+}
+
+/* ---------- 空间九宫格：只有图标 + 名字，一屏看完 ---------- */
 function homeSpaceCards() {
   let cards = "";
   for (const key in DATA) {
     if (key === "whole") continue;
     const s = DATA[key];
-    const chips = s.faqs.slice(0, 2).map((q, qi) =>
-      '<button type="button" class="chip" data-act="ask" data-key="' + escAttr(key) + '" data-idx="' + qi + '">' + esc(q) + '</button>'
-    ).join("");
-    cards += '<div class="card" role="button" tabindex="0" data-act="open-space" data-key="' + escAttr(key) + '">'
+    cards += '<div class="card mini space-tile" role="button" tabindex="0" data-act="open-space" data-key="' + escAttr(key) + '">'
       + '<span class="icon">' + s.icon + '</span>'
       + '<div class="name">' + esc(s.name) + '</div>'
-      + '<div class="desc">' + esc(s.desc) + '</div>'
-      + '<div class="card-qa"><div class="card-qa-title">大家常问：</div><div class="chips">' + chips + '</div></div>'
-      + '<span class="card-go">进入' + esc(s.name) + ' ›</span>'
       + '</div>';
   }
   return cards;
 }
 
-/* 旧版三步引导（已停用，保留备查） */
-function guideStripHtmlOld() {
-  return '<div class="guide-strip">'
-    + '<div class="gs-title">第一次装修？按这个顺序来：</div>'
-    + '<div class="gs-steps">'
-    +   '<button type="button" class="gs-step" data-act="guide-whole">'
-    +     '<span class="n">①</span><span class="t">全屋 · 钱该怎么花</span><span class="d">先看钱花在哪</span></button>'
-    +   '<span class="gs-arrow" aria-hidden="true">→</span>'
-    +   '<button type="button" class="gs-step" data-act="guide-space">'
-    +     '<span class="n">②</span><span class="t">看你家的空间</span><span class="d">厨房 / 卫生间…</span></button>'
-    +   '<span class="gs-arrow" aria-hidden="true">→</span>'
-    +   '<button type="button" class="gs-step" data-act="guide-ask">'
-    +     '<span class="n">③</span><span class="t">有问题随时问</span><span class="d">直接开口</span></button>'
-    + '<div class="gs-note">排行榜和工具箱的内置清单都不联网、不花钱，先看这个不用填 Key。</div>'
-    + '</div>';
-}
-
-/* ---------- P0-2：排行榜升到一级入口 ---------- */
-function homeRankHtml() {
-  const cards = Object.keys(DATA).map(function (key) {
-    const sp = DATA[key];
-    const tabs = ['hidden', 'surface', 'soft'];
-    let total = 0, veto = 0;
-    tabs.forEach(function (tb) {
-      const list = (RANK_DATA[key] || {})[tb] || [];
-      total += list.length;
-      list.forEach(function (it) { if (rankVetoed(it.scores)) veto++; });
-    });
-    return '<div class="card mini rank-mini" role="button" tabindex="0" data-act="open-rank" data-key="' + escAttr(key) + '">'
-      + '<span class="icon">' + sp.icon + '</span>'
-      + '<div class="name">' + esc(sp.name) + '</div>'
-      + '<div class="desc">' + total + ' 条' + (veto ? ' · ' + veto + ' 条一票否决' : '') + '</div>'
-      + '</div>';
-  }).join('');
-  let all = 0;
-  Object.keys(RANK_DATA).forEach(function (k) {
-    ['hidden', 'surface', 'soft'].forEach(function (tb) { all += ((RANK_DATA[k] || {})[tb] || []).length; });
-  });
-  return '<div class="sec-title">🏆 先看这个：各空间「最需要先解决的」</div>'
-       + '<p class="tool-lead">按返工代价和安全影响排出 S / A / B / C 梯队，共 ' + all + ' 条，全部离线内置、不需要联网。</p>'
-       + '<div class="tool-grid rank-mini-grid">' + cards + '</div>';
-}
-
-function viewHome() {
-  let cards = "";
-  for (const key in DATA) {
-    if (key === "whole") continue;      /* 全屋已在「第一步」单独展示，避免重复 */
-    const s = DATA[key];
-    const chips = s.faqs.slice(0, 2).map((q, qi) =>
-      `<button type="button" class="chip" data-act="ask" data-key="${escAttr(key)}" data-idx="${qi}">${esc(q)}</button>`
-    ).join("");
-    cards += `
-      <div class="card" role="button" tabindex="0" data-act="open-space" data-key="${escAttr(key)}">
-        <span class="icon">${s.icon}</span>
-        <div class="name">${esc(s.name)}</div>
-        <div class="desc">${esc(s.desc)}</div>
-        <div class="card-qa">
-          <div class="card-qa-title">大家常问：</div>
-          <div class="chips">${chips}</div>
-        </div>
-        <span class="card-go">进入${esc(s.name)} ›</span>
-      </div>`;
-  }
-
-  return `
-        ${guideStripHtml()}
-    <div id="histBlock">${histBlockHtml()}</div>
-    <p class="tip center">
-      v${APP_VERSION} (${BUILD_TAG}) · 思维链横条 · 联网检索状态条 · 继续说完 · 快捷键 · 图片大图<br>
-      V4.1 Flash（原生多模态）· 整理成表 · 本地示意图 · 用量统计 · 可选产品推荐 · 账号与云端历史<br>
-      登录后对话记录保存在 Supabase（${esc(sbDomainText())}）；没登录时只在这次页面里，关掉就没有。<br>
-      API Key 只发给 DeepSeek 官方接口（api.deepseek.com），不会发给任何第三方，也不会进云端。<br>
-      <b>排行榜内容完全离线、不需要填 Key；工具箱请点右上角 🧰。</b>
-    </p>
-  `;
-}
-
-/* 历史区：搜索框独立于列表，避免每次输入重建输入框、丢掉焦点 */
 /* 历史区顶部那行状态：未登录 / 云端同步中 / 表没建 / 出错 */
 function histNoteHtml() {
   if (!isLoggedIn()) {
@@ -3257,13 +4019,24 @@ function sqlBoxHtml() {
 function histBlockHtml() {
   if (!loadHistory().length) {
     /* 没有历史时也给一块提示，别让首页底部空着 */
-    return `<div class="sec-title">最近问过的</div>
+    return `<div class="home-sec-head">
+        <span class="hsh-mark" aria-hidden="true">💬</span>
+        <span class="hsh-title">最近问过的</span>
+      </div>
       ${histNoteHtml()}
       <p class="tip hist-empty">${isLoggedIn() ? "云端还没有历史记录，点上面的卡片开始第一次咨询吧。" : "还没有历史记录，点上面的卡片开始第一次咨询吧。"}</p>`;
   }
-  const list = filteredHistory();
+  /* 首页只留最近 3 条，想翻全部有下面的「查看全部」 */
+  const all = filteredHistory();
+  const list = all.slice(0, 3);
+  const more = all.length > 3
+    ? `<button type="button" class="tbtn hist-more" data-act="hist-all">查看全部 ${all.length} 条 ›</button>` : "";
   return `
-    <div class="sec-title">最近问过的</div>
+    <div class="home-sec-head">
+      <span class="hsh-mark" aria-hidden="true">💬</span>
+      <span class="hsh-title">最近问过的</span>
+      ${all.length ? `<span class="hsh-count">${all.length} 条</span>` : ""}
+    </div>
     ${histNoteHtml()}
     <div class="hist-search">
       <input type="text" id="histQuery" value="${escAttr(state.histQuery)}"
@@ -3271,6 +4044,7 @@ function histBlockHtml() {
     </div>
     <div class="hist-filter" id="histFilters">${histFiltersHtml()}</div>
     <div id="histItems">${histItemsHtml(list)}</div>
+    ${more}
     <div class="chat-tools" id="histTools">${histToolsHtml(list)}</div>`;
 }
 
@@ -3323,12 +4097,17 @@ function histItemsHtml(list) {
   if (!L.length) return `<p class="tip">没有匹配的记录。</p>`;
   const cap = histPreviewCount();
   const shown = state.histExpanded ? L : L.slice(0, cap);
-  return `<div class="hist">` + shown.map(h => `
+  return `<div class="hist">` + shown.map(h => {
+    const icon = (DATA[h.spaceKey] && DATA[h.spaceKey].icon) || "📄";
+    return `
     <div class="hist-item" role="button" tabindex="0" data-act="hist" data-id="${escAttr(h.id)}">
-      <div class="hist-q">${esc(h.title)}</div>
-      <div class="hist-meta">${esc(h.spaceName)}${h.objectName ? " · " + esc(h.objectName) : ""} · ${fmtTime(h.updatedAt)} · ${(h.messages || []).filter(m => m.role === "ai" && m.text && m.text.trim()).length} 轮</div>
+      <span class="hist-icon" aria-hidden="true">${icon}</span>
+      <div class="hist-body">
+        <div class="hist-q">${esc(h.title)}</div>
+        <div class="hist-meta">${esc(h.spaceName)}${h.objectName ? " · " + esc(h.objectName) : ""} · ${fmtTime(h.updatedAt)} · ${(h.messages || []).filter(m => m.role === "ai" && m.text && m.text.trim()).length} 轮</div>
+      </div>
       <button type="button" class="hist-del" title="删除这条记录" aria-label="删除这条记录" data-act="hist-del" data-id="${escAttr(h.id)}">×</button>
-    </div>`).join("") + `</div>`;
+    </div>`;}).join("") + `</div>`;
 }
 
 function histToolsHtml(list) {
@@ -3356,13 +4135,14 @@ function refreshHistList() {
    ============================================================ */
 
 const TOOLS = [
-  { id:"traps",  icon:"📋", name:"报价单陷阱", desc:"输入你的报价单，找出会加钱的地方" },
-  { id:"talk",   icon:"🗣", name:"工头话术",   desc:"把原话丢进来，翻译成人话" },
-  { id:"ask",    icon:"❓", name:"该问什么",   desc:"按你的阶段生成提问清单" },
-  { id:"design", icon:"⚖️", name:"设计决策",   desc:"该不该做，为什么" },
-  { id:"budget", icon:"💰", name:"预算分配",   desc:"输入总预算，算怎么分" },
-  { id:"progress", icon:"📅", name:"我家进度", desc:"按顺序勾，不漏节点" }
+  { id:"traps",  icon:"📋", name:"报价单陷阱", desc:"粘进来，找出后面会加钱的几行", group:"防坑" },
+  { id:"talk",   icon:"🗣", name:"工头话术",   desc:"把原话丢进来，看他想干什么",   group:"防坑" },
+  { id:"ask",    icon:"❓", name:"该问什么",   desc:"照着念就行",                   group:"防坑" },
+  { id:"design", icon:"⚖️", name:"设计决策",   desc:"你家这个条件，到底值不值",     group:"决策" },
+  { id:"budget", icon:"💰", name:"预算分配",   desc:"20 万怎么分",                   group:"决策" },
+  { id:"progress", icon:"📅", name:"我家进度", desc:"做完一个勾一个",               group:"记录" }
 ];
+const TOOL_GROUPS = ["防坑", "决策", "记录"];
 
 function toolsHtml() {
   const cards = TOOLS.map(function (t) {
@@ -3756,17 +4536,21 @@ function designBlockHtml(spaceKey) {
   }
   return list.map(function (d) {
     const rows = [
+      ["这是什么", d.what],                 /* 新增：先解释术语，再讲为什么 */
       ["为什么做", d.why],
-      ["代价", d.cost],
+      ["代价",     d.cost],
       ["什么情况别做", d.avoid]
     ].filter(function (r) { return r[1]; }).map(function (r) {
       return '<div class="rank-verify-row"><span class="k">' + esc(r[0]) + '</span><span class="v">' + esc(r[1]) + '</span></div>';
     }).join("");
     return '<details class="rank-item"><summary>'
       + '<div class="rank-head"><b>' + esc(d.name) + '</b><span class="grow"></span></div>'
-      + (d.why ? '<div class="rank-why">' + esc(d.why) + '</div>' : "")
+      /* 折叠态摘要优先显示「这是什么」—— 小白扫一眼就懂；
+         老数据没填 what 时退回显示 why，不会空着 */
+      + (d.what ? '<div class="rank-why">' + esc(d.what) + '</div>'
+                : (d.why ? '<div class="rank-why">' + esc(d.why) + '</div>' : ""))
       + '</summary><div class="rank-detail"><div class="rank-verify">'
-      + '<div class="rank-verify-title">做之前先想清楚这三件事</div>' + rows
+      + '<div class="rank-verify-title">做之前先想清楚这几件事</div>' + rows
       + '</div></div></details>';
   }).join("");
 }
@@ -3805,33 +4589,44 @@ function viewDesign() { return viewFallbackDesign(); }
 
 function viewSpace() {
   const sp = DATA[state.space];
-  const faqChips = sp.faqs.map((q, qi) =>
-    `<button type="button" class="chip big" data-act="ask" data-key="${escAttr(state.space)}" data-idx="${qi}">${esc(q)}</button>`
-  ).join("");
-  const objs = sp.objects.map(o =>
-    `<div class="card" role="button" tabindex="0" data-act="open-object" data-id="${escAttr(o.id)}">
-       <span class="icon">${o.icon}</span>
-       <div class="name">${esc(o.name)}</div>
-       <div class="desc">${esc(o.desc)}</div>
-     </div>`).join("");
+  let rankN = 0;
+  ["hidden", "surface", "soft"].forEach(function (t) { rankN += (((RANK_DATA[state.space]) || {})[t] || []).length; });
 
+  /* ① 排行榜入口：放最上、视觉最重（这个空间最该看的东西） */
   const rankEntry = `
     <div class="card rank-entry" role="button" tabindex="0" data-act="open-rank" data-key="${escAttr(state.space)}">
       <span class="icon">🏆</span>
       <div class="name">${esc(sp.name)} · 最需要先解决的</div>
-      <div class="desc">按返工代价、安全影响等五个维度排出 S / A / B / C 梯队，分隐藏工程、表面工程、软装三张榜</div>
-      <span class="card-go">打开排行榜 ›</span>
+      <div class="desc">${rankN} 条必做的事，按「先做哪个最不容易返工」排好，分埋在墙里的 / 露在外面的 / 可以搬走的三张榜</div>
+      <span class="card-go">打开清单 ›</span>
     </div>`;
 
+  /* ② 先认识东西：标签墙 */
+  const objTiles = (sp.objects || []).map(function (o) {
+    return `<button type="button" class="obj-chip" data-act="open-object" data-id="${escAttr(o.id)}">
+      <span class="oi">${o.icon}</span><span class="on">${esc(o.name)}</span></button>`;
+  }).join("");
+
+  /* ③ 常见问题：折叠，默认收起 */
+  const faqRows = (sp.faqs || []).map(function (q, qi) {
+    return `<button type="button" class="faq-row" data-act="ask" data-key="${escAttr(state.space)}" data-idx="${qi}">${esc(q)}</button>`;
+  }).join("");
+
+  const ddList = ((typeof DESIGN_DECISIONS !== "undefined" && DESIGN_DECISIONS[state.space]) || []);
+
   return `
-        <div class="sec-title">最需要先解决的</div>
+        <div class="sec-title">最先看这个</div>
     <div class="grid">${rankEntry}</div>
-    <div class="sec-title">${esc(sp.name)} 的设计决策</div>
-    ${designBlockHtml(state.space)}
-    <div class="sec-title">聊一个具体的东西</div>
-    <div class="grid">${objs}</div>
-    <div class="sec-title">${esc(sp.name)} —— 大家最常问的</div>
-    <div class="chips.row">${faqChips}</div>
+    <div class="sec-title">${esc(sp.name)}里都包含什么</div>
+    <div class="obj-wall">${objTiles}</div>
+    <details class="fold">
+      <summary>大家常问（${(sp.faqs || []).length} 个）</summary>
+      <div class="fold-body">${faqRows}</div>
+    </details>
+    <details class="fold">
+      <summary>设计决策 · 该不该做（${ddList.length} 项）</summary>
+      <div class="fold-body fold-plain">${designBlockHtml(state.space)}</div>
+    </details>
   `;
 }
 
@@ -3843,7 +4638,8 @@ function viewChat() {
 
   let body;
   if (!state.messages.length) {
-    const chips = sp.faqs.map((q, qi) =>
+    /* 空态只给 3 个高频问题，6 个太多反而不知道点哪个 */
+    const chips = sp.faqs.slice(0, 3).map((q, qi) =>
       `<button type="button" class="chip" data-act="quick" data-idx="${qi}">${esc(q)}</button>`
     ).join("");
     body = `
@@ -4594,7 +5390,9 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 /* 值得重试的错误：只补真正的网络层失败。限流 / 服务端异常重试价值低，
    还可能替服务端加压，索性不补 —— 顺带把「多花一次请求」的面收窄。 */
 function retriableKind(kind) {
-  return kind === "net" || kind === "timeout";
+  /* empty：服务端把响应正常收尾了却没吐任何正文（联网检索后、思考模式退出时都可能遇到）。
+     这种和网络抖动一样属于「重发一次通常就好」，不该直接把错误甩给用户。 */
+  return kind === "net" || kind === "timeout" || kind === "empty";
 }
 
 function appendMsg(i) {
@@ -4634,9 +5432,14 @@ async function runCompletion(meta, aiIdx, attempt) {
   const model = effectiveModel();
   const useWeb = !!meta.webSearch && !state.webUnsupported;   /* 联网搜索走 Responses API */
 
+  /* 首字节之前的静默跟「卡住」是两回事：联网要等服务端检索、思考模式要先算完一轮，
+     这段时间服务端可能几十秒不吐一个字。所以首字节给更长的宽容期，见字之后再按用户设的空闲超时收紧。 */
+  const FIRST_BYTE_MS = Math.max(IDLE_TIMEOUT_MS, (useWeb ? 150 : 100) * 1000);
+  let gotFirstByte = false;
   const armIdle = () => {
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { controller.__timeout = true; controller.abort(); }, IDLE_TIMEOUT_MS);
+    idleTimer = setTimeout(() => { controller.__timeout = true; controller.abort(); },
+                           gotFirstByte ? IDLE_TIMEOUT_MS : FIRST_BYTE_MS);
   };
 
   /* Anthropic Messages API 的 SSE 事件处理（联网走这条） */
@@ -4889,6 +5692,7 @@ async function runCompletion(meta, aiIdx, attempt) {
         break;
       }
 
+      if (value && value.length) gotFirstByte = true;
       armIdle();
       buffer += decoder.decode(value, { stream:true });
       buffer = handleLines(buffer, false);
@@ -4950,14 +5754,29 @@ async function runCompletion(meta, aiIdx, attempt) {
         /* 还没吐字、且属于可重试的错误：占位留着（保证索引不错位）并清空，交给 startRun 再试 */
         willRetry = true;
         aiMsg.text = "";
+        /* 思考内容也要清掉，否则重试那次的思考会接在上一轮后面越堆越长 */
+        aiMsg.reasoning = "";
+        aiMsg.thinkStart = 0;
+        aiMsg.thinkMs = 0;
         aiMsg.truncated = false;
         aiMsg.stopped = false;
       } else {
         state.errorKind = kind;
-        state.error = (kind === "timeout")
-          ? ("等待 " + Math.round(IDLE_TIMEOUT_MS / 1000) + " 秒没有收到新内容，已自动中断。")
-          : ((e && e.message) ? String(e.message) : "请求失败");
-        if (!aiMsg.text.trim()) dropLastIf(meta.messages, aiMsg);
+        if (kind === "timeout") {
+          state.error = (gotFirstByte
+            ? ("等待 " + Math.round(IDLE_TIMEOUT_MS / 1000) + " 秒没有收到新内容，已自动中断。")
+            : ("等了 " + Math.round(FIRST_BYTE_MS / 1000) + " 秒还没开始出内容，已自动中断（服务端可能繁忙，再点一次发送通常就好）。"));
+        } else if (kind === "empty") {
+          state.error = (aiMsg.reasoning && aiMsg.reasoning.trim())
+            ? "模型只输出了思考过程，没有给出正文。再点一次发送通常就好。"
+            : "模型这次没有返回内容（服务端可能繁忙）。再点一次发送通常就好。";
+        } else {
+          state.error = (e && e.message) ? String(e.message) : "请求失败";
+        }
+        /* 只要还有思考内容就留着，别让用户盯着一片空白 */
+        if (!aiMsg.text.trim() && !(aiMsg.reasoning && aiMsg.reasoning.trim())) {
+          dropLastIf(meta.messages, aiMsg);
+        }
       }
     }
   } finally {
@@ -6524,6 +7343,28 @@ function popCacheNote() {
 
 function isToolView(v) { return !!(TOOL_META[v]) || v === "progress"; }
 
+/* 手机底栏：高亮 + 对话页隐藏 */
+function renderBottomNav() {
+  const nav = $("bottomNav");
+  if (!nav) return;
+  const isChat = state.view === "chat";
+  nav.classList.toggle("hidden", isChat);       /* 对话页隐藏，避免和输入区叠 */
+  const isPick = state.view === "pick";
+  const home = ["home", "space", "rank"].indexOf(state.view) >= 0;
+  const tools = state.view === "toolbox" || state.view === "progress" || isToolView(state.view);
+  const rank = isPick && state.pickMode === "rank";
+  const ask = isPick && state.pickMode === "ask";
+  const set = function (id, on) {
+    const el = $(id);
+    if (el) el.classList.toggle("active", !!on);
+  };
+  set("bnHome", home);
+  set("bnRank", rank);
+  set("bnTools", tools);
+  set("bnAsk", ask);
+}
+
+
 function openToolbox() {
   state.view = "toolbox";
   render();
@@ -6531,16 +7372,21 @@ function openToolbox() {
 
 /* 工具箱列表页（顶栏 🧰 进入） */
 function viewToolbox() {
-  const cards = TOOLS.map(function (t) {
-    return '<div class="card mini" role="button" tabindex="0" data-act="open-tool" data-tool="' + escAttr(t.id) + '">'
-      + '<span class="icon">' + t.icon + '</span>'
-      + '<div class="name">' + esc(t.name) + '</div>'
-      + '<div class="desc">' + esc(t.desc) + '</div>'
-      + '</div>';
+  const blocks = TOOL_GROUPS.map(function (g) {
+    const cards = TOOLS.filter(function (t) { return t.group === g; }).map(function (t) {
+      return '<div class="card mini tool-tile" role="button" tabindex="0" data-act="open-tool" data-tool="' + escAttr(t.id) + '">'
+        + '<span class="icon">' + t.icon + '</span>'
+        + '<div class="name">' + esc(t.name) + '</div>'
+        + '<div class="desc">' + esc(t.desc) + '</div>'
+        + '</div>';
+    }).join("");
+    return '<div class="sec-title">' + g + '工具</div>'
+         + '<div class="tool-grid">' + cards + '</div>';
   }).join("");
   return '<div class="sec-title">🧰 工具箱</div>'
-       + '<p class="tool-lead">装修过程中最常用的几个工具。每个都能填自己的情况、传截图、联网核对，生成针对你家的分析；没填 Key 时会显示内置参考。</p>'
-       + '<div class="tool-grid">' + cards + '</div>';
+       + '<p class="tool-lead">每个工具都能填自己的情况、传截图、联网核对，生成针对你家的分析；'
+       + '没填 Key 时会显示内置参考。</p>'
+       + blocks;
 }
 
 function openProgress() {
@@ -6584,7 +7430,7 @@ function shareAsMessageImage(idx) {
     lines.forEach(function (ln, i) { c2.fillText(ln, PAD, PAD + i * LINE); });
     c2.fillStyle = "#9a938a";
     c2.font = '13px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
-    c2.fillText("室内设计助手 0.2.3 · 仅供参考，不构成施工依据", PAD, cv.height - FOOT + 14);
+    c2.fillText("室内设计助手 0.2.4 · 仅供参考，不构成施工依据", PAD, cv.height - FOOT + 14);
     const a = document.createElement("a");
     a.href = cv.toDataURL("image/png");
     a.download = "室内设计助手_" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + ".png";
@@ -7162,26 +8008,32 @@ function viewRank() {
       const meta = RANK_TIER_META[tier];
       body += '<div class="sec-title">' + esc(meta.label) + '</div>';
       body += '<p class="rank-tier-hint">' + esc(meta.hint) + '</p>';
-      list.forEach(function (it) { body += rankItemHtml(it, flatIdx++); });
+      list.forEach(function (it, li) {
+      /* 第一条默认展开：让用户看到「展开是什么样」，否则不知道能点 */
+      const isFirst = (flatIdx === 0) && (li === 0);
+      body += rankItemHtml(it, flatIdx++, isFirst);
+    });
     });
   }
 
        const wholeTip = (state.space === "whole")
          ? '<p class="tip">预算分配已移到工具箱（点右上角 🧰 → 预算分配），输入总预算可以让 AI 帮你算怎么分。</p>'
          : "";
+       const wholeTip2 = (state.space === "whole")
+         ? '<p class="tip">预算怎么分已经移到工具箱（点 🧰 → 预算分配），输入总预算可以让 AI 帮你算。</p>'
+         : "";
   return '<div class="sec-title">' + esc(sp.name) + ' · 最需要先解决的排行榜</div>'
-       + '<div class="rank-meta">数据版本 v' + esc(RANK_DATA_VERSION) + ' · 更新于 ' + esc(RANK_DATA_UPDATED)
-       + '</div>'
-       + wholeTip
        + '<div class="rank-tabs">' + tabBar + '</div>'
        + '<div class="rank-presets">' + presetBar + '</div>'
        + body
        + '<p class="tip">内容依据《装修避坑手册（2025）》整理'
        + '（每条展开后的「依据」栏会写明出自手册哪一节，或者对应的国标编号），'
        + '不需要联网、不再调用 AI 生成。想更细问某一条，点条目里的「问设计师」或「联网搜索」。</p>'
+       + wholeTip2
        + '<p class="tip rank-disclaimer">以上内容不构成施工依据：'
        + '各地规范、材料与施工条件不同，实际以现行国标、当地规定和现场情况为准。'
-       + '涉及结构、燃气、电路的改动，请交给有资质的单位。</p>';
+       + '涉及结构、燃气、电路的改动，请交给有资质的单位。</p>'
+       + '<p class="tip rank-ver">数据版本 v' + esc(RANK_DATA_VERSION) + ' · 更新于 ' + esc(RANK_DATA_UPDATED) + '</p>';
 }
 
 
@@ -7246,179 +8098,179 @@ const TALK = [
    不给「推荐指数」，因为该不该做取决于户型和生活方式，不是打分题。 */
 const DESIGN_DECISIONS = {
   kitchen: [
-    { name: "开放式厨房", why: "视觉通透、和家人互动、空间显大。",
+    { name: "开放式厨房", what: "厨房不装门，和客厅、餐厅打通成一个空间。", why: "视觉通透、和家人互动、空间显大。",
       cost: "油烟会扩散到客厅，需要吸力更大的油烟机；开火做饭多的话墙面更容易挂油。",
       avoid: "天天爆炒、户型通风差、厨房本来就小（油烟散不掉）—— 这三种情况建议老老实实做门。" },
-    { name: "中岛", why: "多一块操作台面、下面能做收纳，还能当早餐位和临时餐桌。",
+    { name: "中岛", what: "在厨房中间放一个独立的岛形台面，四周都能走人。", why: "多一块操作台面、下面能做收纳，还能当早餐位和临时餐桌。",
       cost: "至少占 2~3㎡，而且四周要留 90 公分以上通道才不憋屈。",
       avoid: "厨房净宽不足 2.4 米，硬塞中岛会让通道只剩一条缝，天天侧身走。" },
-    { name: "高低台", why: "洗切区做高一点、灶台区做低一点，洗菜不弯腰、炒菜不架胳膊。",
+    { name: "高低台", what: "同一组台面做成两个高度：洗切区高一点、灶台区低一点。", why: "洗切区做高一点、灶台区做低一点，洗菜不弯腰、炒菜不架胳膊。",
       cost: "台面有高差，边缘要处理，视觉上没那么整齐；定制费用略高。",
       avoid: "厨房很小、台面连续长度不足 —— 高差会切碎操作面，反而不顺手。" },
-    { name: "洗碗机", why: "解放双手，洗得比手洗更干净（高温 + 除菌），还能当碗柜。",
+    { name: "洗碗机", what: "嵌入地柜的自动洗碗设备，需要提前留进水、排水和插座。", why: "解放双手，洗得比手洗更干净（高温 + 除菌），还能当碗柜。",
       cost: "占一个地柜位（一般是 60 公分宽），需要提前留进水、排水和插座。",
       avoid: "家里人口少、做饭频率低 —— 攒不满一机就要手洗，反而成了摆设。" },
-    { name: "垃圾处理器", why: "厨余直接打碎冲走，夏天不招虫、不倒湿垃圾。",
+    { name: "垃圾处理器", what: "装在水槽下方的厨余粉碎机，把湿垃圾打碎冲进下水道。", why: "厨余直接打碎冲走，夏天不招虫、不倒湿垃圾。",
       cost: "水槽下要占空间和插座，部分老楼管道细，不适合大量打碎。",
       avoid: "老小区管道老化、排水坡度小 —— 容易堵，堵了要拆管子。" },
-    { name: "吊柜做到顶", why: "顶部不落灰不积油，整体感更强。",
+    { name: "吊柜做到顶", what: "吊柜一直做到天花板，不留一段露着落灰的空隙。", why: "顶部不落灰不积油，整体感更强。",
       cost: "最上层要踩凳子或者用拉篮，取放都不方便。",
       avoid: "层高很高（超过 2.8 米）—— 做到顶会显得头重脚轻，可以顶部做封板代替。" }
   ],
   bathroom: [
-    { name: "干湿分离", why: "洗澡水不外溅，地面不长期湿滑，木门和柜子不容易受潮。",
+    { name: "干湿分离", what: "用隔断或淋浴房，把淋浴区（湿区）和马桶、洗手台（干区）分开。", why: "洗澡水不外溅，地面不长期湿滑，木门和柜子不容易受潮。",
       cost: "要做隔断或淋浴房，占空间；小户型做起来局促。",
       avoid: "卫生间小于 3㎡ 且没有外扩条件 —— 强行分隔会让每个区域都不能用，改用浴帘 + 挡水条更实际。" },
-    { name: "浴缸", why: "泡澡放松、给小孩洗澡方便。",
+    { name: "浴缸", what: "独立或嵌入式的泡澡容器，长度一般 1.5 米以上。", why: "泡澡放松、给小孩洗澡方便。",
       cost: "占 1.5 米以上的长度，放水、清洗都要时间；一年用不了几次的概率很高。",
       avoid: "只有一个卫生间、家里没人有泡澡习惯 —— 浴缸最后大概率变成储物箱。" },
-    { name: "双台盆", why: "早晚高峰两个人可以同时洗漱，不用排队。",
+    { name: "双台盆", what: "洗手台上做两个盆、配两面镜子，两个人可以同时用。", why: "早晚高峰两个人可以同时洗漱，不用排队。",
       cost: "台面至少要 1.2~1.5 米，镜柜、下水都要双份。",
       avoid: "台面不足 1.2 米 —— 两个盆会挨得很近，反而都不好用，不如做单大盆。" },
-    { name: "淋浴房（玻璃隔断）", why: "水不外溅、保温好、显干净。",
+    { name: "淋浴房（玻璃隔断）", what: "用钢化玻璃围出一个封闭的淋浴小空间。", why: "水不外溅、保温好、显干净。",
       cost: "钢化玻璃有自爆风险（必须贴防爆膜），五金要选 304，占 90×90 公分以上。",
       avoid: "家里有老人小孩且空间小 —— 玻璃磕碰和进出绊倒风险更高，浴帘更安全。" },
-    { name: "智能马桶 / 智能马桶盖", why: "冲洗、烘干、加热座圈，冬天体验提升明显。",
+    { name: "智能马桶 / 智能马桶盖", what: "能自动冲洗、烘干、加热座圈的马桶，或加在普通马桶上的智能盖。", why: "冲洗、烘干、加热座圈，冬天体验提升明显。",
       cost: "需要马桶旁留插座（带防水盖），老式马桶要确认是否适配。",
       avoid: "马桶旁边没留插座 —— 后期拉明线在卫生间是有漏电风险的。" },
-    { name: "壁挂式马桶", why: "悬空好打扫，水箱藏墙里，噪音小、看着利落。",
+    { name: "壁挂式马桶", what: "马桶悬空挂在墙上，水箱藏在砌出来的假墙里。", why: "悬空好打扫，水箱藏墙里，噪音小、看着利落。",
       cost: "要砌假墙占 15~20 公分进深，水箱坏了要开墙维修。",
       avoid: "卫生间进深本来就紧张 —— 假墙会让活动空间更小。" }
   ],
   living: [
-    { name: "无主灯", why: "光线分布均匀、没有中心亮斑，层高显高，氛围可调。",
+    { name: "无主灯", what: "不用一个中央大灯，改用分散的筒灯、射灯、灯带来照明。", why: "光线分布均匀、没有中心亮斑，层高显高，氛围可调。",
       cost: "要提前设计灯位和回路，灯具数量多、总价更高；做不好会出现「中间亮四角黑」。",
       avoid: "不做吊顶、层高很低 —— 筒灯没地方装，只能退回去做吸顶灯。" },
-    { name: "电视墙造型", why: "能遮挡管线、做出收纳或展示面。",
+    { name: "电视墙造型", what: "在电视背面的墙上做造型、收纳柜或装饰面。", why: "能遮挡管线、做出收纳或展示面。",
       cost: "造型做复杂容易过时，凹槽积灰难打理，费用不低。",
       avoid: "预算有限或喜欢简洁 —— 乳胶漆 + 预埋线管就够，两三万砸在电视墙上通常是最不划算的一笔。" },
-    { name: "地面通铺（客餐厅一体）", why: "空间连贯、显大，接缝少好打扫。",
+    { name: "地面通铺（客餐厅一体）", what: "客厅和餐厅铺同一种地面材料，不装门槛、不留过门石。", why: "空间连贯、显大，接缝少好打扫。",
       cost: "对铺贴精度要求高（对缝要一路对过去），砖损耗更大。",
       avoid: "两个区域高差大、或者要分材质（餐厅怕油）—— 强行通铺要额外找平，成本更高。" },
-    { name: "开放式客厅（不要隔断）", why: "视线通透、家人互动方便，小户型显大。",
+    { name: "开放式客厅（不要隔断）", what: "客厅不装隔断，直接连着餐厅、厨房或阳台。", why: "视线通透、家人互动方便，小户型显大。",
       cost: "功能分区变模糊，收纳必须做得更好，否则杂物一眼全看见。",
       avoid: "家里人多、东西多且收纳习惯一般 —— 开放式会把乱放大。" },
-    { name: "投影替代电视", why: "画面大，看电影体验好，不用时墙面干净。",
+    { name: "投影替代电视", what: "用投影仪 + 幕布代替电视机看片。", why: "画面大，看电影体验好，不用时墙面干净。",
       cost: "白天需要遮光，灯泡有寿命，游戏延迟比电视高；要预埋 HDMI 和电源。",
       avoid: "白天常看、对延迟敏感（打游戏）—— 还是电视更合适。" }
   ],
   bedroom: [
-    { name: "飘窗改造", why: "把用不上的飘窗改成阅读位、收纳位或书桌，多出一块可用面积。",
+    { name: "飘窗改造", what: "把窗户下那块凸出去的平台改成能坐、能收纳或能写字的地方。", why: "把用不上的飘窗改成阅读位、收纳位或书桌，多出一块可用面积。",
       cost: "必须保留原有保温层和排水，不能砸结构；改造费用按米算。",
       avoid: "飘窗是结构承重的一部分、或者物业明确不允许 —— 动了要担责任。" },
-    { name: "榻榻米", why: "床 + 收纳 + 书桌一体，小房间利用率高。",
+    { name: "榻榻米", what: "把床、收纳柜、书桌做成一个整体，底下能装东西。", why: "床 + 收纳 + 书桌一体，小房间利用率高。",
       cost: "床下收纳取放麻烦，通风差容易返潮，睡感偏硬。",
       avoid: "南方潮湿地区、或者需要每天拿取床下东西 —— 榻榻米返潮发霉是高频投诉。" },
-    { name: "床头背景墙", why: "做出层次、遮住床头线路，看着更完整。",
+    { name: "床头背景墙", what: "床头那面墙做装饰板、软包或造型，和其余墙不同。", why: "做出层次、遮住床头线路，看着更完整。",
       cost: "做复杂造型两三年就过时，软包还容易积灰。",
       avoid: "卧室本来就小 —— 背景墙会让空间显得更窄，不如纯色漆省钱耐看。" },
-    { name: "步入式衣柜", why: "拿取方便、不用开门，通风好不易潮。",
+    { name: "步入式衣柜", what: "单独一个小房间当衣柜，人走进去拿东西，不用开柜门。", why: "拿取方便、不用开门，通风好不易潮。",
       cost: "至少需要 1.5×1.5 米的净空间，占用面积大。",
       avoid: "卧室小于 12㎡ —— 做出来通道太窄，不如推拉门衣柜实用。" },
-    { name: "卧室做吊顶", why: "能藏空调管道和灯带，造型更好看。",
+    { name: "卧室做吊顶", what: "卧室天花往下吊一层，用来藏管道、灯带或空调。", why: "能藏空调管道和灯带，造型更好看。",
       cost: "压低层高 15~20 公分，费用不低。",
       avoid: "层高不足 2.7 米、或者管道可以走墙 —— 吊顶只会让房间压抑。" }
   ],
   dining: [
-    { name: "餐厨一体", why: "上菜动线短、空间显大，做饭的人能和客人聊天。",
+    { name: "餐厨一体", what: "厨房和餐厅打通成一个空间，不做门。", why: "上菜动线短、空间显大，做饭的人能和客人聊天。",
       cost: "油烟问题要用大吸力油烟机解决，燃气和排烟需符合当地规定。",
       avoid: "天天爆炒、燃气公司不允许开放式厨房 —— 很多地方对开放式厨房不让通气，先确认再动。" },
-    { name: "卡座", why: "靠墙坐、省出通道空间，下面还能做收纳。",
+    { name: "卡座", what: "贴着墙做一排固定座椅，靠背是墙、下面能做收纳。", why: "靠墙坐、省出通道空间，下面还能做收纳。",
       cost: "固定不能移动，坐感和普通餐椅不同，下方收纳取放不便。",
       avoid: "餐厅宽敞、或者你喜欢经常换布局 —— 卡座一装就动不了。" },
-    { name: "岛台 / 吧台餐桌", why: "既能当餐桌又能当操作台，视觉上很现代。",
+    { name: "岛台 / 吧台餐桌", what: "在厨房或餐厅中间做一块独立台面，兼当餐桌或操作台。", why: "既能当餐桌又能当操作台，视觉上很现代。",
       cost: "占空间，椅子要考虑能收进去；坐姿比普通餐桌高，久坐不舒服。",
       avoid: "餐厅净宽不足 2.5 米 —— 岛台加两边椅子基本就走不了人。" },
-    { name: "整墙餐边柜", why: "把热水壶、咖啡机、零食、酒全部收起来，台面能做操作位。",
+    { name: "整墙餐边柜", what: "在餐厅靠墙做一整个墙面的收纳柜，中间留一段台面。", why: "把热水壶、咖啡机、零食、酒全部收起来，台面能做操作位。",
       cost: "进深 35~40 公分，整墙做满会让空间显小。",
       avoid: "餐厅本来就窄 —— 满墙柜会压得慌，可以做半墙或上半开放。" }
   ],
   study: [
-    { name: "开放式书房", why: "视觉通透、能兼顾客厅，小户型省面积。",
+    { name: "开放式书房", what: "书房不装门，直接和客厅或走廊连通。", why: "视觉通透、能兼顾客厅，小户型省面积。",
       cost: "隔音差，看书容易被打扰，桌面杂物会被看见。",
       avoid: "需要专注工作、家里人多 —— 开放式书房等于没有书房。" },
-    { name: "玻璃隔断书房", why: "既隔音又透光，空间感保留，比实墙通透。",
+    { name: "玻璃隔断书房", what: "用玻璃墙 + 玻璃门把书房围起来，隔音但透光。", why: "既隔音又透光，空间感保留，比实墙通透。",
       cost: "玻璃要钢化，五金要选好；隔音不如实墙，还要考虑清洁。",
       avoid: "需要绝对安静（录音、上课）—— 玻璃隔断的隔音量不够。" },
-    { name: "整墙书柜", why: "收纳量大、氛围好，一面墙就能解决书和杂物。",
+    { name: "整墙书柜", what: "一整面墙做满书柜，从地到顶。", why: "收纳量大、氛围好，一面墙就能解决书和杂物。",
       cost: "进深 30 公分、整墙做满视觉压抑；层板承重要够（重书放下层）。",
       avoid: "房间小、采光差 —— 深色满墙书柜会让空间更暗更挤，用浅色 + 部分开放格。" },
-    { name: "升降桌", why: "能站坐交替，久坐的人腰颈负担小很多。",
+    { name: "升降桌", what: "桌面高度能电动升降的桌子，坐着站着随时切换。", why: "能站坐交替，久坐的人腰颈负担小很多。",
       cost: "价格比普通桌高，桌下需要留线材空间，电机有寿命。",
       avoid: "预算非常紧 —— 优先把椅子买好，效果比升降桌更明显。" },
-    { name: "双人书房", why: "两人可以在同一空间各自工作，互不干扰。",
+    { name: "双人书房", what: "书房里放两张桌子，两个人可以同时用。", why: "两人可以在同一空间各自工作，互不干扰。",
       cost: "需要至少 2.4 米以上的连续桌面，插座和网口都要双份。",
       avoid: "房间小于 8㎡ —— 两张桌子会挤到都伸不开椅子。" }
   ],
   entry: [
-    { name: "下沉式玄关", why: "脏东西留在低区，视觉上有个明确的分界，进门就有仪式感。",
+    { name: "下沉式玄关", what: "进门位置的地面比室内低 3~5 公分，形成一个换鞋的小台阶。", why: "脏东西留在低区，视觉上有个明确的分界，进门就有仪式感。",
       cost: "要整体抬高室内地面 3~5 公分，工程量不小，老人小孩容易绊。",
       avoid: "层高紧张、家里有老人 —— 高差是绊倒隐患，用一块地垫区隔更稳妥。" },
-    { name: "玄关柜做到顶", why: "收纳量最大化，顶部不落灰。",
+    { name: "玄关柜做到顶", what: "玄关柜一直做到天花板，不留一段露着落灰的空隙。", why: "收纳量最大化，顶部不落灰。",
       cost: "高处取放不便，进深 35 公分以上会占走道。",
       avoid: "玄关净宽不足 1.2 米 —— 满柜会让人进出侧身，改做矮柜 + 挂衣区。" },
-    { name: "换鞋凳一体柜", why: "坐着换鞋更稳，凳子下面还能放当天穿的鞋。",
+    { name: "换鞋凳一体柜", what: "把换鞋凳和鞋柜做成一整件家具，坐着换鞋更稳。", why: "坐着换鞋更稳，凳子下面还能放当天穿的鞋。",
       cost: "占 40~60 公分宽度，凳面高度按 40~45 公分做才舒服。",
       avoid: "玄关极窄 —— 单独放个可移动小凳更灵活。" },
-    { name: "屏风 / 隔断", why: "挡住视线（避免开门见厅）、挡点穿堂风。",
+    { name: "屏风 / 隔断", what: "进门处放一块半透明挡板或家具，遮挡视线、避免开门见厅。", why: "挡住视线（避免开门见厅）、挡点穿堂风。",
       cost: "占空间，还可能挡光；材质选不好会显得廉价。",
       avoid: "玄关本来就窄且采光差 —— 隔断会让进门更压抑，用半透材质或家具遮挡。" },
-    { name: "玄关感应灯", why: "进门自动亮，不用摸黑找开关，体验提升明显。",
+    { name: "玄关感应灯", what: "人一进门自动亮、离开自动灭的灯，不用摸开关。", why: "进门自动亮，不用摸黑找开关，体验提升明显。",
       cost: "要预留电源，感应头装的位置要考虑不被路人误触发。",
       avoid: "玄关正对室外走廊 —— 感应头朝外会被路过的邻居反复点亮。" }
   ],
   balcony: [
-    { name: "阳台并入客厅", why: "客厅直接大一圈，采光更好，空间连贯。",
+    { name: "阳台并入客厅", what: "拆掉阳台和客厅之间的门，把阳台变成客厅的一部分。", why: "客厅直接大一圈，采光更好，空间连贯。",
       cost: "要确认非承重、做好封窗保温，晾晒要重新安排（烘干机或北阳台）。",
       avoid: "只有这一个阳台且必须晾晒 —— 并进来之后衣服没地方挂，也是常见后悔。" },
-    { name: "封阳台", why: "防风防雨防尘，能当半个室内用，安全性更好。",
+    { name: "封阳台", what: "用铝合金窗把阳台外侧封起来，变成半个室内空间。", why: "防风防雨防尘，能当半个室内用，安全性更好。",
       cost: "断桥铝 + 钢化玻璃费用不低（楼层越高越贵），必须做好密封和排水孔。",
       avoid: "物业不允许、或者外立面统一要求不能封 —— 违规封窗可能被要求拆除。" },
-    { name: "洗衣机放阳台", why: "动线短，晾晒方便，卫生间能省出空间。",
+    { name: "洗衣机放阳台", what: "把洗衣机从卫生间挪到阳台，就近晾晒。", why: "动线短，晾晒方便，卫生间能省出空间。",
       cost: "要预留进水、排水、防水插座和防晒措施，西晒会加速机器老化。",
       avoid: "阳台没有下水管或排水管细 —— 强行接会返味甚至漏水。" },
-    { name: "阳台花园 / 绿植角", why: "改善心情、遮挡视线，让阳台不只是杂物间。",
+    { name: "阳台花园 / 绿植角", what: "把阳台做成养花种草的地方，兼当休闲角落。", why: "改善心情、遮挡视线，让阳台不只是杂物间。",
       cost: "要接水、要排水，植物有养护成本，浇水会弄湿地面。",
       avoid: "阳台朝西暴晒、或者你经常出差 —— 植物会死，不如做耐晒品种或干脆不放。" },
-    { name: "阳台做地台 / 卡座", why: "多出一块休闲区，可以喝茶看书，下面还能收纳。",
+    { name: "阳台做地台 / 卡座", what: "把阳台地面抬高 10~20 公分当地台，或做一排固定座椅。", why: "多出一块休闲区，可以喝茶看书，下面还能收纳。",
       cost: "抬高地面要处理排水坡度，容易积水；坐垫受潮。",
       avoid: "阳台排水本来就不畅 —— 地台会挡住水流，雨季容易泡。" }
   ],
   whole: [
-    { name: "全屋智能", why: "灯光、窗帘、空调、门锁联动，生活便利度提升明显。",
+    { name: "全屋智能", what: "灯光、窗帘、空调、门锁等设备联网，能用手机或语音控制。", why: "灯光、窗帘、空调、门锁联动，生活便利度提升明显。",
       cost: "需要提前布零线、留网关位置、选协议；后期加装要么走明线，要么换设备。",
       avoid: "预算紧、或者家里老人不习惯 —— 先把基础的水电和网络做好，智能以后随时可以加。" },
-    { name: "中央空调 / 风管机", why: "不占地面空间、出风均匀、外观干净，一台外机带多间房。",
+    { name: "中央空调 / 风管机", what: "一台外机带多间房的空调，室内机藏在吊顶里。", why: "不占地面空间、出风均匀、外观干净，一台外机带多间房。",
       cost: "吊顶要压低 25~30 公分，必须留检修口；层高不足 2.7 米会明显压抑，造价也高。",
       avoid: "层高低于 2.7 米、或者只开一两间房 —— 分体机更划算，也更好维修。" },
-    { name: "地暖", why: "从脚底暖起来，比空调舒服，且不占墙面空间。",
+    { name: "地暖", what: "地面下铺发热管或电缆，从脚底暖和起来。", why: "从脚底暖起来，比空调舒服，且不占墙面空间。",
       cost: "抬高地面 8~10 公分，地板要选地暖专用（纯实木基本不行），能耗和维护都要考虑。",
       avoid: "层高紧张、或者只做局部 —— 局部地暖热得不均，反而不舒服。" },
-    { name: "新风系统", why: "不开窗也能换气，对雾霾天、临街、怕闷的家庭很实用。",
+    { name: "新风系统", what: "把室外空气过滤后送进屋里，不用开窗也能换气。", why: "不开窗也能换气，对雾霾天、临街、怕闷的家庭很实用。",
       cost: "中央新风要走管道、占吊顶；壁挂新风要在外墙打两个孔，滤芯是长期开销。",
       avoid: "老楼无法在外墙开孔、或者预算紧张 —— 先把窗户和排风扇做好，新风不是必需品。" },
-    { name: "全屋净水", why: "前置滤掉泥沙，中央软水让洗澡和洗衣更舒服，直饮解决了喝水。",
+    { name: "全屋净水", what: "从进户开始分几道过滤：前置、中央、软水、直饮。", why: "前置滤掉泥沙，中央软水让洗澡和洗衣更舒服，直饮解决了喝水。",
       cost: "要提前规划管路和设备位，中央净水和软水机体积不小，最好留设备间或厨下空间。",
       avoid: "老小区水压本来很低 —— 加装设备会进一步降压，要先确认水压。" },
-    { name: "全屋 Wi-Fi（AC + AP）", why: "每个房间都有稳定信号，走动不掉线，比单个路由器强太多。",
+    { name: "全屋 Wi-Fi（AC + AP）", what: "一台主机 + 每个房间一个无线面板，全屋信号满格。", why: "每个房间都有稳定信号，走动不掉线，比单个路由器强太多。",
       cost: "每个房间要预埋网线 + 天花板留电，装修后基本没法补。",
       avoid: "小户型（70㎡ 以内）—— 一台好路由器加一个 Mesh 节点通常就够，不用大动干戈。" },
-    { name: "地板通铺", why: "空间连贯、显大、接缝少好打扫。",
+    { name: "地板通铺", what: "全屋铺同一种地板，不装门槛石。", why: "空间连贯、显大、接缝少好打扫。",
       cost: "对地面找平要求高，要留伸缩缝；如果局部有地暖，铺装方式要跟着调整。",
       avoid: "各区域高差明显、或要分材质（比如厨房怕水）—— 强行通铺要先大面积找平，成本更高。" },
-    { name: "无主灯", why: "光线分布均匀、没有中心亮斑，层高显高，氛围可调。",
+    { name: "无主灯", what: "不用一个中央大灯，改用分散的筒灯、射灯、灯带来照明。", why: "光线分布均匀、没有中心亮斑，层高显高，氛围可调。",
       cost: "灯位和回路都要提前设计，灯具数量多、总价更高；做不好会中间亮四角黑。",
       avoid: "不做吊顶、层高很低 —— 筒灯没地方装，只能退回吸顶灯。" },
-    { name: "全屋定制 vs 成品家具", why: "定制能贴合尺寸、把死角用起来；成品便宜、能搬走、坏了随时换。",
+    { name: "全屋定制 vs 成品家具", what: "全屋定制是按墙尺寸让厂家做柜子；成品家具是买现成的搬进来。", why: "定制能贴合尺寸、把死角用起来；成品便宜、能搬走、坏了随时换。",
       cost: "定制贵、周期长（一般 30~45 天）、后期基本不能改；成品尺寸对不上会留缝。",
       avoid: "还没确定家具位置就先定柜子 —— 顺序错了，柜子装完发现插座被挡住。" },
-    { name: "拆改格局", why: "把不合理的户型调整过来，动线和采光都能明显改善。",
+    { name: "拆改格局", what: "敲掉或新建非承重墙，重新规划户型。", why: "把不合理的户型调整过来，动线和采光都能明显改善。",
       cost: "涉及结构就有风险，必须确认承重墙、去物业报备，燃气改动只能由燃气公司做。",
       avoid: "拿不准是不是承重墙 —— 一律按承重墙处理。违规拆改不只是罚款，是整栋楼的安全问题。" },
-    { name: "开放式布局", why: "客厅 + 餐厅 + 厨房打通，视觉通透，适合小户型和喜欢互动的人。",
+    { name: "开放式布局", what: "客厅、餐厅、厨房打通成一个大空间。", why: "客厅 + 餐厅 + 厨房打通，视觉通透，适合小户型和喜欢互动的人。",
       cost: "油烟、噪音、隐私都会互相影响；收纳压力变大，厨房要配大吸力油烟机。",
       avoid: "天天爆炒、家里人多作息不一致 —— 先用玻璃门或半开放过渡，别一上来就全打通。" },
-    { name: "干湿分离（全屋思路）", why: "把「用水的地方」集中起来，其他区域就不会到处受潮。",
+    { name: "干湿分离（全屋思路）", what: "把家里「会用水」的区域集中在一起，其余区域不容易潮。", why: "把「用水的地方」集中起来，其他区域就不会到处受潮。",
       cost: "要重新规划排水和防水范围，改造成本不低。",
       avoid: "只为干湿分离而大改排水 —— 如果原格局排水位置已经合理，做隔断比改管道更划算。" }
   ],
@@ -7461,9 +8313,9 @@ const ASK_STAGES = [
    mandatory 国标强制（不做不行）/ recommended 行业共识（强烈建议）/ optional 看需求。
    刻意不做「4.8 分」「五星推荐」这类主观打分。 */
 const RANK_LEVEL_META = {
-  mandatory:   { label:"国标强制", cls:"lv-must" },
-  recommended: { label:"行业共识", cls:"lv-rec"  },
-  optional:    { label:"看需求",   cls:"lv-opt"  }
+  mandatory:   { label:"必须做",     cls:"lv-must" },
+  recommended: { label:"建议做",     cls:"lv-rec"  },
+  optional:    { label:"可做可不做", cls:"lv-opt"  }
 };
 
 /* 验收动作卡：把「怎么验收」拆成 什么时候 / 拍什么 / 看什么 / 不合格 / 怎么办。
@@ -7474,38 +8326,40 @@ function rankCheckHtml(check) {
     return '<div class="rank-check"><b>怎么验收：</b>' + esc(check) + '</div>';
   }
   const rows = [
-    ["什么时候", check.when],
-    ["拍什么",   check.shoot],
-    ["看什么",   check.look],
-    ["不合格",   check.fail],
-    ["怎么办",   check.act]
-  ].filter(function (r) { return r[1]; });
+    ["🕒", "什么时候", check.when, ""],
+    ["📷", "拍什么",   check.shoot, ""],
+    ["👀", "看什么",   check.look, ""],
+    ["❌", "不合格",   check.fail, "rank-verify-bad"],
+    ["→",  "怎么办",   check.act, "rank-verify-act"]
+  ].filter(function (r) { return r[2]; });
   if (!rows.length) return "";
   return '<div class="rank-verify">'
-    + '<div class="rank-verify-title">怎么验收</div>'
+    + '<div class="rank-verify-title">✅ 怎么验收</div>'
     + rows.map(function (r) {
-        return '<div class="rank-verify-row">'
-          + '<span class="k">' + esc(r[0]) + '</span>'
-          + '<span class="v">' + esc(r[1]) + '</span>'
+        return '<div class="rank-verify-row ' + r[3] + '">'
+          + '<span class="e" aria-hidden="true">' + r[0] + '</span>'
+          + '<span class="k">' + esc(r[1]) + '</span>'
+          + '<span class="v">' + esc(r[2]) + '</span>'
           + '</div>';
       }).join("")
     + '</div>';
 }
 
-function rankItemHtml(it, i) {
+function rankItemHtml(it, i, forceOpen) {
   const costText = it.cost ? ("¥" + it.cost[0] + "~" + it.cost[1] + " " + esc(it.costUnit)) : "";
   const lv = RANK_LEVEL_META[it.level];
-  return '<details class="rank-item">'
+  const openIt = ((state.rankFocus && String(it.name) === String(state.rankFocus)) || forceOpen) ? " open" : "";
+  return '<details class="rank-item"' + openIt + '>'
     + '<summary>'
     +   '<div class="rank-head">'
     +     '<b>' + esc(it.name) + '</b>'
     +     (lv ? '<span class="rank-level ' + lv.cls + '">' + esc(lv.label) + '</span>' : "")
-    +     (it.veto ? '<span class="rank-veto" title="安全或返工代价是一票否决项，无论加权分多少都排进 S 级">一票否决</span>' : "")
-    +     '<span class="rank-basis">依据 · 装修避坑手册（2025）</span>'
+    +     (it.veto ? '<span class="rank-veto" title="安全和返工代价不能让步，无论加权分多少都排进最要紧">不能省</span>' : "")
     +     '<span class="grow"></span>'
     +   '</div>'
     +   (it.why ? '<div class="rank-why">' + esc(it.why) + '</div>' : "")
     +   '<div class="rank-flag">' + esc(rankDimText(it.scores)) + '</div>'
+    + '<div class="rank-expand-hint"></div>'
     + '</summary>'
     + '<div class="rank-detail">'
     +   (it.key ? '<div class="rank-key">🔑 关键数字：' + esc(it.key) + '</div>' : "")
@@ -7566,6 +8420,31 @@ document.addEventListener("click", e => {
     case "sb-reset":       restoreSbDefaults(); break;
     case "open-settings":  openModal(); break;
     case "open-toolbox":   openToolbox(); break;
+    case "bn-home":   goHome(); break;
+    case "bn-rank":   state.pickMode = "rank"; state.view = "pick"; render(); break;
+    case "bn-tools":  openToolbox(); break;
+    case "bn-ask":    state.pickMode = "ask";  state.view = "pick"; render(); break;
+    case "gc-whole":  goSpace("whole"); break;   /* 进「全屋」房间主页，不直接跳榜单 */
+    case "gc-pick-space": state.pickMode = "rank"; state.view = "pick"; render(); break;
+    case "gc-ask":    state.pickMode = "ask";  state.view = "pick"; render(); break;
+    case "pick-space": {
+      const key = node.dataset.key;
+      if (state.pickMode === "rank") {
+        /* 「房间」模式：进这个房间的主页（第一层菜单），不直接跳榜单 */
+        goSpace(key);
+      } else {
+        const k = store.get(LS_APIKEY);
+        startSession(key, null, "");
+        if (!k) state.showKeyGuide = true;
+        render();
+      }
+      break;
+    }
+    case "hist-all":  state.histShowAll = true; renderKeepingScroll(); break;
+    case "hs-rank":   openRankToItem(node.dataset.space, node.dataset.tab, ""); break;
+    case "hs-space":  goSpace(node.dataset.space); break;
+    case "hs-object": state.fromSearch = true; goObject(node.dataset.id, node.dataset.space); break;
+    case "hs-faq":    askFaq(node.dataset.space, Number(node.dataset.idx)); break;
     case "open-key-help":  openKeyHelp(); break;
     case "close-settings": closeModal(true); break;
     case "save-settings":  saveSettings(); break;
@@ -7581,7 +8460,7 @@ document.addEventListener("click", e => {
     }
     case "progress-clear": state.progress = {}; saveProgress(); renderKeepingScroll(); break;
     case "share-image":    shareAsMessageImage(Number(node.dataset.idx)); break;
-    case "guide-whole":  openRank("whole"); break;
+    case "guide-whole":  goSpace("whole"); break;
     case "guide-space":  { const g = document.querySelector(".rank-mini-grid") || document.querySelector(".grid"); if (g) g.scrollIntoView({ behavior:"smooth", block:"start" }); break; }
     case "guide-ask":    { const tc = $("composerInput"); if (tc) { try { tc.focus(); } catch (_) {} } break; }
     case "guide-free":   state.showKeyGuide = false; guiToRank(); break;
@@ -7710,6 +8589,12 @@ document.addEventListener("input", e => {
   if (t.dataset && t.dataset.cond) { state.conditions[t.dataset.cond] = t.value; renderCondSummary(); return; }
   if (t.id === "modelSelect") { $("customModel").classList.toggle("hidden", t.value !== "custom"); }
 });
+
+/* 首页搜索：输入即搜 */
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t && t.id === "homeSearch") renderHomeSearch();
+}, true);
 
 document.addEventListener("change", e => {
   const t = e.target;
