@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#1b1917" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <meta name="color-scheme" content="light dark">
-<title>室内设计助手 0.2.1 · 对话式设计顾问</title>
+<title>室内设计助手 0.2.2 · 对话式设计顾问</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -944,6 +944,7 @@
   .gs-arrow { align-self:center; color:var(--text-5); font-size:0.875rem; }
   .gs-note { font-size:0.75rem; color:var(--text-4); margin-top:9px; line-height:1.7; }
   @media (max-width: 640px) {
+    .ver-tag { display:none; }          /* 顶栏按钮多，手机上先让出版本号的位置 */
     .gs-steps { flex-direction:column; }
     .gs-arrow { display:none; }
     .gs-step { min-width:0; width:100%; }
@@ -1164,7 +1165,8 @@
     <div class="ab-main" id="abMain">室内设计助手</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.2.1</span>
+  <span class="ver-tag" id="verTag">v0.2.2</span>
+  <button type="button" class="ab-btn" id="abToolsBtn" data-act="open-toolbox" aria-label="工具箱" title="工具箱">🧰</button>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
   <button type="button" class="ab-btn hidden" id="abMoreBtn" data-act="toggle-more" aria-label="更多操作" title="更多操作">⋯</button>
@@ -1174,7 +1176,7 @@
 <div class="wrap" id="wrap">
   <header class="hero" id="hero">
     <h1>室内设计助手</h1>
-    <p>点一个常见问题，或者直接开口问 —— 跟设计师聊天一样，可以一直追问下去</p>
+    <p>先看全屋，再看空间。有问题随时问 —— 跟设计师聊天一样，可以一直追问下去</p>
   </header>
   <div class="crumb" id="crumb"></div>
   <main id="view"></main>
@@ -1479,7 +1481,7 @@
 </div>
 
 <script>/* ============================================================
-   室内设计助手 v0.2.1
+   室内设计助手 v0.2.2
    ------------------------------------------------------------
    本版新增「优先级排行榜」：把「钱该花在哪」从一句话变成一张表。
 
@@ -1960,9 +1962,9 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.2.1";
+const APP_VERSION  = "0.2.2";
 const BUILD_TAG    = "v15";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
-const BASE_TITLE   = "室内设计助手 0.2.1 · 对话式设计顾问";
+const BASE_TITLE   = "室内设计助手 0.2.2 · 对话式设计顾问";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
 const WEB_SEARCH_URL = "https://api.deepseek.com/anthropic/v1/messages";
@@ -2611,6 +2613,7 @@ function doRender() {
   if (state.view === "home")        view.innerHTML = viewHome();
   else if (state.view === "space")  view.innerHTML = viewSpace();
   else if (state.view === "rank")   view.innerHTML = viewRank();
+  else if (state.view === "toolbox") view.innerHTML = viewToolbox();
   else if (state.view === "progress") view.innerHTML = viewProgress();
   else if (isToolView(state.view)) view.innerHTML = viewToolWorkbench(state.view);
   else                              view.innerHTML = viewChat();
@@ -2807,6 +2810,7 @@ function appbarTitle() {
   if (!sp) return "室内设计助手";
   if (state.view === "space") return sp.name;
   if (state.view === "rank") return sp.name + " · 最需要先解决";
+  if (state.view === "toolbox") return "工具箱";
   const ob = state.objectId ? sp.objects.find(o => o.id === state.objectId) : null;
   let t = sp.name + (ob ? " · " + ob.name : "");
   if (state.topic) t += "（" + state.topic + "）";
@@ -2943,7 +2947,12 @@ function showHelp() {
    ============================================================ */
 
 function goBack() {
-  if (isToolView(state.view)) { goHome(); return true; }   /* 工具箱页面直接回首页 */
+  if (state.view === "toolbox") { goHome(); return true; }
+  if (isToolView(state.view)) {
+    /* 从工具箱进来的具体工具，返回到工具箱列表；否则回首页 */
+    if (state.tool && state.tool.activeId) { state.view = "toolbox"; render(); return true; }
+    goHome(); return true;
+  }
   if (state.view === "rank") { goSpace(state.space); return true; }
   if (state.view === "chat") {
     if (state.fromHistory) goHome(); else goSpace(state.space);
@@ -3036,6 +3045,11 @@ function renderCrumb() {
   if (state.view === "home") { c.innerHTML = ""; return; }
   const sp = DATA[state.space];
   let html = `<button type="button" class="link" data-act="home">首页</button>`;
+  if (state.view === "toolbox") {
+    html += `<span class="sep">›</span><span>工具箱</span>`;
+    c.innerHTML = html;
+    return;
+  }
   if (isToolView(state.view)) {
     /* 工具箱：首页 › 工具箱 › 具体工具 */
     html += `<span class="sep">›</span><span>工具箱</span>`;
@@ -3067,7 +3081,44 @@ function chatTitleText() {
 
 /* ---------- 首页 ---------- */
 /* ---------- P0-1：第一次装修的三步引导 ---------- */
+/* ---------- 首页两步引导：先全屋规划，再选空间 ---------- */
 function guideStripHtml() {
+  const w = DATA.whole;
+  return '<div class="sec-title">第一步：先看全屋</div>'
+    + '<div class="grid">'
+    +   '<div class="card rank-entry" role="button" tabindex="0" data-act="open-space" data-key="whole">'
+    +     '<span class="icon">' + (w ? w.icon : "🏠") + '</span>'
+    +     '<div class="name">全屋 · 钱怎么分、合同怎么签、工期怎么排</div>'
+    +     '<div class="desc">预算分配、装修公司筛选、合同条款、付款节点、验收时间线 —— 这些全屋级的事先定下来，后面每个空间才不会被动</div>'
+    +     '<span class="card-go">进入全屋规划 ›</span>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="sec-title">第二步：选一个空间，看具体怎么做</div>'
+    + '<div class="grid">' + homeSpaceCards() + '</div>';
+}
+
+/* 空间卡片（全屋除外） */
+function homeSpaceCards() {
+  let cards = "";
+  for (const key in DATA) {
+    if (key === "whole") continue;
+    const s = DATA[key];
+    const chips = s.faqs.slice(0, 2).map((q, qi) =>
+      '<button type="button" class="chip" data-act="ask" data-key="' + escAttr(key) + '" data-idx="' + qi + '">' + esc(q) + '</button>'
+    ).join("");
+    cards += '<div class="card" role="button" tabindex="0" data-act="open-space" data-key="' + escAttr(key) + '">'
+      + '<span class="icon">' + s.icon + '</span>'
+      + '<div class="name">' + esc(s.name) + '</div>'
+      + '<div class="desc">' + esc(s.desc) + '</div>'
+      + '<div class="card-qa"><div class="card-qa-title">大家常问：</div><div class="chips">' + chips + '</div></div>'
+      + '<span class="card-go">进入' + esc(s.name) + ' ›</span>'
+      + '</div>';
+  }
+  return cards;
+}
+
+/* 旧版三步引导（已停用，保留备查） */
+function guideStripHtmlOld() {
   return '<div class="guide-strip">'
     + '<div class="gs-title">第一次装修？按这个顺序来：</div>'
     + '<div class="gs-steps">'
@@ -3079,7 +3130,6 @@ function guideStripHtml() {
     +   '<span class="gs-arrow" aria-hidden="true">→</span>'
     +   '<button type="button" class="gs-step" data-act="guide-ask">'
     +     '<span class="n">③</span><span class="t">有问题随时问</span><span class="d">直接开口</span></button>'
-    + '</div>'
     + '<div class="gs-note">排行榜和工具箱的内置清单都不联网、不花钱，先看这个不用填 Key。</div>'
     + '</div>';
 }
@@ -3113,6 +3163,7 @@ function homeRankHtml() {
 function viewHome() {
   let cards = "";
   for (const key in DATA) {
+    if (key === "whole") continue;      /* 全屋已在「第一步」单独展示，避免重复 */
     const s = DATA[key];
     const chips = s.faqs.slice(0, 2).map((q, qi) =>
       `<button type="button" class="chip" data-act="ask" data-key="${escAttr(key)}" data-idx="${qi}">${esc(q)}</button>`
@@ -3132,17 +3183,13 @@ function viewHome() {
 
   return `
         ${guideStripHtml()}
-        ${homeRankHtml()}
-        ${toolsHtml()}
-        <div class="sec-title">选一个空间，或者直接点常见问题开问</div>
-    <div class="grid">${cards}</div>
     <div id="histBlock">${histBlockHtml()}</div>
     <p class="tip center">
       v${APP_VERSION} (${BUILD_TAG}) · 思维链横条 · 联网检索状态条 · 继续说完 · 快捷键 · 图片大图<br>
       V4.1 Flash（原生多模态）· 整理成表 · 本地示意图 · 用量统计 · 可选产品推荐 · 账号与云端历史<br>
       登录后对话记录保存在 Supabase（${esc(sbDomainText())}）；没登录时只在这次页面里，关掉就没有。<br>
       API Key 只发给 DeepSeek 官方接口（api.deepseek.com），不会发给任何第三方，也不会进云端。<br>
-      <b>没填 Key 也能用</b>：排行榜和工具箱的内置清单完全离线可用，不需要联网、不花一分钱。
+      <b>排行榜内容完全离线、不需要填 Key；工具箱请点右上角 🧰。</b>
     </p>
   `;
 }
@@ -3282,6 +3329,7 @@ const TOOLS = [
   { id:"talk",   icon:"🗣", name:"工头话术",   desc:"把原话丢进来，翻译成人话" },
   { id:"ask",    icon:"❓", name:"该问什么",   desc:"按你的阶段生成提问清单" },
   { id:"design", icon:"⚖️", name:"设计决策",   desc:"该不该做，为什么" },
+  { id:"budget", icon:"💰", name:"预算分配",   desc:"输入总预算，算怎么分" },
   { id:"progress", icon:"📅", name:"我家进度", desc:"按顺序勾，不漏节点" }
 ];
 
@@ -3494,11 +3542,41 @@ function toolResultDesign(r) {
        + alts;
 }
 
+/* —— 预算分配 —— */
+function toolResultBudget(r) {
+  const cats = (r.breakdown || []).map(function (c) {
+    const items = (c.items || []).map(function (x) {
+      return '<div class="rank-verify-row">'
+        + '<span class="k">' + esc(x.name || "") + '</span>'
+        + '<span class="v">' + esc(x.percent || "") + ' · ' + esc(x.amount || "")
+        + (x.note ? '　' + esc(x.note) : "") + '</span>'
+        + '</div>';
+    }).join("");
+    return '<div class="tool-card">'
+      + '<div class="tool-card-head"><b>' + esc(c.category || "") + '</b>'
+      + '<span class="rank-level lv-rec">' + esc(c.percent || "") + ' · ' + esc(c.amount || "") + '</span></div>'
+      + (items ? '<div class="rank-verify">' + items + '</div>' : "")
+      + (c.warning ? '<div class="tool-contract"><b>注意：</b>' + esc(c.warning) + '</div>' : "")
+      + '</div>';
+  }).join("");
+  const advice = (r.advice || []).length
+    ? '<div class="tool-block"><div class="tool-block-t">重要提醒</div><ul class="tool-ul">'
+      + r.advice.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ul></div>' : "";
+  const defer = (r.defer || []).length
+    ? '<div class="tool-block"><div class="tool-block-t">可以后补的项</div><ul class="tool-ul">'
+      + r.defer.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ul></div>' : "";
+  return (r.summary ? '<div class="tool-summary">' + esc(r.summary) + '</div>' : "")
+       + (r.total ? '<div class="tool-summary">总预算：' + esc(r.total) + '</div>' : "")
+       + cats + advice + defer
+       + (r.special ? '<div class="tool-contract"><b>针对你的情况：</b>' + esc(r.special) + '</div>' : "");
+}
+
 function toolResultHtml(id, r) {
   let body = "";
   if (id === "traps") body = toolResultTraps(r);
   else if (id === "talk") body = toolResultTalk(r);
   else if (id === "ask") body = toolResultAsk(r);
+  else if (id === "budget") body = toolResultBudget(r);
   else body = toolResultDesign(r);
   return '<div class="tool-result">' + body + '</div>'
        + toolSourcesHtml(state.tool.sources)
@@ -3509,6 +3587,7 @@ function toolFallbackBodyHtml(id) {
   if (id === "traps") return viewFallbackTraps();
   if (id === "talk") return viewFallbackTalk();
   if (id === "ask") return viewFallbackAsk();
+  if (id === "budget") return viewFallbackBudget();
   return viewFallbackDesign();
 }
 
@@ -3651,6 +3730,24 @@ function designBlockHtml(spaceKey) {
       + '<div class="rank-verify-title">做之前先想清楚这三件事</div>' + rows
       + '</div></div></details>';
   }).join("");
+}
+
+function viewFallbackBudget() {
+  return '<div class="tool-card">'
+    + '<div class="tool-card-head"><b>通用分配参考</b></div>'
+    + '<div class="rank-verify">'
+    +   '<div class="rank-verify-row"><span class="k">隐藏工程</span><span class="v">30~35% · 水电、防水、暖通、结构相关</span></div>'
+    +   '<div class="rank-verify-row"><span class="k">表面工程</span><span class="v">40% 左右 · 砖、地板、墙漆、门窗、吊顶</span></div>'
+    +   '<div class="rank-verify-row"><span class="k">软装</span><span class="v">25~30% · 家具、窗帘、灯、饰品</span></div>'
+    + '</div>'
+    + '</div>'
+    + '<div class="tool-block"><div class="tool-block-t">重要提醒</div><ul class="tool-ul">'
+    + '<li>隐藏工程别省：漏水、跳闸的返工代价最高。</li>'
+    + '<li>留 5~10% 机动金，装修几乎一定会加项。</li>'
+    + '<li>软装可以分批买，先住进去再慢慢添。</li>'
+    + '</ul></div>'
+    + '<p class="tool-foot">这是通用比例，实际要根据房屋情况调整。'
+    + '填好 Key 后点「AI 生成」，可以让 AI 按你家条件算。</p>';
 }
 
 function viewFallbackDesign() {
@@ -5779,6 +5876,27 @@ const TOOL_META = {
     ],
     promptKey: "design",
     fallbackKey: "DESIGN_DECISIONS"
+  },
+  budget: {
+    icon: "💰", title: "预算分配",
+    desc: "输入总预算和房屋情况，算隐藏工程 / 表面工程 / 软装怎么分",
+    cardDesc: "输入总预算，算怎么分",
+    inputLabel: "你的预算和房屋情况",
+    placeholder: "例如：\n\n总预算 20 万，89 平两室一厅毛坯。\n家里两口人，打算要小孩。\n最担心水电防水做不好，软装可以慢慢添。",
+    examples: [
+      "总预算 20 万，89 平毛坯，两人住，重点做厨房和卫生间",
+      "预算 15 万，老房改造，水电全改，有老人同住",
+      "预算 30 万，120 平精装房，想换地板和做全屋定制",
+      "预算 10 万，小户型，想尽量省，哪些可以后补"
+    ],
+    fields: [
+      { k:"total",   label:"总预算",     ph:"例如 20 万" },
+      { k:"area",    label:"面积 / 户型", ph:"例如 89 平两室" },
+      { k:"type",    label:"房屋类型",   ph:"毛坯 / 旧房改造 / 精装房" },
+      { k:"special", label:"特殊需求",   ph:"例如 有老人小孩 / 想装地暖" }
+    ],
+    promptKey: "budget",
+    fallbackKey: "BUDGET_FALLBACK"
   }
 };
 
@@ -5836,6 +5954,19 @@ const TOOL_PROMPTS = {
         "\n\n请输出 JSON：" + this.schema;
     }
   },
+  budget: {
+    schema: '{"total":"总预算","summary":"总体判断","breakdown":[{"category":"隐藏工程","percent":"35%","amount":"7 万","items":[{"name":"水电改造","percent":"15%","amount":"3 万","note":"..."}],"warning":"..."}],"advice":["重要提醒"],"defer":["可以后补的项"],"special":"针对特殊需求的调整建议"}',
+    role: "你是一位资深装修预算顾问。根据业主的总预算和房屋情况，给出合理的预算分配方案。按「隐藏工程（水电、防水、暖通）/ 表面工程（砖、地板、墙漆、门窗、吊顶）/ 软装（家具、窗帘、灯）」三块拆开，每块再给到分项（水电、防水、瓷砖、木作、洁具…），并写明建议比例和金额。金额必须能加得起来对得上总预算。要指出哪些项目不能省、哪些可以后补、以及留多少机动金。",
+    user: function (input, extra, webNote) {
+      return "【业主的情况】\n" + (input || "（未提供文字，请看图片）") +
+        "\n\n【补充信息】总预算：" + (extra.total || "未提供") +
+        "；面积户型：" + (extra.area || "未提供") +
+        "；房屋类型：" + (extra.type || "未提供") +
+        "；特殊需求：" + (extra.special || "未提供") +
+        webNote +
+        "\n\n请输出 JSON：" + this.schema;
+    }
+  },
   design: {
     schema: '{"decision":"建议做 / 不建议做 / 有条件做","why":"原因","cost":"代价","avoid":"什么情况别做","alternatives":["替代方案"],"verify":"怎么验收或维护","sources":["url"]}',
     role: "你判断某个装修设计「该不该做」。结论必须对应业主给出的实际条件（尺寸、层高、采光、人口、习惯、预算），不要给放之四海皆准的套话。",
@@ -5851,12 +5982,38 @@ const TOOL_PROMPTS = {
   }
 };
 
+/* 预算分配的兜底（默认比例，AI 不可用时给人看） */
+const BUDGET_FALLBACK = {
+  summary: "通用的预算分配参考：隐藏工程 30~35%、表面工程 40%、软装 25~30%。",
+  breakdown: [
+    { category: "隐藏工程", percent: "30~35%", amount: "按总价折算", items: [
+      { name: "水电改造", percent: "10~15%", amount: "", note: "别省，返工代价最高" },
+      { name: "防水", percent: "3~5%", amount: "", note: "含闭水试验" },
+      { name: "暖通 / 采暖", percent: "按需", amount: "", note: "装地暖才计" }
+    ], warning: "隐藏工程被省掉的每一分钱，后面都会以返工的形式花回来。" },
+    { category: "表面工程", percent: "40% 左右", amount: "按总价折算", items: [
+      { name: "瓷砖 / 地板", percent: "10~15%", amount: "", note: "" },
+      { name: "墙面 / 油漆", percent: "5~8%", amount: "", note: "" },
+      { name: "门窗 / 吊顶", percent: "8~12%", amount: "", note: "" }
+    ], warning: "" },
+    { category: "软装", percent: "25~30%", amount: "按总价折算", items: [
+      { name: "家具", percent: "12~15%", amount: "", note: "可以分批买" },
+      { name: "窗帘 / 灯具", percent: "5~8%", amount: "", note: "" },
+      { name: "饰品 / 绿植", percent: "3~5%", amount: "", note: "" }
+    ], warning: "" }
+  ],
+  advice: ["留 5~10% 机动金", "隐藏工程不要省", "涉及承重、燃气、电路请找有资质的单位"],
+  defer: ["软装可以住进去再慢慢添", "柜内收纳件、装饰画、绿植都可以后补"],
+  special: "有老人小孩时，优先把钱花在卫生间防滑、扶手预留和电路安全上。"
+};
+
 /* 工具 ID → 静态兜底数据（无 Key / 断网 / 失败时用） */
 function toolFallbackData(id) {
   if (id === "traps")  return TRAPS;
   if (id === "talk")   return TALK;
   if (id === "ask")    return ASK_STAGES;
   if (id === "design") return DESIGN_DECISIONS;
+  if (id === "budget") return BUDGET_FALLBACK;
   return null;
 }
 
@@ -6276,6 +6433,25 @@ function popCacheNote() {
 
 function isToolView(v) { return !!(TOOL_META[v]) || v === "progress"; }
 
+function openToolbox() {
+  state.view = "toolbox";
+  render();
+}
+
+/* 工具箱列表页（顶栏 🧰 进入） */
+function viewToolbox() {
+  const cards = TOOLS.map(function (t) {
+    return '<div class="card mini" role="button" tabindex="0" data-act="open-tool" data-tool="' + escAttr(t.id) + '">'
+      + '<span class="icon">' + t.icon + '</span>'
+      + '<div class="name">' + esc(t.name) + '</div>'
+      + '<div class="desc">' + esc(t.desc) + '</div>'
+      + '</div>';
+  }).join("");
+  return '<div class="sec-title">🧰 工具箱</div>'
+       + '<p class="tool-lead">装修过程中最常用的几个工具。每个都能填自己的情况、传截图、联网核对，生成针对你家的分析；没填 Key 时会显示内置参考。</p>'
+       + '<div class="tool-grid">' + cards + '</div>';
+}
+
 function openProgress() {
   state.view = "progress";
   loadProgress();
@@ -6317,7 +6493,7 @@ function shareAsMessageImage(idx) {
     lines.forEach(function (ln, i) { c2.fillText(ln, PAD, PAD + i * LINE); });
     c2.fillStyle = "#9a938a";
     c2.font = '13px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
-    c2.fillText("室内设计助手 0.2.1 · 仅供参考，不构成施工依据", PAD, cv.height - FOOT + 14);
+    c2.fillText("室内设计助手 0.2.2 · 仅供参考，不构成施工依据", PAD, cv.height - FOOT + 14);
     const a = document.createElement("a");
     a.href = cv.toDataURL("image/png");
     a.download = "室内设计助手_" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + ".png";
@@ -6434,6 +6610,18 @@ function toolResultText() {
       (r.replies || []).forEach(function (x) { lines.push("", "【" + (x.tone || "回复") + "】" + (x.text || "")); });
       if (r.contract) lines.push("", "写进合同：" + r.contract);
       if (r.next) lines.push("下一步：" + r.next);
+    } else if (id === "budget") {
+      if (r.total) lines.push("", "总预算：" + r.total);
+      (r.breakdown || []).forEach(function (c) {
+        lines.push("", "—— " + (c.category || "") + "（" + (c.percent || "") + " · " + (c.amount || "") + "）——");
+        (c.items || []).forEach(function (x) {
+          lines.push("  · " + (x.name || "") + "　" + (x.percent || "") + " · " + (x.amount || "") + (x.note ? "　" + x.note : ""));
+        });
+        if (c.warning) lines.push("  注意：" + c.warning);
+      });
+      if ((r.advice || []).length) lines.push("", "重要提醒：" + r.advice.join("；"));
+      if ((r.defer || []).length) lines.push("可以后补：" + r.defer.join("；"));
+      if (r.special) lines.push("", "针对你的情况：" + r.special);
     } else if (id === "ask") {
       (r.stageGroups || []).forEach(function (g) {
         lines.push("", "—— " + (g.stage || "问题") + " ——");
@@ -6851,11 +7039,13 @@ function viewRank() {
     });
   }
 
-  const budget = (state.space === "whole") ? budgetSplitterHtml() : "";
+       const wholeTip = (state.space === "whole")
+         ? '<p class="tip">预算分配已移到工具箱（点右上角 🧰 → 预算分配），输入总预算可以让 AI 帮你算怎么分。</p>'
+         : "";
   return '<div class="sec-title">' + esc(sp.name) + ' · 最需要先解决的排行榜</div>'
        + '<div class="rank-meta">数据版本 v' + esc(RANK_DATA_VERSION) + ' · 更新于 ' + esc(RANK_DATA_UPDATED)
        + '</div>'
-       + budget
+       + wholeTip
        + '<div class="rank-tabs">' + tabBar + '</div>'
        + '<div class="rank-presets">' + presetBar + '</div>'
        + body
@@ -7210,6 +7400,7 @@ document.addEventListener("click", e => {
     case "sb-test":        testSbConnection(); break;
     case "sb-reset":       restoreSbDefaults(); break;
     case "open-settings":  openModal(); break;
+    case "open-toolbox":   openToolbox(); break;
     case "close-settings": closeModal(true); break;
     case "save-settings":  saveSettings(); break;
     case "clear-key":      clearKey(); break;
