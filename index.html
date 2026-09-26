@@ -2222,7 +2222,7 @@
     <div class="ab-main" id="abMain">RoomWise</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.2.7</span>
+  <span class="ver-tag" id="verTag">v0.2.7.1</span>
   <button type="button" class="ab-btn" id="abToolsBtn" data-act="open-toolbox" aria-label="工具箱" title="工具箱">🧰</button>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
@@ -3079,8 +3079,8 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.2.7";
-const BUILD_TAG    = "v20";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
+const APP_VERSION  = "0.2.7.1";
+const BUILD_TAG    = "v21";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
 const BASE_TITLE   = "RoomWise · 装修小白的第一站";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
@@ -3610,6 +3610,10 @@ function shortHost(u) {
 let problemShownAt = 0;
 function reportProblem(e) {
   try { if (window.console && console.error) console.error("[RoomWise]", e); } catch (_) {}
+  /* View Transitions 的内部报错（Transition was aborted / skipped）不是用户的问题，
+     页面状态是好的，不该弹「出了点问题」吓人 */
+  const em = (e && e.message) ? String(e.message) : String(e || "");
+  if (/Transition was (aborted|skipped)/i.test(em) || /ViewTransition/i.test(em)) return;
   const msg = (e && e.message) ? String(e.message) : String(e || "未知错误");
   const now = Date.now();
   if (now - problemShownAt < 3000) return;      /* 节流：同一波错误只提示一次 */
@@ -3762,19 +3766,53 @@ function hasAnswer()  { return state.messages.some(m => m.role === "ai" && m.tex
 
 /* 渲染入口：任何一次渲染崩掉都不该让页面白屏 */
 function render() {
-  /* View Transitions：支持的浏览器（Chrome 111+ / Safari 18+）会把这次重绘
-     变成一次真正的过渡；不支持的直接同步执行，行为完全一样。 */
+  /* View Transitions：只在「视图真的换了」的时候用。
+     同一视图内的重绘（开对象面板、切榜单 tab、改条件）不能走它 ——
+     过渡期间浏览器会把滚动锚回顶部，面板的 scrollIntoView 会失效。 */
+  const viewChanged = (vtInited && state.view !== vtLastView);
+  vtLastView = state.view;
+  vtInited = true;
   try {
-    if (!skipViewAnim && !renderInVT && typeof document.startViewTransition === "function") {
+    if (viewChanged && !skipViewAnim && !renderInVT
+        && typeof document.startViewTransition === "function") {
       renderInVT = true;
+      let trans = null;
       try {
-        document.startViewTransition(function () { doRender(); });
-      } finally {
+        /* 回调里的异常自己兜住，绝不能让 VT 的内部错误冒到 reportProblem */
+        trans = document.startViewTransition(function () {
+          try { doRender(); } catch (e) { reportProblem(e); }
+        });
+      } catch (_) {
         renderInVT = false;
       }
-      try { initHomeReveal(); } catch (_) {}
-      try { renderAboutInSettings(); } catch (_) {}
-      return;
+      if (trans) {
+        /* 关键：守卫要活到过渡真正结束。
+           原来在这里用 finally 立刻复位，而回调是下一帧才跑的，
+           等于没守 —— 回调里再触发一次 render 就会「Transition was aborted」。 */
+        let guardDone = false;
+        const done = function () {
+          if (guardDone) return;      /* 幂等：超时和安全回调都可能先到 */
+          guardDone = true;
+          renderInVT = false;
+        };
+        /* 兜底：万一 finished 因故不 resolve（过渡被中断、页面切到后台），
+           守卫不能永久留在 true —— 那会让此后所有视图切换都退化成无过渡。 */
+        let guardTimer = null;
+        try { guardTimer = setTimeout(done, 1200); } catch (_) {}
+        const ok = function () { try { clearTimeout(guardTimer); } catch (_) {} done(); };
+        try {
+          if (trans.finished && typeof trans.finished.then === "function") {
+            trans.finished.then(ok, ok);
+          } else if (trans.updateCallbackDone && typeof trans.updateCallbackDone.then === "function") {
+            trans.updateCallbackDone.then(ok, ok);
+          } else {
+            ok();
+          }
+        } catch (_) { ok(); }
+        try { initHomeReveal(); } catch (_) {}
+        try { renderAboutInSettings(); } catch (_) {}
+        return;
+      }
     }
   } catch (_) {}
   try { doRender(); }
@@ -3865,6 +3903,8 @@ function renderKeepingScroll() {
 
 let skipViewAnim = false;   /* renderKeepingScroll 期间置 true：别重放视图入场动画 */
 let renderInVT = false;     /* 正在走 View Transitions，防重入 */
+let vtLastView = null;      /* 上次渲染时的视图，只有换了才值得做过渡 */
+let vtInited = false;       /* 首屏不走过渡：那时候没有「上一个视图」可比 */
 
 function doRender() {
 
@@ -6077,13 +6117,21 @@ function openObjectPanel(spaceKey, objectId) {
   state.view = "space";
   state.objectPanel = objectId;
   syncHash();
+  /* render 会重建 #view，滚动位置会掉回顶部 —— 先记下来，
+     万一面板没找到也能滚回原处，不至于让用户重新往下滑 */
+  let keepY = 0;
+  try { keepY = window.scrollY || window.pageYOffset || 0; } catch (_) {}
   render();
-  requestAnimationFrame(function () {
+  const settle = function () {
     const el = $("objPanel");
     if (el && el.scrollIntoView) {
       el.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    } else {
+      try { window.scrollTo(0, keepY); } catch (_) {}
     }
-  });
+  };
+  /* 两帧：等布局稳定、也避开过渡刚开始的那一下 */
+  requestAnimationFrame(function () { requestAnimationFrame(settle); });
 }
 
 /* 按对象名，从这个空间的必做项里挑出跟它相关的几条。
