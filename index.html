@@ -11,6 +11,22 @@
 <style>
   :root {
     color-scheme: light dark;
+
+    /* ===== 动效系统：时长刻度 ===== */
+    --dur-instant: 90ms;    /* hover、颜色变化 */
+    --dur-fast:    160ms;   /* 按钮按下、chip */
+    --dur-normal:  240ms;   /* 卡片 hover、面板展开 */
+    --dur-slow:    360ms;   /* 视图进入、弹窗 */
+    --dur-slower:  520ms;   /* 首屏编排、大块内容 */
+
+    /* ===== 动效系统：缓动函数 ===== */
+    --ease-out:    cubic-bezier(.22, .9, .3, 1);    /* 默认出场 */
+    --ease-in-out: cubic-bezier(.4, 0, .2, 1);      /* 对称移动 */
+    --ease-spring: cubic-bezier(.34, 1.56, .64, 1); /* 弹性，用于按钮 / 开关 */
+    --ease-soft:   cubic-bezier(.25, .46, .45, .94);
+
+    /* 统一过渡：绝大多数交互用它 */
+    --tx: var(--dur-fast) var(--ease-out);
     --bg:#f7f5f1;
     --surface:#ffffff;
     --surface-2:#faf8f4;
@@ -179,6 +195,8 @@
   box-shadow: 0 2px 8px rgba(160,107,63,.06);
   transform: none;
     }
+    /* 触屏没有悬停：按下时的缩放要在抬起前复位，否则会「先缩一下再弹回来」 */
+    .card:active { transform: none; }
     .card:hover .card-go {
   gap: 10px; background: transparent;
     }
@@ -220,7 +238,7 @@
     display:inline-flex; align-items:center; justify-content:center;
     font-size:1.125rem; line-height:1; font-family:inherit;
     color:var(--text-2); background:var(--surface); cursor:pointer;
-    border:1px solid var(--border); border-radius:10px; transition:all .18s;
+    border:1px solid var(--border); border-radius:10px; transition: color var(--tx), border-color var(--tx), background var(--tx);
   }
   .ab-btn:hover { border-color:var(--gold); color:var(--accent); }
   .ab-btn:active { opacity:.82; }
@@ -231,7 +249,7 @@
     font:inherit; font-size:0.8125rem; font-weight:500;
     color:var(--text-2); background:transparent; border:1px solid transparent;
     border-radius:9px; padding:7px 11px; cursor:pointer;
-    transition:color .18s ease, background .18s ease, border-color .18s ease;
+    transition:color var(--tx), background var(--tx), border-color var(--tx);
   }
   .tn-item:hover { color:var(--accent-dark); background:var(--accent-soft); }
   .tn-item.active {
@@ -266,7 +284,7 @@
     display:flex; align-items:center; gap:8px; width:100%;
     padding:10px 12px; border:none; border-radius:10px; background:none;
     font-family:inherit; font-size:0.875rem; color:var(--text-2);
-    text-align:left; cursor:pointer; transition:background .15s;
+    text-align:left; cursor:pointer; transition:background var(--tx);
   }
   .ab-menu .mi:hover { background:var(--accent-soft); color:var(--accent); }
   .ab-menu .mi:disabled { color:var(--faint); cursor:not-allowed; }
@@ -515,6 +533,27 @@
   body.home-mode #view { position: relative; }
   body.home-mode #view > *:first-child { margin-top: -18px; }
 
+  /* ===== 列表错位入场：靠 --i 控制延迟，最多 7 档（再多就像「越等越久」） ===== */
+  .rank-item, .hist-item, .space-tile {
+    animation: listIn var(--dur-normal) var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 40ms);
+  }
+  @keyframes listIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  body.no-view-anim .rank-item,
+  body.no-view-anim .hist-item,
+  body.no-view-anim .space-tile { animation: none !important; }
+
+  /* ===== 从搜索跳过来时，给目标条目一次短暂高亮 ===== */
+  .rank-item.flash { animation: flashHighlight 1.6s var(--ease-out) both; }
+  @keyframes flashHighlight {
+    0%   { background: var(--accent-soft); }
+    60%  { background: var(--accent-soft); }
+    100% { background: var(--surface); }
+  }
+
   /* ===== 「向上滑动」提示 ===== */
   .hero-bot { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
 
@@ -526,7 +565,7 @@
     width: 100%;
     margin-top: 28px;
     display: flex; flex-direction: column; align-items: center; gap: 10px;
-    transition: opacity .45s, transform .45s;
+    transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
   }
   .hero-scroll .hs-arrow {
     width: 36px; height: 36px; border-radius: 50%;
@@ -556,6 +595,10 @@
     animation: homeRise .62s cubic-bezier(.22,.9,.3,1) both;
     animation-delay: var(--rv-delay, 0ms);
   }
+  @keyframes fabIn {
+    from { opacity: 0; transform: scale(.86); }
+    to   { opacity: 1; transform: scale(1); }
+  }
   @keyframes homeRise {
     from { opacity: 0; transform: translateY(28px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -565,7 +608,39 @@
     box-shadow: 0 1px 2px rgba(160,107,63,.06), 0 18px 44px rgba(160,107,63,.10);
   }
   @media (prefers-reduced-motion: reduce) {
-    body.home-mode #view .reveal { opacity: 1; transform: none; }
+    /* 直接显示：不然元素会先「空」着，等 animation-delay 到了才瞬间冒出 */
+    body.home-mode #view .reveal,
+    body.home-mode #view .reveal-in {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+  }
+
+  /* ===== 顶栏滚动反馈：往下滚一点就加阴影、略微收矮 ===== */
+  .appbar { transition: box-shadow var(--tx), min-height var(--dur-normal) var(--ease-out); }
+  body.scrolled .appbar {
+    box-shadow: 0 1px 0 rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+    min-height: 54px;
+  }
+
+  /* ===== 视图进入：整块轻微上浮 + 淡入 ===== */
+  #view > *:not(.chat-scroll):not(.msgs) {
+    animation: viewEnter var(--dur-slow) var(--ease-out) both;
+  }
+  /* 后退时方向反过来：新页从左边进来，感觉是「退了一层」而不是又进一层 */
+  body.nav-back #view > *:not(.chat-scroll):not(.msgs) {
+    animation-name: viewEnterBack;
+  }
+  @keyframes viewEnterBack {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  /* 原地重绘（开关面板、切 tab、增删图片）时不播入场动画 */
+  body.no-view-anim #view > * { animation: none !important; }
+  @keyframes viewEnter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   /* 面包屑 */
@@ -590,7 +665,11 @@
   cursor: pointer;
   text-align: left;
   box-shadow: 0 1px 2px rgba(0,0,0,.02);
-  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  transition:
+    border-color var(--tx),
+    box-shadow var(--tx),
+    background var(--tx),
+    transform var(--dur-normal) var(--ease-out);
   position: relative;
   font-family: inherit;
   color: inherit;
@@ -621,7 +700,7 @@
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: -.005em;
-  transition: gap .2s ease;
+  transition: gap var(--tx);
   }
   .card:hover .card-go { background:var(--accent-dark); }
   .card .icon {
@@ -660,7 +739,7 @@
   .chip {
     text-align:left; font-size:0.75rem; color:var(--text-2); background:var(--surface-2);
     border:1px solid var(--border-soft); border-radius:10px; padding:8px 10px;
-    cursor:pointer; font-family:inherit; line-height:1.45; transition:all .18s;
+    cursor:pointer; font-family:inherit; line-height:1.45; transition: color var(--tx), border-color var(--tx), background var(--tx);
   }
   .chip:hover { border-color:var(--gold); color:var(--accent); background:var(--accent-soft); }
   .chip.big { font-size:0.875rem; padding:12px 16px; background:var(--surface); border:1.5px solid var(--border); border-radius:10px; }
@@ -680,7 +759,7 @@
   padding: 8px 12px;
   color: var(--text-2);
   box-shadow: none;
-  transition: border-color .2s ease, color .2s ease, background .2s ease;
+  transition: border-color var(--tx), color var(--tx), background var(--tx);
   }
   .obj-chip:hover {
   border-color: var(--accent);
@@ -702,10 +781,27 @@
     display:flex; align-items:center; gap:8px;
   }
   .fold > summary::-webkit-details-marker { display:none; }
-  .fold > summary::after { content:"▾"; margin-left:auto; color:var(--text-4); }
-  .fold[open] > summary::after { content:"▴"; }
+  .fold > summary::after {
+    content:"▾"; margin-left:auto; color:var(--text-4);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .fold[open] > summary::after { transform: rotate(180deg); }
   .fold[open] > summary { border-bottom:1px solid var(--border-soft); }
   .fold-body { padding:10px 16px 16px; }
+
+  /* ===== 折叠块平滑展开 =====
+     用 grid-template-rows 0fr → 1fr 做高度动画；
+     需要外面包一层 .dt-wrap（渲染后由 wrapDetailsBodies() 统一加上，
+     这样不用去改六类折叠块的渲染代码）。 */
+  .dt-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--dur-normal) var(--ease-out);
+  }
+  details[open] > .dt-wrap { grid-template-rows: 1fr; }
+  .dt-wrap > * { overflow: hidden; min-height: 0; }
+  /* 折叠块自己已经处理了 padding，这里不要再加 */
+  .dt-wrap > * { margin: 0; }
   .fold-body.fold-plain { padding:8px 10px 12px; }
   .faq-row {
     display:block; width:100%; text-align:left; font:inherit; cursor:pointer;
@@ -779,7 +875,7 @@
     letter-spacing: .04em;
     color: var(--text-5);
     font-variant-numeric: tabular-nums;
-    transition: color .2s ease;
+    transition: color var(--tx);
   }
   .gc-step-primary .gc-num { color: var(--accent); }
   .gc-step:hover .gc-num { color: var(--accent); }
@@ -796,7 +892,7 @@
     font-weight: 600;
     letter-spacing: -.005em;
     color: var(--text-strong);
-    transition: color .2s ease;
+    transition: color var(--tx);
   }
   .gc-step:hover .gc-body b { color: var(--accent-dark); }
   .gc-body span {
@@ -816,7 +912,7 @@
     padding-top: 1px;
     font-size: 0.9375rem;
     color: var(--text-5);
-    transition: color .2s ease, transform .2s ease;
+    transition: color var(--tx), transform var(--tx);
   }
   .gc-step:hover .gc-arrow {
     color: var(--accent);
@@ -840,7 +936,7 @@
   }
   .key-banner b { font-size: 0.9375rem; color: var(--text-strong); }
   .key-banner span { font-size: 0.8125rem; color: var(--text-3); line-height: 1.6; }
-  .key-banner .tbtn { align-self: flex-start; }
+  .key-banner .tbtn, .key-banner .btn { align-self: flex-start; }
 
   /* ===== 空间选择页（底栏清单/问 AI 的中间页） ===== */
 .pick-head {
@@ -911,7 +1007,7 @@
       color: var(--text-4);
       padding: 6px 0;
       position: relative;
-      transition: color .22s ease;
+      transition: color var(--tx);
     }
     /* 取消旧的顶部色条 —— 现在用图标容器的填色做视觉锚点 */
     .bn-item::before { display: none; }
@@ -925,12 +1021,12 @@
       font-size: 1.0625rem;
       line-height: 1;
       background: transparent;
-      transition: background .22s ease, transform .22s ease;
+      transition: background var(--tx), transform var(--tx);
     }
     .bn-item .bn-text {
       font-size: 0.6875rem;
       letter-spacing: .02em;
-      transition: color .22s ease;
+      transition: color var(--tx);
     }
     .bn-item.active { color: var(--accent-dark); }
     .bn-item.active .bn-icon {
@@ -939,6 +1035,8 @@
       transform: translateY(-1px) scale(1.04);
     }
     .bn-item.active .bn-text { font-weight: 600; }
+    /* 文字和图标一起动，不要一个动一个瞬变 */
+    .bn-item .bn-text { transition: color var(--dur-normal) var(--ease-out); }
     /* 给底部留出导航高度：页面、浮动按钮、toast、输入区 */
     .wrap { padding-bottom:calc(var(--bottom-nav-h) + 48px); }
     .floater, .to-bottom { bottom:calc(var(--bottom-nav-h) + 16px); }
@@ -960,7 +1058,7 @@
   padding: 0 16px;
   margin: 0 0 16px;
   box-shadow: none;
-  transition: border-color .2s ease;
+  transition: border-color var(--tx);
 }
 .home-search:focus-within {
   border-color: var(--accent); box-shadow: none;
@@ -987,6 +1085,7 @@
   .hs-name { flex:1 1 auto; font-size:0.875rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .hs-label { flex:0 0 auto; font-size:0.75rem; color:var(--text-4); }
   .hs-empty { padding:12px; font-size:0.8125rem; color:var(--text-3); text-align:center; }
+  .hs-empty-act { padding:0 12px 14px; text-align:center; }
 
   /* 全屋大卡 */
 
@@ -1013,8 +1112,12 @@
     font-weight:500; list-style:none;
   }
   .cond > summary::-webkit-details-marker { display:none; }
-  .cond > summary::before { content:"▸ "; color:var(--accent); }
-  .cond[open] > summary::before { content:"▾ "; }
+  .cond > summary::before {
+    content:"▸ "; color:var(--accent);
+    display:inline-block;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .cond[open] > summary::before { transform: rotate(90deg); }
   .cond > summary .hint { color:var(--text-5); font-weight:400; font-size:0.75rem; }
   .cond > summary .cond-sum { color:var(--accent); font-weight:600; }
   .cond-body {
@@ -1028,8 +1131,12 @@
     font-size:0.8125rem; color:var(--accent-dark);
   }
   .cond-more > summary::-webkit-details-marker { display:none; }
-  .cond-more > summary::before { content:"▸ "; }
-  .cond-more[open] > summary::before { content:"▾ "; }
+  .cond-more > summary::before {
+    content:"▸ ";
+    display:inline-block;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .cond-more[open] > summary::before { transform: rotate(90deg); }
   .cond-body-more { padding:4px 0 2px; }
 
   /* 表单控件 */
@@ -1039,7 +1146,7 @@
   .set-row input, .set-row select, .hist-search input {
     padding:12px 12px; border:1.5px solid var(--border); border-radius:10px;
     font-size:0.875rem; font-family:inherit; background:var(--surface); outline:none;
-    transition:border-color .2s; color:var(--text);
+    transition:border-color var(--tx); color:var(--text);
   }
   .field input:focus, .field select:focus, .field textarea:focus,
   .set-row input:focus, .set-row select:focus, .hist-search input:focus { border-color:var(--accent); }
@@ -1049,9 +1156,11 @@
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
     padding:12px 24px; border-radius:10px; border:none; cursor:pointer;
     font-size:0.8125rem; font-weight:600; font-family:inherit;
-    background:var(--accent); color:#fff; transition:all .2s;
+    background:var(--accent); color:#fff; transition: background var(--tx), color var(--tx);
   }
   .btn:hover { background:var(--accent-dark); }
+  .btn:active { transform: scale(.97); }
+  .btn { transition: background var(--tx), transform var(--dur-fast) var(--ease-spring); }
   .btn:disabled { background:var(--text-5); cursor:not-allowed; }
   .btn.ghost { background:var(--surface); color:var(--accent); border:1.5px solid var(--accent); }
   .btn.ghost:hover { background:var(--accent-soft); }
@@ -1063,7 +1172,11 @@
   .chat-sub { font-size:0.75rem; color:var(--text-4); }
 
   .msgs { display:flex; flex-direction:column; gap:var(--msg-gap); margin-top:14px; }
-  .msg { display:flex; }
+  .msg { display:flex; animation: msgIn var(--dur-normal) var(--ease-out) both; }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
   .msg.user { justify-content:flex-end; }
   .msg .col { display:flex; flex-direction:column; gap:12px; align-items:flex-start; max-width:72%; }
   .msg.user .col { align-items:flex-end; }
@@ -1084,7 +1197,7 @@
   }
   @keyframes caret { 50% { opacity:0; } }
 
-  .msg-acts { display:flex; gap:8px; flex-wrap:wrap; opacity:.5; transition:opacity .2s; }
+  .msg-acts { display:flex; gap:8px; flex-wrap:wrap; opacity:.5; transition:opacity var(--tx); }
   .msg .col:hover .msg-acts, .msg-acts:focus-within { opacity:1; }
   .msg-acts.right { justify-content:flex-end; }
   .tbtn.xs { padding:4px 10px; font-size:0.75rem; border-radius:8px; }
@@ -1129,8 +1242,12 @@
   }
   .think > summary { cursor:pointer; font-size:0.8125rem; color:var(--text-3); list-style:none; }
   .think > summary::-webkit-details-marker { display:none; }
-  .think > summary::before { content:"▸ "; color:var(--accent); }
-  .think[open] > summary::before { content:"▾ "; }
+  .think > summary::before {
+    content:"▸ "; color:var(--accent);
+    display:inline-block;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .think[open] > summary::before { transform: rotate(90deg); }
   .think.thinking > summary::before { content:""; }
   .think > summary .busy { color:var(--accent); font-weight:600; }
   .think-hint { color:var(--text-5); }
@@ -1169,6 +1286,12 @@
   /* P1-5 图片 */
   .thumbs { display:flex; gap:8px; flex-wrap:wrap; }
   .thumb { max-width:170px; max-height:170px; border-radius:10px; border:1.5px solid var(--border); }
+  /* 图片不要「啪」地出现 */
+  .thumb, .pending-img img, .tool-img img { animation: imgPop var(--dur-normal) var(--ease-spring) both; }
+  @keyframes imgPop {
+    from { opacity: 0; transform: scale(.88); }
+    to   { opacity: 1; transform: scale(1); }
+  }
   .img-note { font-size:0.75rem; color:var(--text-4); }
   .pending-imgs { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; }
   .pending-img { position:relative; display:inline-block; }
@@ -1254,16 +1377,19 @@
     flex:1; resize:none; min-height:48px; max-height:140px; padding:12px 16px;
     border:1.5px solid var(--border); border-radius:10px; background:var(--surface);
     color:var(--text); font-family:inherit; font-size:0.875rem; line-height:1.6; outline:none;
-    transition:border-color .2s;
+    transition:border-color var(--tx);
   }
   .composer textarea:focus { border-color:var(--accent); }
 
   .chat-tools { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
   .tbtn {
     font-size:0.75rem; color:var(--text-2); background:var(--surface); border:1.5px solid var(--border);
-    border-radius:10px; padding:8px 12px; cursor:pointer; font-family:inherit; transition:all .18s;
+    border-radius:10px; padding:8px 12px; cursor:pointer; font-family:inherit;
+    transition: border-color var(--tx), color var(--tx), background var(--tx),
+                transform var(--dur-fast) var(--ease-spring);
   }
   .tbtn:hover { border-color:var(--gold); color:var(--accent); }
+  .tbtn:active { transform: scale(.97); }
   .tbtn:disabled { color:var(--faint); cursor:not-allowed; border-color:var(--border-soft); }
   .tbtn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
   /* 主行动按钮：原来 primary 这个 class 用了三处（AI 生成 / 停止 / 引导里的主按钮）却没有任何样式，
@@ -1287,9 +1413,10 @@
   }
   .fab {
     pointer-events:auto; font-size:0.8125rem; font-family:inherit; cursor:pointer;
+    animation: fabIn var(--dur-normal) var(--ease-spring) both;
     background:var(--text); color:var(--bg); border:none; border-radius:20px;
     padding:8px 16px; box-shadow:0 6px 18px var(--shadow-strong);
-    transition:opacity .2s, transform .2s;
+    transition: opacity var(--tx), transform var(--tx);
   }
   .fab:active { opacity:.85; transform:scale(.97); }
 
@@ -1300,7 +1427,7 @@
     font: inherit; cursor: pointer; text-align: left;
     background: var(--surface); border: 1px solid var(--border-soft);
     border-radius: 14px; padding: 12px 14px;
-    transition: border-color .2s ease, background .2s ease;
+    transition: border-color var(--tx), background var(--tx);
   }
   .hist-strip:hover { border-color: var(--accent-light); background: var(--accent-soft); }
   .hist-strip.open { border-color: var(--accent-light); background: var(--accent-soft); }
@@ -1316,6 +1443,7 @@
   }
   .hist-strip-arrow { flex: 0 0 auto; font-size: 0.75rem; color: var(--text-4); }
   .hist-strip-body { margin-top: 12px; }
+  .hist-strip-collapse { margin-top: 14px; width: 100%; }
 
   /* ===== 首页「最近问过的」分组标题 ===== */
   .home-sec-head {
@@ -1361,7 +1489,7 @@
     border-radius: 14px;
     padding: 14px 52px 14px 14px;
     cursor: pointer;
-    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    transition: border-color var(--tx), box-shadow var(--tx), transform var(--tx);
   }
   .hist-item:hover {
     border-color: var(--accent-light);
@@ -1431,8 +1559,10 @@
     display:flex; align-items:center; gap:12px;
     background:var(--text); color:var(--bg); padding:12px 16px; border-radius:10px;
     font-size:0.8125rem; max-width:84vw;
-    opacity:0; pointer-events:none; transform:translate(-50%, 8px);
-    transition:opacity .25s, transform .25s; box-shadow:0 8px 24px var(--shadow-strong);
+    opacity:0; pointer-events:none; transform:translate(-50%, 14px) scale(.97);
+    transition:opacity var(--dur-fast) var(--ease-out),
+               transform var(--dur-normal) var(--ease-spring);
+    box-shadow:0 8px 24px var(--shadow-strong);
   }
   .toast.show { opacity:1; pointer-events:auto; transform:translate(-50%, 0); }
   .toast-act {
@@ -1445,12 +1575,22 @@
     position:fixed; inset:0; background:rgba(30,26,22,.5);
     display:flex; align-items:center; justify-content:center; padding:24px;
     z-index:99; backdrop-filter:blur(2px); overflow-y:auto;
+    /* 遮罩淡入；弹窗从 0.96 轻微放大落位 */
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
   }
+  .modal-mask:not(.hidden) { opacity: 1; }
   .modal {
     background:var(--surface); border-radius:16px; padding:24px 32px;
     max-width:620px; width:100%; box-shadow:0 24px 60px var(--shadow-strong);
     max-height:88vh; overflow-y:auto;
+    transform: scale(.96) translateY(8px);
+    opacity: 0;
+    transition:
+      transform var(--dur-normal) var(--ease-spring),
+      opacity var(--dur-fast) var(--ease-out);
   }
+  .modal-mask:not(.hidden) .modal { transform: none; opacity: 1; }
   .modal h3 { font-size:1.125rem; margin-bottom:12px; }
   .modal .set-hint { font-size:0.75rem; color:var(--text-3); line-height:1.6; margin-top:6px; }
   .modal .set-hint .em { color:var(--accent); }
@@ -1465,8 +1605,12 @@
     background:var(--surface-2);
   }
   .set-group > summary::-webkit-details-marker { display:none; }
-  .set-group > summary::before { content:"▸ "; color:var(--accent); }
-  .set-group[open] > summary::before { content:"▾ "; }
+  .set-group > summary::before {
+    content:"▸ "; color:var(--accent);
+    display:inline-block;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .set-group[open] > summary::before { transform: rotate(90deg); }
   .set-group .set-grid { padding:16px; }
   .key-state { font-size:0.75rem; margin-top:6px; }
   .key-state.ok { color:var(--accent); }
@@ -1487,7 +1631,7 @@
     width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center;
     border:none; background:none; border-radius:10px; cursor:pointer;
     font-size:1.125rem; line-height:1; font-family:inherit; color:var(--text-3);
-    transition:color .18s, background .18s;
+    transition: color var(--tx), background var(--tx);
   }
   .pw-wrap .pw-toggle:hover { color:var(--accent); background:var(--surface-2); }
   .pw-wrap .pw-toggle:active { opacity:.82; }
@@ -1739,7 +1883,7 @@
   border-radius: 14px;
   padding: 16px 18px;
   box-shadow: none;
-  transition: border-color .2s ease;
+  transition: border-color var(--tx);
 }
   .rank-item:hover { border-color: var(--accent-light); }
 .rank-item + .rank-item {
@@ -1749,6 +1893,14 @@
   .rank-item > summary::-webkit-details-marker { display:none; }
   .rank-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
   .rank-head b { font-size:0.9375rem; }
+  /* 梯队内的序号：1 2 3…，说明「先做哪个」 */
+  .rank-seq {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:19px; height:19px; margin-right:7px; padding:0 5px;
+    border-radius:6px; background:var(--surface-2); border:1px solid var(--border-soft);
+    font-size:0.75rem; font-weight:700; color:var(--text-3);
+    font-variant-numeric:tabular-nums;
+  }
   .rank-head .grow { flex:1; }
   .rank-flag { font-size:0.75rem; color:var(--accent); margin-top:5px; }
   /* 联网搜别人的案例 */
@@ -1936,6 +2088,20 @@
   .tool-cachenote { font-size:0.75rem; color:var(--text-4); margin:-6px 0 8px; min-height:1em; }
   .tool-out { margin:10px 0; }
   .tool-empty { text-align:center; padding:24px 12px; color:var(--text-4); }
+  /* ===== 骨架屏：长任务（工具箱 10~30 秒、联网 20~40 秒）别只给三个点 ===== */
+  .skeleton { display:flex; flex-direction:column; gap:10px; padding:4px 0; }
+  .skeleton > * {
+    background: linear-gradient(90deg, var(--surface-2) 25%, var(--border-soft) 50%, var(--surface-2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: 8px;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .sk-title { height: 20px; width: 46%; }
+  .sk-line  { height: 13px; }
+  .sk-line.short { width: 62%; }
+  .sk-card  { height: 62px; }
+  .sk-card.tall { height: 96px; }
   .tool-empty .et { font-size:0.9375rem; color:var(--text-3); margin-bottom:6px; }
   .tool-empty .es { font-size:0.8125rem; line-height:1.7; }
   .tool-warn {
@@ -2056,7 +2222,7 @@
     <div class="ab-main" id="abMain">RoomWise</div>
     <div class="ab-sub hidden" id="abSub"></div>
   </div>
-  <span class="ver-tag" id="verTag">v0.2.6</span>
+  <span class="ver-tag" id="verTag">v0.2.7</span>
   <button type="button" class="ab-btn" id="abToolsBtn" data-act="open-toolbox" aria-label="工具箱" title="工具箱">🧰</button>
   <button type="button" class="ab-btn" id="abAuthBtn" data-act="open-auth" aria-label="登录 / 注册" title="登录 / 注册">👤</button>
   <button type="button" class="ab-btn" data-act="open-settings" aria-label="设置" title="设置">⚙</button>
@@ -2407,9 +2573,17 @@
 </div>
 
 <script>/* ============================================================
-   RoomWise v0.2.6
+   RoomWise v0.2.7
    ------------------------------------------------------------
-   v0.2.6 摘要：
+   v0.2.7 摘要：
+   · 修 14 个确定 bug：Key 引导卡被 clearSessionState 重置、底栏/顶栏双高亮、进度完成数超过总数、
+     换模型后仍走兜底、自定义灵活度输入框不显示、榜单双次渲染、非对话页关设置丢草稿、
+     首页整页 render 跳回顶部、榜单点「问 AI」无声清空对话、工具箱缓存忽略图片内容、
+     sbFetch 在 fetch 失败时抛 TypeError、进度阶段展开状态被覆盖
+   · 删掉 budgetSplitterHtml 死代码（工具箱里已有「预算分配」工具）
+   · 工具箱缓存键加入图片指纹；「关于」每次渲染刷新
+
+   v0.2.6 摘要（保留）：
    · 全屋榜重做为「不做不行」14 条底线，按 水与电 / 燃气排烟与封窗 / 埋进去就改不了的 分三张榜
    · 新增「合同和钱」板块（12 条）：开工前 / 施工中 / 出了问题，DATA 与 RANK_DATA 都独立成套
    · 首页引导卡三步改四步（全屋底线 → 房间细节 → 合同和钱 → 问 AI）
@@ -2905,8 +3079,8 @@
    ·  ``` 代码块渲染
    ============================================================ */
 
-const APP_VERSION  = "0.2.6";
-const BUILD_TAG    = "v19";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
+const APP_VERSION  = "0.2.7";
+const BUILD_TAG    = "v20";        /* 每次改代码 +1：用来确认浏览器跑的是不是最新版 */
 const BASE_TITLE   = "RoomWise · 装修小白的第一站";
 const API_URL      = "https://api.deepseek.com/chat/completions";
 /* 联网搜索走 Anthropic Messages 协议（DeepSeek 的 anthropic 兼容端点） */
@@ -3292,12 +3466,13 @@ const state = {
   familyProfile: {},      /* 全局「我家档案」：跨空间复用的条件 */
   profileSync: true,      /* 条件面板里的「与我家档案同步」开关 */
   showKeyGuide: false,    /* 没填 Key 时在对话页显示的引导卡 */
-  homeTab: "rank",        /* 预留：首页曾用过的区块选中空间，现已不在首页展示 */
+  rankFocus: "",          /* 榜单里「要自动展开的那一条」的名字（从搜索跳过来时用） */
   pickMode: "rank",       /* pick 中间页：rank 看清单 / ask 问 AI */
   budgetTotal: 20,        /* 预算分配器的总额（万元） */
   budgetRatios: [35, 40, 25],   /* 隐藏 / 表面 / 软装 的比例 */
   progress: {},           /* 「我家进度」勾选状态：key -> true */
   objectPanel: "",        /* 「包含什么」里当前展开的那个对象的 id */
+  progressOpen: {},       /* 「我家进度」各阶段手动展开/收起的状态：key -> true/false */
 
   /* 工具箱 AI 工作台（与聊天完全分开，互不干扰） */
   tool: {
@@ -3587,10 +3762,28 @@ function hasAnswer()  { return state.messages.some(m => m.role === "ai" && m.tex
 
 /* 渲染入口：任何一次渲染崩掉都不该让页面白屏 */
 function render() {
+  /* View Transitions：支持的浏览器（Chrome 111+ / Safari 18+）会把这次重绘
+     变成一次真正的过渡；不支持的直接同步执行，行为完全一样。 */
+  try {
+    if (!skipViewAnim && !renderInVT && typeof document.startViewTransition === "function") {
+      renderInVT = true;
+      try {
+        document.startViewTransition(function () { doRender(); });
+      } finally {
+        renderInVT = false;
+      }
+      try { initHomeReveal(); } catch (_) {}
+      try { renderAboutInSettings(); } catch (_) {}
+      return;
+    }
+  } catch (_) {}
   try { doRender(); }
   catch (e) { reportProblem(e); }
   /* 首页的内容块要滚进来才浮现，渲染完就得重新挂一次观察 */
   try { initHomeReveal(); } catch (_) {}
+  /* 「关于」里的版本号和 Supabase 域名是动态的，每次渲染顺手刷新一次
+     （面板没打开时 $("aboutBody") 为空，这个函数会直接返回） */
+  try { renderAboutInSettings(); } catch (_) {}
 }
 
 /* ===== 首页：内容浮现 + 「向上滑动」提示的淡出 ===== */
@@ -3622,16 +3815,32 @@ function initHomeReveal() {
 
 /* 滚过首屏两成就把「向上滑动」提示收掉，同时记录 body 状态 */
 function onHomeScroll() {
+  /* 顶栏的滚动反馈不分页面，先统一处理 */
+  try {
+    const y = window.scrollY || window.pageYOffset || 0;
+    document.body.classList.toggle("scrolled", y > 8);
+  } catch (_) {}
   if (state.view !== "home") {
     try { document.body.classList.remove("home-scrolled"); } catch (_) {}
     return;
   }
   const scrolled = (window.scrollY || window.pageYOffset || 0) > (window.innerHeight || 0) * 0.2;
   try { document.body.classList.toggle("home-scrolled", scrolled); } catch (_) {}
+  /* 顶栏反馈对所有页面生效：滚下去一点就加阴影 */
+  const nearTop = (window.scrollY || window.pageYOffset || 0) > 8;
+  try { document.body.classList.toggle("scrolled", nearTop); } catch (_) {}
 }
 
 if (typeof window !== "undefined" && window.addEventListener) {
   window.addEventListener("scroll", onHomeScroll, { passive: true });
+  /* 关页面 / 切到后台时，把还没送出去的记录刷一次。
+     flushUpsertsOnExit 写了但一直没挂上，等于这些记录直接丢了。 */
+  window.addEventListener("pagehide", function () { try { flushUpsertsOnExit(); } catch (_) {} });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") {
+      try { flushUpsertsOnExit(); } catch (_) {}
+    }
+  });
 }
 
 /* 位置保持式重绘：用于「开关联网 / 开关面板 / 增删图片」这类局部状态变化。
@@ -3647,8 +3856,15 @@ function renderKeepingScroll() {
     pendingScrollTop = (typeof window.scrollY === "number") ? window.scrollY : 0;
   }
   pendingStickBottom = state.stickBottom;
-  render();
+  /* 这次是「局部状态变化后的原地重绘」，不是换页 ——
+     不能让 #view > * 的入场动画重放一遍（在对话页点一下联网开关，
+     整个输入区都会重新淡入一次）。 */
+  skipViewAnim = true;
+  try { render(); } finally { skipViewAnim = false; }
 }
+
+let skipViewAnim = false;   /* renderKeepingScroll 期间置 true：别重放视图入场动画 */
+let renderInVT = false;     /* 正在走 View Transitions，防重入 */
 
 function doRender() {
 
@@ -3659,6 +3875,8 @@ function doRender() {
   try { document.body.classList.toggle("not-home", state.view !== "home"); } catch (_) {}
   /* 首页让 Hero 铺满首屏，并让下面的内容依次浮现 */
   try { document.body.classList.toggle("home-mode", state.view === "home"); } catch (_) {}
+  /* 原地重绘时关掉整页入场动画 */
+  try { document.body.classList.toggle("no-view-anim", skipViewAnim); } catch (_) {}
 
   renderCrumb();
   renderAppbar();
@@ -3717,7 +3935,9 @@ function doRender() {
       pendingScrollTop = null;
       pendingStickBottom = null;
       requestAnimationFrame(function () { window.scrollTo(0, keepTop); });
-    } else {
+    } else if (state.view !== "home") {
+      /* 首页不强制滚顶：删历史、展开历史这类操作会触发整页 render，
+         一回顶用户就得重新往下翻一遍 */
       window.scrollTo({ top: 0 });
     }
   }
@@ -3763,7 +3983,12 @@ const FOLD_NOTE_TEXT = (n) => `更早的 ${n} 条已折叠显示（只为让页�
 function msgRenderStart() {
   const total = state.messages.length;
   let start = Math.max(0, total - RENDER_MSG_LIMIT);
-  if (state.editing && state.editing.idx < start) start = state.editing.idx;
+  /* 正在编辑的那条必须画出来，但不能因为它就把起点无限往前拖 ——
+     拖太早会让「上面还有 N 条」的数字突然变大，看起来像 bug。
+     所以只允许往前放宽一个窗口。 */
+  if (state.editing && state.editing.idx < start) {
+    start = Math.max(state.editing.idx, total - RENDER_MSG_LIMIT * 2, 0);
+  }
   return start;
 }
 
@@ -3800,7 +4025,91 @@ function trimMsgDom() {
   note.textContent = hidden > 0 ? FOLD_NOTE_TEXT(hidden) : "";
 }
 
+/* 给每个 <details> 的内容包一层 .dt-wrap，让 grid-template-rows 的展开动画生效。
+   选择器只看直接子元素，summary 不包；已经包过的跳过（重绘后会重新执行）。 */
+/* 长任务（工具箱生成、联网检索）用骨架屏代替三个跳动的点：
+   用户能看到「大概是什么样的内容要来了」，心理上也更快。 */
+function skeletonHtml() {
+  return '<div class="skeleton" aria-hidden="true">'
+    + '<div class="sk-title"></div>'
+    + '<div class="sk-line"></div>'
+    + '<div class="sk-line short"></div>'
+    + '<div class="sk-card"></div>'
+    + '<div class="sk-card tall"></div>'
+    + '</div>';
+}
+
+function wrapDetailsBodies() {
+  try {
+    const list = document.querySelectorAll("#view details");
+    for (let i = 0; i < list.length; i++) {
+      const d = list[i];
+      /* 只处理顶层 details：嵌套的（榜单条目里套的设计决策、工具箱阶段）
+         如果也做高度动画，两层 grid-template-rows 一起算会明显抖动 */
+      let pp = d.parentNode, nested = false;
+      while (pp && pp !== document) {
+        if (pp.tagName && String(pp.tagName).toLowerCase() === "details") { nested = true; break; }
+        pp = pp.parentNode;
+      }
+      if (nested) continue;
+      if (d.querySelector(":scope > .dt-wrap")) continue;
+      const kids = [];
+      for (let j = 0; j < d.children.length; j++) {
+        const el = d.children[j];
+        if (el.tagName === "SUMMARY") continue;
+        if (el.classList && el.classList.contains("dt-wrap")) continue;
+        kids.push(el);
+      }
+      if (!kids.length) continue;
+      const wrap = document.createElement("div");
+      wrap.className = "dt-wrap";
+      d.appendChild(wrap);
+      for (let j = 0; j < kids.length; j++) wrap.appendChild(kids[j]);
+    }
+  } catch (_) {}
+}
+
+/* ===== FLIP：列表重排时让它「滑」过去，而不是瞬移 =====
+   用法：flipReorder(容器, () => { ...改 DOM... })
+   原理：重排前记下每个元素的位置，重排后量一次，反算出位移并用动画补回去。 */
+/* 重排用的是 innerHTML = …，元素是新实例、没法按节点配对，
+   所以按「下标」配对新旧条目 —— 对「同一批只换顺序」（榜单按权重重排、切梯队）
+   准确；对「筛掉几条」也能对上剩下的那些。 */
+function flipSnapshot(container) {
+  if (!container || typeof container.getBoundingClientRect !== "function") return null;
+  return Array.prototype.slice.call(container.children).map(function (el) {
+    try { return el.getBoundingClientRect(); } catch (_) { return null; }
+  });
+}
+
+function flipPlay(container, old) {
+  if (!old || !container) return;
+  if (typeof Element === "undefined" || !Element.prototype || !Element.prototype.animate) return;
+  Array.prototype.slice.call(container.children).forEach(function (el, i) {
+    const b = old[i];
+    if (!b) return;
+    let a = null;
+    try { a = el.getBoundingClientRect(); } catch (_) { return; }
+    if (!a) return;
+    const dx = b.left - a.left, dy = b.top - a.top;
+    if (!dx && !dy) return;
+    try {
+      el.animate(
+        [{ transform: "translate(" + dx + "px," + dy + "px)" }, { transform: "none" }],
+        { duration: 240, easing: "cubic-bezier(.22,.9,.3,1)" }
+      );
+    } catch (_) {}
+  });
+}
+
+function flipReorder(container, mutate) {
+  const old = flipSnapshot(container);
+  mutate();
+  flipPlay(container, old);
+}
+
 function afterRender() {
+  wrapDetailsBodies();
   if (state.view === "chat") {
     /* 编辑态：回填编辑框 */
     const eb = document.querySelector("[data-edit-input]");
@@ -4034,7 +4343,9 @@ function goBack() {
      只要历史栈里有我们自己压进去的那一条，就直接 back()；
      直接打开链接进来的（栈里只有这一页）才走下面的层级兜底。 */
   if (navPushed > 0 && typeof history !== "undefined" && history.length > 1) {
-    navPushed--;
+    /* 这里不要自己 navPushed--：history.back() 会触发 hashchange，
+       而 onHashChange 里已经统一递减一次。两边都减的话，一次返回计数减 2，
+       压进去的历史很快就被「还」完，之后「←」就永远走层级兜底了。 */
     try { history.back(); return true; } catch (_) {}
   }
   if (state.view === "pick") { goHome(); return true; }
@@ -4206,7 +4517,7 @@ function viewPick() {
     +   '<b>问 AI 需要先填 API Key</b>'
     +   '<span>DeepSeek 官方注册 → 充值几块钱 → 复制 sk- 开头的密钥，约 3 分钟。'
     +   'Key 只保存在你自己的浏览器里。</span>'
-    +   '<button type="button" class="tbtn primary" data-act="open-settings">现在去填 ›</button>'
+    +   '<button type="button" class="btn small" data-act="open-settings">现在去填 ›</button>'
     + '</div>'
     : "";
   /* 「看清单」和「问 AI」原来是底栏两个入口，进的是同一个页面 —— 现在合成一页，用 tab 切 */
@@ -4219,11 +4530,11 @@ function viewPick() {
     ? "选一个房间进去，里面是它的主页：必做的事、包含哪些东西、常见问题、设计决策都在那儿。不用联网、不用填 Key。"
     : "进去后可以先点常见问题，也可以直接说一句。你发出问题后，缺信息时它会先问你一个最关键的问题。";
   /* 全屋和合同都有自己的入口（引导卡第 01 / 03 步），这里只放 8 个真实空间 */
-  let cards = "";
+  let cards = "", cardIdx = 0;
   for (const key in DATA) {
     if (key === "whole" || key === "contract") continue;
     const s = DATA[key];
-    cards += '<div class="card mini space-tile" role="button" tabindex="0" data-act="pick-space" data-key="' + escAttr(key) + '">'
+    cards += '<div class="card mini space-tile" style="--i:' + Math.min(cardIdx++, 7) + '" role="button" tabindex="0" data-act="pick-space" data-key="' + escAttr(key) + '">'
       + '<span class="icon">' + s.icon + '</span>'
       + '<div class="name">' + esc(s.name) + '</div>'
       + '</div>';
@@ -4302,7 +4613,11 @@ function homeHistSectionHtml() {
     +   '<span class="hist-strip-text">' + esc(label) + '</span>'
     +   '<span class="hist-strip-arrow" aria-hidden="true">' + (open ? "收起 ▴" : "展开 ▾") + '</span>'
     + '</button>'
-    + (open ? '<div id="histBlock" class="hist-strip-body">' + histBlockHtml() + '</div>' : "")
+    + (open
+        ? '<div id="histBlock" class="hist-strip-body">' + histBlockHtml()
+          + '<button type="button" class="tbtn hist-strip-collapse" data-act="hist-strip-toggle">收起 ▴</button>'
+          + '</div>'
+        : "")
     + '</div>';
 }
 
@@ -4367,11 +4682,13 @@ function renderHomeSearch() {
   const list = homeSearchAll(q);
   box.classList.remove("hidden");
   if (!list.length) {
-    box.innerHTML = '<div class="hs-empty">没找到「' + esc(q) + '」相关条目。换个词，或者直接去问 AI。</div>';
+    box.innerHTML = '<div class="hs-empty">没找到「' + esc(q) + '」相关条目。换个词，'
+      + '或者直接去问 AI。</div>'
+      + '<div class="hs-empty-act"><button type="button" class="tbtn primary" data-act="gc-ask">去问 AI ›</button></div>';
     return;
   }
   box.innerHTML = list.map(function (r) {
-    const kindText = r.kind === "rank" ? "清单" : r.kind === "space" ? "空间" : r.kind === "object" ? "包含" : "问题";
+    const kindText = r.kind === "rank" ? "清单" : r.kind === "space" ? "空间" : r.kind === "object" ? "包含" : "常问";
     const name = r.kind === "faq" ? truncateWidth(r.name, 26) : r.name;
     let act = "";
     if (r.kind === "rank") act = 'data-act="hs-rank" data-space="' + escAttr(r.space) + '" data-tab="' + escAttr(r.tab) + '" data-name="' + escAttr(r.name) + '"';
@@ -4387,10 +4704,29 @@ function renderHomeSearch() {
 
 /* 搜到某一条清单：进榜单并把它展开 */
 function openRankToItem(spaceKey, tab, name) {
-  /* 先按 tab 打开榜单（openRank 会清掉上一次的 rankFocus），
-     再设这一次要展开的那条，然后重绘一次让它自动展开 */
-  openRank(spaceKey, tab || "hidden");
-  if (name) { state.rankFocus = name; render(); }
+  /* 先把「要展开哪条」设好，然后让 openRank 一次渲染到位（keepFocus=true 保住它）。
+     原来 openRank 里先 render 一次、这里又 render 一次，而且它还会把 rankFocus 清掉 ——
+     结果从首页搜索点某一条，进榜单后那一条根本不展开，等于搜了没用。 */
+  state.rankFocus = name || "";
+  openRank(spaceKey, tab || "hidden", true);
+  /* 视线落在展开的条目中间时，不知道哪条是自己刚点的 —— 闪一下 */
+  if (name) {
+    requestAnimationFrame(function () {
+      try {
+        const box = $("rankList") || $("view");
+        if (!box || !box.querySelectorAll) return;
+        const list = box.querySelectorAll(".rank-item");
+        for (let i = 0; i < list.length; i++) {
+          const el = list[i];
+          if (el.textContent && el.textContent.indexOf(name) >= 0) {
+            el.classList.add("flash");
+            setTimeout(function () { el.classList.remove("flash"); }, 1700);
+            break;
+          }
+        }
+      } catch (_) {}
+    });
+  }
 }
 
 /* ---------- 全屋：单独一张大卡（它不是「空间」，是全局） ---------- */
@@ -4504,10 +4840,10 @@ function histItemsHtml(list) {
   if (!L.length) return `<p class="tip">没有匹配的记录。</p>`;
   const cap = histPreviewCount();
   const shown = state.histExpanded ? L : L.slice(0, cap);
-  return `<div class="hist">` + shown.map(h => {
+  return `<div class="hist">` + shown.map((h, idx) => {
     const icon = (DATA[h.spaceKey] && DATA[h.spaceKey].icon) || "📄";
     return `
-    <div class="hist-item" role="button" tabindex="0" data-act="hist" data-id="${escAttr(h.id)}">
+    <div class="hist-item" style="--i:${Math.min(idx, 7)}" role="button" tabindex="0" data-act="hist" data-id="${escAttr(h.id)}">
       <span class="hist-icon" aria-hidden="true">${icon}</span>
       <div class="hist-body">
         <div class="hist-q">${esc(h.title)}</div>
@@ -4531,7 +4867,8 @@ function refreshHistList() {
   if (!it) { render(); return; }                    /* 首页还没铺过历史区就整体重建 */
   const list = filteredHistory();                   /* 每轮只算一次 */
   if (f) f.innerHTML = histFiltersHtml();
-  it.innerHTML = histItemsHtml(list);
+  /* 重排前后记位置，让条目滑过去而不是瞬移 */
+  flipReorder(it, function () { it.innerHTML = histItemsHtml(list); });
   if (tl) tl.innerHTML = histToolsHtml(list);
 }
 
@@ -4670,6 +5007,7 @@ function toolActionsHtml(id) {
     + '<button type="button" class="tbtn" data-act="tool-export">导出 Markdown</button>'
     + '<button type="button" class="tbtn" data-act="tool-ask">问 AI</button>'
     + '<button type="button" class="tbtn" data-act="tool-save-to-chat">保存到当前对话</button>'
+    + '<button type="button" class="tbtn" data-act="tool-cache-clear">清空本工具缓存</button>'
     + '</div>';
 }
 
@@ -4812,7 +5150,7 @@ function toolOutputHtml(id) {
   const t = state.tool;
 
   if (t.busy) {
-    return '<div class="tool-out"><div class="dots"><span></span><span></span><span></span></div>'
+    return '<div class="tool-out">' + skeletonHtml()
       + '<div class="thinking">' + (t.web ? "正在联网检索并整理…" : "正在整理…") + '</div></div>';
   }
 
@@ -5800,7 +6138,7 @@ function objectPanelHtml() {
     + '</section>';
 }
 
-function startSession(spaceKey, objectId, topic) {
+function startSession(spaceKey, objectId, topic, opts) {
   /* 之前某次联网端点 404 把开关锁死了，换个会话就给它一次重来的机会 */
   if (state.webUnsupported) state.webUnsupported = false;
   abortCurrent();
@@ -5816,6 +6154,10 @@ function startSession(spaceKey, objectId, topic) {
   /* 会话 id：登录后前缀就是 Supabase 的 user.id —— 一眼看得出这条会话属于谁；
      后面仍带时间戳与随机尾巴，保证「再来一次新对话」是各自独立的一条历史 */
   state.sessionId = (auth.userId ? auth.userId : "s") + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+  /* clearSessionState() 上面刚把 showKeyGuide 清成 false，
+     调用方如果知道「这次要显示去填 Key 的引导」，就通过 opts 传进来，这里补回去，
+     这样只需要渲染一次，不会先闪一下空白再补上引导卡。 */
+  if (opts && opts.showKeyGuide) state.showKeyGuide = true;
   syncHash();
   render();
 }
@@ -5949,6 +6291,7 @@ function sendMessage(text) {
   state.showKeyGuide = false;
   state.error = ""; state.errorKind = "";
   state.editing = null;
+  haptic(10);                        /* 发送：轻微一下 */
 
   state.messages.push({ role:"user", text: text, images: imgs });
   state.images = [];
@@ -6018,7 +6361,9 @@ function appendMsg(i) {
     wrap.className = "msgs";
     wrap.id = "msgs";
     wrap.setAttribute("role", "log");
-    wrap.setAttribute("aria-live", "polite");
+    /* 流式生成时会把每个增量都播报一遍，长回答会一直读个没完；
+   改成 off，等这一轮结束后由播报函数统一读一次（见 announceLastAi） */
+    wrap.setAttribute("aria-live", "off");
     /* 空白对话页还没有 #msgs：必须插进 .chat-inner（滚动容器里）。
        早期版本插到 #view 末尾 —— 那里在 .composer 之后，消息跑到滚动区外面看不见 */
     const inner = document.querySelector("#view .chat-inner");
@@ -6785,6 +7130,9 @@ async function jsonRequest(prompt, maxTokens) {
   /* 挂到 state.controller：「整理成表 / 画个示意图」期间那颗「停止」按钮才真的能停。
      以前它只是个局部变量，按钮亮着却按下去没反应 —— 比不显示更糟。 */
   state.controller = ctrl;
+  /* 打上标记：关掉「搜案例」弹窗时靠它认出这条请求并 abort，
+     否则它会一直跑到超时，期间照常计费 */
+  ctrl.__rankWeb = true;
   try {
     const res = await fetch(API_URL, {
       method: "POST",
@@ -7561,10 +7909,17 @@ function toolTemperature() {
 
 function toolCacheKey(id) {
   const t = state.tool;
+  /* 图片不能只算张数：换了图但张数相同，原来会命中旧缓存、拿回上一张的分析结果。
+     用每张图的 dataUrl 长度 + 首尾片段做一个够用又便宜的指纹。 */
+  const imgSig = (t.images || []).map(function (im) {
+    const u = String((im && im.dataUrl) || "");
+    return u.length + ":" + u.slice(0, 40) + ":" + u.slice(-40);
+  }).join(",");
   const raw = [
     id,
     String(t.input || "").slice(0, 2000),
     (t.images || []).length,
+    imgSig,
     JSON.stringify(t.extra || {}),
     state.space || "",
     currentModel(),        /* 用实际发出的模型名（自定义档位时是 customModel） */
@@ -7964,7 +8319,7 @@ function renderTopNav() {
   if (!nav) return;
   /* 和底栏一致：房间 / 问 AI 合成一个入口 */
   const items = [
-    { act: "bn-home",  icon: "🏠", text: "首页",   on: ["home", "space", "rank"].indexOf(state.view) >= 0 },
+    { act: "bn-home",  icon: "🏠", text: "首页",   on: state.view === "home" },
     { act: "bn-rank",  icon: "🚪", text: "房间",   on: state.view === "pick" || state.view === "space" || state.view === "rank" },
     { act: "bn-tools", icon: "🧰", text: "工具箱", on: state.view === "toolbox" || state.view === "progress" || isToolView(state.view) }
   ];
@@ -7981,7 +8336,9 @@ function renderBottomNav() {
   nav.classList.toggle("hidden", isChat);       /* 对话页隐藏，避免和输入区叠 */
   /* 底栏只剩三项：「看清单」和「问 AI」合并进同一个「房间」入口，
      进去之后用页内 tab 切，不用在两个几乎一样的页面之间来回点。 */
-  const home = ["home", "space", "rank"].indexOf(state.view) >= 0;
+  /* home 只认首页：space / rank 属于「房间」这一支，
+     否则两个图标会一起点亮 */
+  const home = state.view === "home";
   const tools = state.view === "toolbox" || state.view === "progress" || isToolView(state.view);
   const rooms = state.view === "pick" || state.view === "space" || state.view === "rank";
   const set = function (id, on) {
@@ -8040,6 +8397,15 @@ function shareAsMessageImage(idx) {
     const paras = String(m.text).split("\n");
     const lines = [];
     paras.forEach(function (p) {
+      /* 表格行和分隔线单独处理，否则整张表会挤成一行看不清 */
+      if (p.indexOf("|") >= 0 && /^[\s:|-]+$/.test(p.trim())) return;   /* 表头下面的 --- 那行跳过 */
+      if (p.trim().charAt(0) === "|") {
+        const cells = p.split("|").map(function (x) { return x.trim(); }).filter(function (x, i, a) {
+          return !(i === 0 && x === "") && !(i === a.length - 1 && x === "");
+        });
+        lines.push(cells.join("　│　"));
+        return;
+      }
       const s = p.replace(/\*\*/g, "").replace(/^#+\s*/, "");
       if (!s.trim()) { lines.push(""); return; }
       let cur = "";
@@ -8239,15 +8605,36 @@ function toolExportResult() {
 }
 
 /* 带着工具箱结果去聊天（不自动发送，让用户确认） */
+/* 工具箱里两个「回到对话」的入口，如果当前对话已经有内容了，先问一句再开新会话。
+   和 askRankItem 用的是同一套判断，避免「聊到一半点一下就没了」。 */
+function confirmNewSession(then) {
+  if ((state.messages || []).length === 0) { then(); return; }
+  askDialog({
+    title: "开一个新话题？",
+    body: "当前对话里还有内容。直接开新话题会清空它 —— 想接着聊就勾上下面那项。",
+    checkbox: "保留当前对话，不新建会话",
+    okText: "确定"
+  }).then(function (r) {
+    if (!r || !r.ok) return;
+    then(!!r.checked);
+  });
+}
+
 function askFromTool() {
   const id = state.tool.activeId;
   const meta = TOOL_META[id];
   const title = meta ? meta.title : "工具箱";
   const txt = toolResultText();
   const brief = String(txt || "").slice(0, 1200);
-  /* 起一个新会话，标题用工具名 */
-  startSession(state.space || "kitchen", null, title);
-  state.draft = "我刚在「" + title + "」里得到下面这份参考，请帮我结合我家的情况确认一下，哪几条最重要、有没有不适用的：\n\n" + brief;
+  const fill = function () {
+    state.draft = "我刚在「" + title + "」里得到下面这份参考，请帮我结合我家的情况确认一下，哪几条最重要、有没有不适用的：\n\n" + brief;
+  };
+  /* 对话里还有内容就先问一句；选了「保留」就不新建会话，只把草稿填进去 */
+  confirmNewSession(function (keep) {
+    if (!keep) startSession(state.space || "kitchen", null, title);
+    else { state.view = "chat"; syncHash(); render(); }
+    fill();
+  });
   state.view = "chat";
   render();
   const ta = $("composerInput");
@@ -8257,7 +8644,26 @@ function askFromTool() {
 
 /* 只把摘要和原始输入存进当前对话（不存大 JSON） */
 function toolSaveToChat() {
-  if (!hasAnswer() && !state.messages.length) {
+  /* 用和榜单一样的判断：只要对话里还有消息就先问一句，
+     不能只看内存里是不是「空的」（用户看到的那条对话可能不是内存里的这条） */
+  if ((state.messages || []).length > 0) {
+    askDialog({
+      title: "开一个新话题？",
+      body: "当前对话里还有内容。直接开新话题会清空它 —— 想接着聊就勾上下面那项。",
+      checkbox: "保留当前对话，不新建会话",
+      okText: "确定"
+    }).then(function (r) {
+      if (!r || !r.ok) return;
+      if (!r.checked) doToolSaveToChat(true);
+      else { state.view = "chat"; syncHash(); render(); doToolSaveToChat(false); }
+    });
+    return;
+  }
+  doToolSaveToChat(true);
+}
+
+function doToolSaveToChat(makeSession) {
+  if (makeSession) {
     /* 还没有对话：先把工具内容起个会话 */
     const meta = TOOL_META[state.tool.activeId];
     startSession(state.space || "kitchen", null, meta ? meta.title : "工具箱");
@@ -8272,7 +8678,7 @@ function toolSaveToChat() {
   toast("已保存到当前对话");
 }
 
-function openRank(spaceKey, tab) {
+function openRank(spaceKey, tab, keepFocus) {
   if (!DATA[spaceKey]) return;
   abortCurrent();
   state.view = "rank";
@@ -8280,8 +8686,9 @@ function openRank(spaceKey, tab) {
   /* tab 由调用方决定：搜索里点某一条时应该落在它所在的那张榜上，
      以前写死 "hidden"，把调用方设好的 tab 又覆盖回去了。 */
   state.rankTab = (tab === "surface" || tab === "soft" || tab === "hidden") ? tab : "hidden";
-  /* 上一次「要自动展开的那条」必须清掉，否则同一条记录每次进来都会自己弹开 */
-  state.rankFocus = "";
+  /* 上一次「要自动展开的那条」要清掉，否则同一条记录每次进来都会自己弹开。
+     但「从搜索跳过来」时调用方刚设好 rankFocus，这里不能清 —— keepFocus 就是给这种情况留的。 */
+  if (!keepFocus) state.rankFocus = "";
   syncHash();
   render();
 }
@@ -8290,8 +8697,37 @@ function askRankItem(idx) {
   const items = rankItems(state.space, state.rankTab);
   const it = items[idx];
   if (!it || !it.ask) return;
-  startSession(state.space, null, it.name);
-  sendMessage(it.ask);
+  /* 只看有没有消息，不判当前视图 ——
+     askRankItem 只能在榜单页触发，那一刻 state.view 一定是 "rank"，
+     加上 view === "chat" 就恒为 false，等于没做判断。 */
+  const dirty = (state.messages || []).length > 0;
+  const go = function () {
+    startSession(state.space, null, it.name);
+    sendMessage(it.ask);
+  };
+  if (dirty) {
+    askDialog({
+      title: "开一个新话题？",
+      body: "当前对话里还有内容。直接开新话题会清空它 —— 想接着聊就勾上下面那项。",
+      checkbox: "保留当前对话，把这条作为追问",
+      okText: "确定"
+    }).then(function (r) {
+      if (!r || !r.ok) return;              /* 取消：什么都不做 */
+      if (r.checked) {
+        /* 当作追问：必须先把视图切回对话页，
+           否则 sendMessage 第一句 state.view !== "chat" 就直接 return，点了没反应 */
+        state.view = "chat";
+        syncHash();
+        render();
+        scrollBottom(false);
+        sendMessage(it.ask);
+      } else {
+        go();                                 /* 没勾：开新话题 */
+      }
+    });
+  } else {
+    go();
+  }
 }
 function copyRankItem(idx) {
   const items = rankItems(state.space, state.rankTab);
@@ -8309,6 +8745,7 @@ function copyRankItem(idx) {
     it.tip ? "经验提醒：" + it.tip : "",
     it.cost ? "参考花费：¥" + it.cost[0] + "~" + it.cost[1] + " " + it.costUnit : ""
   ].filter(Boolean).join("\n");
+  haptic(8);                        /* 复制成功：轻微一下 */
   copyText(s, "已复制这一条");
 }
 
@@ -8488,37 +8925,6 @@ function loadBudget() {
     }
   } catch (_) {}
 }
-function saveBudget() {
-  try { store.set(LS_BUDGET, JSON.stringify({ total: state.budgetTotal, ratios: state.budgetRatios })); } catch (_) {}
-}
-function budgetSplitterHtml() {
-  const t = state.budgetTotal;
-  const r = state.budgetRatios;
-  const sum = (r[0] + r[1] + r[2]) || 100;
-  const money = function (p) { return (t * p / sum).toFixed(1); };
-  const rows = [
-    { k: 0, label: "隐藏工程", hint: "水电 / 防水 / 暖通 —— 别省" },
-    { k: 1, label: "表面工程", hint: "砖 / 地板 / 墙漆 / 门窗" },
-    { k: 2, label: "软装",     hint: "家具 / 窗帘 / 灯 —— 可以后补" }
-  ].map(function (x) {
-    return '<div class="bs-row">'
-      + '<div class="bs-head"><b>' + esc(x.label) + '</b>'
-      +   '<span class="bs-money">' + money(r[x.k]) + ' 万</span></div>'
-      + '<div class="bs-hint">' + esc(x.hint) + '</div>'
-      + '<input type="range" min="5" max="60" step="1" value="' + r[x.k] + '" data-act="budget-ratio" data-k="' + x.k + '" aria-label="' + escAttr(x.label) + '">'
-      + '<div class="bs-pct">' + r[x.k] + '%</div>'
-      + '</div>';
-  }).join("");
-  return '<div class="budget-splitter">'
-    + '<div class="bs-title">💰 先分一下钱：我打算花 '
-    +   '<input type="number" id="budgetTotal" min="1" max="500" step="1" value="' + t + '" data-act="budget-total" aria-label="预算总额（万元）"> 万'
-    + '</div>'
-    + rows
-    + '<div class="bs-foot">比例参考行业经验（隐藏 30~35% / 表面 40% / 软装 25~30%），可以拖。'
-    + '  隐藏工程占到三成以上，后面才不会因为漏水返工。</div>'
-    + '</div>';
-}
-
 /* ---------- P1-7：我家进度（按 check.when 归阶段） ---------- */
 const PROGRESS_STAGES = [
   { key: "pre",    label: "开工前", words: ["签合同", "约谈", "开工前", "定方案", "下单前", "买前", "买之前", "选砖", "选材", "定做前", "定制前", "买机器前", "买桌子前", "买椅子前", "买床前"] },
@@ -8530,11 +8936,23 @@ const PROGRESS_STAGES = [
   { key: "finish", label: "收尾",   words: ["入住", "验收完成", "使用", "一个月", "一年", "收尾", "连续"] }
 ];
 const LS_PROGRESS = "design_progress_v1";
+/* 各阶段「手动展开/收起」的状态单独存一个键：
+   它和 progress 是同一件事的两半，但格式不同（一个是 key->true，一个是 stage->bool），
+   混进同一个键要改现有数据格式、还得处理旧数据迁移，独立存更稳。 */
+const LS_PROGRESS_OPEN = "design_progress_open_v1";
 function loadProgress() {
+  try {
+    const rawO = store.get(LS_PROGRESS_OPEN);
+    if (rawO) {
+      const oo = JSON.parse(rawO);
+      if (oo && typeof oo === "object") state.progressOpen = oo;
+    }
+  } catch (_) {}
   try { const raw = store.get(LS_PROGRESS); if (raw) { const o = JSON.parse(raw); if (o && typeof o === "object") state.progress = o; } } catch (_) {}
 }
 function saveProgress() {
   try { store.set(LS_PROGRESS, JSON.stringify(state.progress || {})); } catch (_) {}
+  try { store.set(LS_PROGRESS_OPEN, JSON.stringify(state.progressOpen || {})); } catch (_) {}
 }
 function progressKey(spaceKey, tab, name) { return spaceKey + "|" + tab + "|" + name; }
 function stageOfItem(it) {
@@ -8589,7 +9007,12 @@ function viewProgress() {
   const byStage = progressData();
   let total = 0;
   Object.keys(byStage).forEach(function (k) { total += byStage[k].length; });
-  const done = Object.keys(state.progress || {}).filter(function (k) { return state.progress[k]; }).length;
+  /* 只数当前数据里真实存在的条目：老数据删掉/改名后留下的孤儿 key 不算，
+     否则会出现「已经完成 15/12」这种自相矛盾的数字 */
+  let done = 0;
+  Object.keys(byStage).forEach(function (k) {
+    byStage[k].forEach(function (x) { if (state.progress[x.key]) done++; });
+  });
   const body = PROGRESS_STAGES.map(function (st) {
     const list = byStage[st.key] || [];
     if (!list.length) return "";
@@ -8603,7 +9026,10 @@ function viewProgress() {
         + '</label>';
     }).join("");
     const stDone = list.filter(function (x) { return state.progress[x.key]; }).length;
-    return '<details class="rank-item"' + (stDone < list.length ? " open" : "") + '><summary>'
+    /* 用户手动收/开过的阶段以手动状态优先，没动过的按「全勾完就收起」 */
+    const manual = (state.progressOpen || {})[st.key];
+    const openIt = (manual === undefined) ? (stDone < list.length) : !!manual;
+    return '<details class="rank-item"' + (openIt ? " open" : "") + ' data-stage="' + escAttr(st.key) + '"><summary>'
       + '<div class="rank-head"><b>' + esc(st.label) + '</b>'
       + '<span class="pg-count" id="pgCount_' + st.key + '">' + stDone + '/' + list.length + '</span>'
       + '<span class="grow"></span></div>'
@@ -8650,10 +9076,12 @@ function viewRank() {
       const meta = RANK_TIER_META[tier];
       body += '<div class="sec-title">' + esc(meta.label) + '</div>';
       body += '<p class="rank-tier-hint">' + esc(meta.hint) + '</p>';
-      list.forEach(function (it) {
+      list.forEach(function (it, li) {
       /* 不默认展开任何一条：进榜单就该先看到全貌。
-         想展开点标题，想定位某一条用页面上的搜索。
          （rankItemHtml 的第三个参数留给「从搜索跳过来时自动展开那一条」，这里一律 false） */
+      /* 梯队内的先后顺序本身就是结论（先做哪个），所以加个序号，别只靠位置 */
+      it.__seq = (li + 1);
+      it.__i = Math.min(li, 7);            /* 错位入场用，最多 7 档 */
       body += rankItemHtml(it, flatIdx++, false);
     });
     });
@@ -8671,7 +9099,7 @@ function viewRank() {
     + '「家有老人小孩」把安全的权重调高；「预算紧」更看重花小钱办大事；'
     + '「追求品质」会把手感、观感类的条目往前排。任何一次切换都不会联网、不会花 token。</p></div>'
     + '</details>'
-       + body
+       + '<div id="rankList">' + body + '</div>'
        + '<p class="tip">内容依据《装修避坑手册（2025）》整理'
        + '（每条展开后的「依据」栏会写明出自手册哪一节，或者对应的国标编号），'
        + '不需要联网、不再调用 AI 生成。想更细问某一条，点条目里的「问 AI」或「搜别人家怎么做的」。</p>'
@@ -8997,10 +9425,10 @@ function rankItemHtml(it, i, forceOpen) {
   const costText = noMaterial ? "" : ("¥" + it.cost[0] + "~" + it.cost[1] + " " + esc(it.costUnit));
   const lv = RANK_LEVEL_META[it.level];
   const openIt = ((state.rankFocus && String(it.name) === String(state.rankFocus)) || forceOpen) ? " open" : "";
-  return '<details class="rank-item"' + openIt + '>'
+  return '<details class="rank-item"' + openIt + ' style="--i:' + (it.__i || 0) + '">'
     + '<summary>'
     +   '<div class="rank-head">'
-    +     '<b>' + esc(it.name) + '</b>'
+    +     '<b>' + (it.__seq ? '<span class="rank-seq">' + it.__seq + '</span>' : "") + esc(it.name) + '</b>'
     +     (lv ? '<span class="rank-level ' + lv.cls + '">' + esc(lv.label) + '</span>' : "")
     +     (it.veto ? '<span class="rank-veto" title="安全和返工代价不能让步，无论加权分多少都排进最要紧">不能省</span>' : "")
     +     '<span class="grow"></span>'
@@ -9072,7 +9500,7 @@ document.addEventListener("click", e => {
     case "sb-reset":       restoreSbDefaults(); break;
     case "open-settings":  openModal(); break;
     case "open-toolbox":   openToolbox(); break;
-    case "bn-home":   goHome(); break;
+    case "bn-home": haptic(6); goHome(); break;
     case "bn-rank":   state.pickMode = "rank"; state.view = "pick"; syncHash(); render(); break;
 
     case "pick-mode": {
@@ -9094,9 +9522,9 @@ document.addEventListener("click", e => {
         goSpace(key);
       } else {
         const k = store.get(LS_APIKEY);
-        /* startSession 内部已经 render 过了，这里不用再渲染一次 */
-        if (!k) state.showKeyGuide = true;
-        startSession(key, null, "");
+        /* 没填 Key 就把引导卡的意图一起交给 startSession，
+           由它在 clearSessionState() 之后补回来 —— 只渲染一次，不会闪 */
+        startSession(key, null, "", { showKeyGuide: !k });
       }
       break;
     }
@@ -9117,6 +9545,7 @@ document.addEventListener("click", e => {
     case "open-tool":    { const tid = node.dataset.tool; if (tid === "progress") { openProgress(); } else { openTool(tid); } break; }
     case "progress-toggle": {
       const pk = node.dataset.key;
+      haptic(8);                     /* 勾选：更轻一点 */
       state.progress[pk] = !state.progress[pk];
       saveProgress();
       if (node.parentNode) node.parentNode.classList.toggle("done", !!state.progress[pk]);
@@ -9139,6 +9568,7 @@ document.addEventListener("click", e => {
     }
     case "tool-run":     toolSyncFromDom(); toolRun(false); break;
     case "tool-retry":   toolSyncFromDom(); toolRun(true); break;
+    case "tool-cache-clear": haptic(12); toolCacheClearCurrent(); toast("这个工具的缓存已清空，下次会重新生成"); break;
     case "tool-stop":    toolCancel(); renderKeepingScroll(); break;
     case "tool-clear":
       state.tool.input = ""; state.tool.images = []; state.tool.extra = {};
@@ -9151,20 +9581,37 @@ document.addEventListener("click", e => {
     case "tool-example":    toolFillExample(Number(node.dataset.idx)); break;
     case "tool-pick-image": toolPickImage(); break;
     case "tool-remove-image": toolRemoveImage(node.dataset.id); break;
-    case "tool-copy":         toolCopyResult(); break;
+    case "tool-copy":         toolCopyResult(); flashCopied(node); break;
     case "tool-export":       toolExportResult(); break;
     case "tool-ask":          askFromTool(); break;
     case "tool-save-to-chat": toolSaveToChat(); break;
     case "tool-open-settings": openModal(); break;
     case "open-rank":    openRank(node.dataset.key); break;
-    case "rank-tab":     state.rankTab = node.dataset.tab; renderKeepingScroll(); break;
-    case "rank-preset":  state.rankPreset = node.dataset.preset; renderKeepingScroll(); break;
+    case "rank-tab": {
+      /* 切梯队：FLIP 只作用于条目容器，不要用整个 #view ——
+         否则面包屑、tab 栏、折叠块、底部免责都会被按索引配对，动画会乱飞 */
+      const host = $("rankList");
+      const snap = host ? flipSnapshot(host) : null;
+      state.rankTab = node.dataset.tab;
+      renderKeepingScroll();
+      flipPlay(host, snap);
+      break;
+    }
+    case "rank-preset": {
+      /* 切权重只改排序，内容不变 —— 最值得用 FLIP 的一处 */
+      const host = $("rankList");
+      const snap = host ? flipSnapshot(host) : null;
+      state.rankPreset = node.dataset.preset;
+      renderKeepingScroll();
+      flipPlay(host, snap);
+      break;
+    }
     case "rank-ask":     askRankItem(Number(node.dataset.idx)); break;
     case "rank-web":     openRankWeb(Number(node.dataset.idx)); break;
     case "close-rank-web": closeRankWeb(); break;
     case "rank-web-go":  doRankWebSearch(false); break;
     case "rank-web-research": doRankWebSearch(true); break;
-    case "rank-copy":    copyRankItem(Number(node.dataset.idx)); break;
+    case "rank-copy":    copyRankItem(Number(node.dataset.idx)); flashCopied(node); break;
     case "open-space":     goSpace(node.dataset.key); break;
     case "open-object":        openObjectPanel(state.space, node.dataset.id); break;
     case "close-object-panel": state.objectPanel = ""; renderKeepingScroll(); break;
@@ -9187,7 +9634,7 @@ document.addEventListener("click", e => {
     case "edit-save":      saveEdit(); break;
     case "edit-cancel":    cancelEdit(); break;
     case "copy":           copyChat(); break;
-    case "copy-one":       copyOne(Number(node.dataset.idx)); break;
+    case "copy-one":       copyOne(Number(node.dataset.idx)); flashCopied(node); break;
     case "export-md":      exportMarkdown(); break;
     case "export-pdf":     exportPdf(); break;
     case "home":           goHome(); break;
@@ -9200,6 +9647,7 @@ document.addEventListener("click", e => {
       closeMenu();
       goBack();
       break;
+    case "open-auth": haptic(6); openAuth(); break;
     case "toggle-more":
       state.menuOpen = !state.menuOpen;
       renderMenu();
@@ -9224,7 +9672,7 @@ document.addEventListener("click", e => {
     case "sketch":         doSketch(); break;
     case "close-extract":  state.extract = null; renderKeepingScroll(); break;
     case "close-sketch":   state.sketch = null; renderKeepingScroll(); break;
-    case "copy-extract":   copyExtract(); break;
+    case "copy-extract":   copyExtract(); flashCopied(node); break;
     case "ask-ok":         closeAsk({ ok: true, checked: !!($("askCheck") && $("askCheck").checked) }); break;
     case "ask-cancel":     closeAsk({ ok: false }); break;
     case "close-lightbox": closeLightbox(); break;
@@ -9261,7 +9709,18 @@ document.addEventListener("input", e => {
   if (t.id === "histQuery") { state.histQuery = t.value; state.histExpanded = false; refreshHistList(); return; }
   if (t.dataset && t.dataset.cond) { state.conditions[t.dataset.cond] = t.value; renderCondSummary(); return; }
   if (t.id === "modelSelect") { $("customModel").classList.toggle("hidden", t.value !== "custom"); }
+  /* temperature 选「自定义…」时要把输入框显出来，否则用户找不到填值的地方 */
+  if (t.id === "tempSelect") { $("tempCustomInput").classList.toggle("hidden", t.value !== "custom"); }
 });
+
+/* 「我家进度」各阶段手动开合：记下用户的选择，别被「全勾完就收起」覆盖 */
+document.addEventListener("toggle", function (e) {
+  const d = e.target;
+  if (!d || !d.dataset || !d.dataset.stage) return;
+  state.progressOpen = state.progressOpen || {};
+  state.progressOpen[d.dataset.stage] = !!d.open;
+  try { store.set(LS_PROGRESS_OPEN, JSON.stringify(state.progressOpen)); } catch (_) {}
+}, true);
 
 /* 首页搜索：输入即搜 */
 document.addEventListener("input", e => {
@@ -9461,9 +9920,6 @@ function sbDomainText() {
 }
 
 /* 用的是不是内置项目 */
-function usingBuiltinCloud() {
-  return SB_URL === SB_DEFAULT_URL && SB_KEY === SB_DEFAULT_KEY;
-}
 const SB_TABLE = "chat_history";
 const LS_AUTH  = "design_auth_v1";
 
@@ -9530,6 +9986,9 @@ async function sbFetch(path, opts) {
   } finally {
     clearTimeout(timer);
   }
+  /* fetch 本身抛错时 res 是 undefined，下面的 res.ok 会变成 TypeError，
+     把真正的网络错误盖掉。这里先兜一层。 */
+  if (!res) { throw new Error("网络不可用（请求没有送到服务器，检查一下网络或代理）"); }
   let data = null;
   if (text) { try { data = JSON.parse(text); } catch (_) { data = { message: text }; } }
   if (!res.ok) {
@@ -10121,7 +10580,7 @@ function persistHistory(list) {
 function warnStorage() {
   if (storageWarned) return;
   storageWarned = true;
-  toast("历史没能留在本次页面里，这条对话可能不会出现在历史列表");
+  toast("这个浏览器不让存本地数据，这条对话关掉页面就找不回来了");
 }
 
 /* allowPending=true：还没有回答也先落一条（自动重试期间用，免得关掉页面就丢了问过什么） */
@@ -10218,6 +10677,7 @@ function openHistory(id) {
 }
 
 function deleteHistory(id) {
+  haptic(14);                      /* 删除：稍微重一点，提醒这是不可逆操作 */
   const list = loadHistory();
   const item = list.find(h => h.id === id);
   if (!item) return;
@@ -10273,7 +10733,7 @@ async function clearHistory() {
 function fmtTime(ts) {
   try {
     return new Date(ts).toLocaleString("zh-CN", {
-      month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit"
+      month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false
     });
   } catch (e) { return ""; }
 }
@@ -10281,6 +10741,20 @@ function fmtTime(ts) {
 /* ============================================================
    十一、复制 / 导出
    ============================================================ */
+
+/* 复制：点下去先给一次触觉，再把按钮本身变成 ✓（1.5 秒后变回来）——
+   比只弹一个 toast 更像「这个动作成功了」。 */
+function flashCopied(btn) {
+  if (!btn || !btn.dataset) return;
+  if (btn.dataset.flashing) return;
+  const old = btn.textContent;
+  btn.dataset.flashing = "1";
+  btn.textContent = "✓ 已复制";
+  setTimeout(function () {
+    btn.textContent = old;
+    delete btn.dataset.flashing;
+  }, 1500);
+}
 
 async function copyText(text, okMsg) {
   try {
@@ -10331,6 +10805,8 @@ function buildMarkdown(withReasoning) {
   const ob = (sp && state.objectId) ? sp.objects.find(o => o.id === state.objectId) : null;
 
   let md = `# RoomWise · 对话记录\n\n`;
+  /* 注意：单条消息的「依据」（m.basis）在下面对每条消息的循环里输出，
+     以前漏了它，导出的 md 里这一行会整条消失 */
   md += `- 空间：${sp ? sp.name : "—"}${ob ? " · " + ob.name : ""}\n`;
   md += `- 时间：${new Date().toLocaleString("zh-CN")}\n`;
   md += `- 模型：${currentModel()}${isThinking() ? "（思考模式）" : ""}\n`;
@@ -10347,6 +10823,8 @@ function buildMarkdown(withReasoning) {
       md += `<details><summary>思考过程</summary>\n\n${m.reasoning.trim()}\n\n</details>\n\n`;
     }
     if (m.text && m.text.trim()) md += m.text.trim() + "\n\n";
+    /* 「本条依据」以前没进 md，导出的文件里这一行会整条丢 */
+    if (m.basis && String(m.basis).trim()) md += "> 本条依据：" + String(m.basis).trim() + "\n\n";
     if (m.sources && m.sources.length) {
       md += m.sources.map((x, i) => `[${i + 1}] ${x}`).join("\n") + "\n\n";
     }
@@ -10404,6 +10882,12 @@ function exportPdf() {
    ============================================================ */
 
 let toastEl = null, toastTimer = null, toastAction = null;
+
+/* 移动端关键操作给一次轻微震动。不支持的设备 navigator.vibrate 不存在，直接跳过；
+   桌面浏览器通常也不支持，所以这里不会打扰任何人。 */
+function haptic(ms) {
+  try { if (navigator && typeof navigator.vibrate === "function") navigator.vibrate(ms || 10); } catch (_) {}
+}
 
 function toast(msg, actionLabel, onAction) {
   if (!toastEl) {
@@ -10574,6 +11058,11 @@ function closeModal(restorePending) {
   if (state.view === "chat" && p.sessionId === state.sessionId) {
     setDraft(p.text);
     toast("已取消，问题还在输入框里");
+  } else {
+    /* 用户中途切到了别的页面：草稿至少留在 state.draft 里，回对话页还能看到，
+       不能什么都不说就把文本丢掉 */
+    state.draft = p.text || "";
+    toast("问题已暂存，回到对话页还在输入框里");
   }
 }
 
@@ -10701,7 +11190,9 @@ async function saveSettings() {
   }
 
   /* 到这里才落进 settings 并生效 */
-  Object.assign(settings, next);
+  Object.assign(settings, next)
+  /* 用户改过模型档位了，之前的「这个模型接口不认」结论作废，重新试一次 */
+  state.modelUnsupported = null;
   applySbConfig();
   if (sbChanged) { resetCloudAccount(); toast("云端项目已切换，需要重新登录"); }
 
@@ -11013,6 +11504,13 @@ function navigateFromHash(hash) {
 function onHashChange() {
   const h = location.hash || "#/home";
   if (h === lastHash) return;          /* 自己写进去的不重复处理 */
+  /* 用层级深浅判断方向：#/space/kitchen（2 段）→ #/rank/kitchen/hidden（3 段）是前进，
+     反过来是后退。后退时入场动画换个方向，才像「退回去」而不是又进一层。 */
+  try {
+    const od = (lastHash || "").split("/").length;
+    const nd = (h || "").split("/").length;
+    document.body.classList.toggle("nav-back", nd < od);
+  } catch (_) {}
   /* 走到这里说明是「浏览器后退/前进」或手改地址栏触发的，
      把我们自己那条计数还回去，免得「←」一直以为还有历史可用 */
   if (navPushed > 0) navPushed--;
